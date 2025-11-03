@@ -23,7 +23,7 @@ const variantMap = {
   white: 'text-white',
 };
 
-// Icon mapping object - extend this as needed
+// Icon mapping object — each key must be unique
 const iconMap = {
   // Navigation & Actions
   menu: HiIcons.HiMenu,
@@ -33,44 +33,53 @@ const iconMap = {
   edit: HiIcons.HiPencil,
   delete: HiIcons.HiTrash,
   settings: HiIcons.HiCog,
-  
+
   // User & Profile
   user: FaIcons.FaUser,
   profile: FaIcons.FaUserCircle,
   logout: HiIcons.HiLogout,
-  
+
   // Status & Feedback
   success: HiIcons.HiCheckCircle,
   error: HiIcons.HiExclamationCircle,
   warning: HiIcons.HiExclamationTriangle,
   info: HiIcons.HiInformationCircle,
   loading: AiIcons.AiOutlineLoading3Quarters,
-  
+
   // Common Actions
   download: HiIcons.HiDownload,
   upload: HiIcons.HiUpload,
   save: HiIcons.HiSave,
   share: HiIcons.HiShare,
-  
+
   // Forms & Input
   chevronDown: HiIcons.HiChevronDown,
   chevronUp: HiIcons.HiChevronUp,
   chevronLeft: HiIcons.HiChevronLeft,
   chevronRight: HiIcons.HiChevronRight,
-  
+
   // Communication
   mail: HiIcons.HiMail,
   notification: HiIcons.HiBell,
-  
+
   // Document & Files
   document: HiIcons.HiDocument,
   folder: HiIcons.HiFolder,
-  
-  // Application Specific
+
+  // Application Specific (keep these only once)
   job: BiIcons.BiBriefcase,
   company: BiIcons.BiBuildings,
   resume: IoIcons.IoDocument,
+  employment: BiIcons.BiBriefcase,
+
+  // New navbar icons you added (unique names)
+  home: HiIcons.HiHome,                // if you use a home icon anywhere
+  education: HiIcons.HiAcademicCap,    // used for Education
+  certifications: HiIcons.HiBadgeCheck,// used for Certifications
+  projects: HiIcons.HiCollection,      // used for Projects
+  brain: FaIcons.FaBrain,
 };
+
 
 export const Icon = ({ 
   name,

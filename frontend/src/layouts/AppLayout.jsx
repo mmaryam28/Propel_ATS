@@ -7,11 +7,14 @@ const classNames = (...xs) => xs.filter(Boolean).join(" ");
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: "home" },
-  { to: "/jobs", label: "Jobs", icon: "job" },
-  { to: "/applications", label: "Applications", icon: "document" },
-  { to: "/documents", label: "Documents", icon: "folder" },
-  //{ to: "/typography", label: "Typography", icon: "edit" },
-  //{ to: "/cards", label: "Cards", icon: "settings" },
+  //{ to: "/jobs", label: "Jobs", icon: "job" },
+  //{ to: "/applications", label: "Applications", icon: "applications" },
+  { to: "/education", label: "Education", icon: "education" },
+  { to: "/certifications", label: "Certifications", icon: "certifications" },
+  { to: "/projects", label: "Projects", icon: "projects" },
+  { to: "/skills", label: "Skills", icon: "brain" },
+  { to: "/employment", label: "Employment", icon: "employment" },
+
 ];
 
 
@@ -91,7 +94,11 @@ function Navbar() {
           {/* Left side: Logo + Nav */}
           <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-xl bg-black/90" />
+              <img
+                src="../public/propel-logo.png"
+                alt="Propel logo"
+                className="h-7 w-7 object-contain rounded-md hover:scale-105 transition-transform duration-200"
+              />
               <span className="font-semibold whitespace-nowrap truncate max-w-[12ch] sm:max-w-none">PROPEL</span>
             </Link>
 

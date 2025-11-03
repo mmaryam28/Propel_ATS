@@ -116,6 +116,11 @@ h2 { font-size: clamp(18px, 2.6vw, 22px); margin: 24px 0 8px; }
   cursor: pointer;
 }
 
+.btn-cancel {
+  @apply w-full sm:w-auto px-4 py-2 rounded-full border border-gray-200 text-gray-800 font-semibold bg-white hover:bg-gray-100 transition-colors duration-200;
+}
+
+
 .btn--primary {
   background: var(--primary-color);
   color: white;

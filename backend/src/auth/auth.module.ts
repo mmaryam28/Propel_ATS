@@ -1,30 +1,44 @@
+// src/auth/auth.module.ts
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
-import { JwtStrategy } from './jwt.strategy';
-import { GoogleStrategy } from './strategies/google.strategy';
-import { LinkedInStrategy } from './strategies/linkedin.strategy';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { MailModule } from '../mail/mail.module';
+// import { JwtStrategy } from './jwt.strategy'; // if you have one
+
+// JSON Web Token "ms" style duration string type
+type MsString = `${number}${'ms'|'s'|'m'|'h'|'d'|'w'|'y'}`;
 
 @Module({
   imports: [
-    PrismaModule,
-    ConfigModule.forRoot({ isGlobal: true }),
-    PassportModule.register({ session: false }),
+    ConfigModule,
+    PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (cfg: ConfigService) => ({
-        secret: cfg.get<string>('JWT_SECRET'),
-        expiresIn: '7d',
-        signOptions: { expiresIn: 60 * 60 * 24 * 7 },
-      }),
       inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const raw = config.get<string>('JWT_EXPIRES_IN');
+        const expiresIn: number | MsString =
+          raw && !Number.isNaN(Number(raw)) ? Number(raw) : ((raw as MsString) ?? '7d');
+
+        return {
+          secret: config.get<string>('JWT_SECRET') ?? 'changeme',
+          signOptions: { expiresIn },
+        };
+      },
     }),
+    MailModule, // <-- ensures MailService is available here
   ],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, LinkedInStrategy],
   controllers: [AuthController],
+  providers: [
+    AuthService,
+    PrismaService,
+    // JwtStrategy,
+  ],
+  exports: [AuthService],
 })
 export class AuthModule {}

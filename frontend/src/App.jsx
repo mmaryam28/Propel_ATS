@@ -1,4 +1,3 @@
-// frontend/src/App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
@@ -14,6 +13,7 @@ import Privacy from "./pages/Privacy";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Logout from "./pages/Logout";
+import DeleteAccount from "./pages/DeleteAccount";
 import PasswordResetRequest from "./pages/PasswordResetRequest";
 import PasswordResetComplete from "./pages/PasswordResetComplete";
 
@@ -24,7 +24,6 @@ import CertificationsPage from "./pages/CertificationsPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProfileForm from "./components/ProfileForm";
 import ProfileSummary from "./components/ProfileSummary";
-import DeleteAccount from "./pages/DeleteAccount"; //  ensure this file exists
 
 export default function App() {
   return (
@@ -40,13 +39,15 @@ export default function App() {
         {/* Password Reset + Auth */}
         <Route path="/reset-password" element={<PasswordResetRequest />} />
         <Route path="/reset-password/:token" element={<PasswordResetComplete />} />
+        <Route path="/forgot-password" element={<PasswordResetRequest />} />
+        <Route path="/reset/:token" element={<PasswordResetComplete />} />
         <Route path="/logout" element={<Logout />} />
 
         {/* Demo / Utility */}
         <Route path="/typography" element={<TypographyPreview />} />
         <Route path="/icons" element={<IconDemo />} />
 
-        {/* Dashboard + Profile Sections */}
+        {/* Dashboard + Profile */}
         <Route path="/dashboard" element={<ProfileDashboard />} />
         <Route path="/education" element={<EducationPage />} />
         <Route path="/certifications" element={<CertificationsPage />} />

@@ -18,7 +18,7 @@ export const Card = ({
   const ElementType = to ? Link : Component;
   
   // Base card styles
-  const baseStyles = 'rounded-lg bg-white border border-gray-200';
+  const baseStyles = 'rounded-lg bg-[var(--panel-bg)] border border-[var(--border-color)]';
   
   // Size-specific padding
   const sizeStyles = {

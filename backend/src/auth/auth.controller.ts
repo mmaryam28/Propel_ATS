@@ -1,4 +1,16 @@
-import { Body, Controller, Post, BadRequestException, HttpCode, HttpStatus, Get, Put, Req, UseGuards, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  BadRequestException,
+  HttpCode,
+  HttpStatus,
+  Get,
+  Put,
+  Req,
+  UseGuards,
+  Res,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { AuthService } from './auth.service';
@@ -37,7 +49,6 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getMe(@Req() req) {
-    // Return current user profile
     const userId = req.user.userId;
     const user = await this.authService.getUserById(userId);
     if (!user) throw new BadRequestException({ error: 'User not found' });
@@ -56,7 +67,29 @@ export class AuthController {
     }
   }
 
-  // Google OAuth
+  // ---------- Password reset (new) ----------
+  @Post('request-password-reset')
+  @HttpCode(HttpStatus.OK)
+  async requestPasswordReset(@Body('email') email: string) {
+    return this.authService.requestPasswordReset(email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: { token: string; password: string }) {
+    const { token, password } = body || {};
+    if (!token || !password) {
+      throw new BadRequestException({ error: 'Token and password are required' });
+    }
+    try {
+      return await this.authService.resetPassword(token, password);
+    } catch (e: any) {
+      // Keep message shape consistent with your frontend expectations
+      throw new BadRequestException({ message: e?.message || 'Invalid or expired reset link' });
+    }
+  }
+
+  // ---------- Google OAuth ----------
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth() {}
@@ -73,7 +106,7 @@ export class AuthController {
     }
   }
 
-  // LinkedIn OAuth
+  // ---------- LinkedIn OAuth ----------
   @Get('linkedin')
   @UseGuards(AuthGuard('linkedin'))
   async linkedinAuth() {}
@@ -89,5 +122,4 @@ export class AuthController {
       return res.redirect(`${frontend}/login?error=${encodeURIComponent(e?.message || 'LinkedIn login failed')}`);
     }
   }
-
 }

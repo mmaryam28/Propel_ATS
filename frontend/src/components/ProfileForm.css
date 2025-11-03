@@ -1,165 +1,44 @@
+/* ===== Page layout ===== */
+.page-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 16px 24px;
+}
+
+.page-title {
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-weight: 650;
+  font-size: 1.75rem; /* ~28px */
+  line-height: 1.2;
+  color: #0f172a; /* slate-900 */
+  margin: 18px 0 14px;
+}
+
 /* --- Profile Container --- */
 .profile-container {
   width: 100%;
-  max-width: 520px;
-  margin: 32px auto;
+  max-width: 56rem; /* ~896px */
+  margin: 0 auto;
   padding: 24px;
-  border-radius: 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
   box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
-  background-color: #fff;
   font-family: 'Inter', system-ui, sans-serif;
+  color: #111827;
 }
 
-/* --- Profile Form --- */
-.profile-form {
-  display: flex;
-  flex-direction: column;
+/* Optional section label INSIDE the card */
+.section-title {
+  margin: 0 0 8px 0;
+  font-weight: 700;
+  font-size: 1.125rem; /* 18px */
+  color: #111827;
 }
 
-.profile-form input,
-.profile-form select,
-.profile-form textarea {
-  margin-top: 5px;
-  margin-bottom: 10px;
-  padding: 8px;
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-
-.profile-form textarea {
-  min-height: 80px;
-}
-
-.button-group {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 15px;
-}
-
-/* --- Buttons --- */
-.save-btn {
-  background-color: #4f46e5;
-  color: #fff;
-  padding: 10px 18px;
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 1rem;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background 0.18s, color 0.18s;
-}
-
-.save-btn:hover {
-  background-color: #4338ca;
-  opacity: 0.98;
-}
-
-.cancel-btn {
-  background-color: #6b7280;
-  color: #fff;
-  padding: 10px 18px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background 0.18s, color 0.18s;
-}
-
-.cancel-btn:hover {
-  background-color: #4b5563;
-  color: #fff;
-  opacity: 0.98;
-}
-
-/* --- Messages --- */
-.error {
-  color: red;
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-top: 0.5rem;
-}
-
-.success {
-  color: green;
-  font-weight: 600;
-  margin-top: 15px;
-}
-
-/* --- Character Counter --- */
-.char-count {
-  font-size: 0.85em;
-  color: #555;
-  text-align: right;
-}
-
-/* --- Profile Picture Section --- */
-.profile-picture-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.profile-preview {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #ccc;
-  margin-bottom: 0.8rem;
-}
-
-.upload-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.upload-label {
-  background-color: #007bff;
-  color: white;
-  padding: 0.4rem 0.8rem;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.upload-label:hover {
-  background-color: #0056b3;
-}
-
-button {
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #5a6268;
-}
-
-/* --- Progress Bar --- */
-.progress-bar {
-  width: 100%;
-  background: #eee;
-  height: 8px;
-  border-radius: 4px;
-  margin-top: 0.8rem;
-}
-
-.progress {
-  height: 8px;
-  background: #28a745;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-/* --- Employment Form --- */
+/* ===== Form layout ===== */
 .employment-form {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 16px;
   background: #fff;
   padding: 24px;
@@ -168,141 +47,242 @@ button:hover {
   margin-top: 24px;
 }
 
+.employment-form label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+/* Inputs / Textareas */
 .employment-form input,
 .employment-form textarea {
   width: 100%;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
   font-size: 1rem;
+  color: #111827;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
+.employment-form textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+/* Focus */
+.employment-form input:focus,
+.employment-form textarea:focus {
+  outline: none;
+  border-color: #93c5fd; /* blue-300 */
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+/* Dates row responsive */
 .date-row {
-  display: flex;
-  gap: 15px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 640px) {
+  .date-row {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
-/* --- Button Group --- */
-.button-group {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.back-btn {
-  background-color: #9ca3af;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 14px;
-  cursor: pointer;
-}
-
-.back-btn:hover {
-  background-color: #6b7280;
-}
-
-/* --- Employment List --- */
+/* Checkbox row */
 .current-position {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center; 
-  gap: 8px;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  width: 100%;
+  gap: 10px;
+  margin: 4px 0 2px;
 }
-
 .current-position input[type="checkbox"] {
   width: 18px;
   height: 18px;
+  accent-color: #4f46e5;
   cursor: pointer;
 }
-
 .current-position label {
   font-weight: 500;
-  cursor: pointer;
-  font-size: 1rem;
+  color: #374151;
 }
 
+/* Helper text */
+.employment-form p {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 2px 0 0;
+}
+
+.success {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.error {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* Buttons */
+.button-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+
+/* Shared button base */
+.button-group .save-btn,
+.button-group .cancel-btn,
+.button-group .finish-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  line-height: 1.25;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #111827;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.06s ease;
+  box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04);
+}
+
+.button-group .save-btn:focus-visible,
+.button-group .cancel-btn:focus-visible,
+.button-group .finish-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+  border-color: #93c5fd;
+}
+
+/* Primary (Save / Finish) */
+.button-group .save-btn,
+.button-group .finish-btn {
+  background: #2563eb;
+  color: #fff;
+  border-color: transparent;
+}
+.button-group .save-btn:hover,
+.button-group .finish-btn:hover {
+  background: #1d4ed8;
+}
+
+/* Cancel */
+.button-group .cancel-btn {
+  background: #eaebed;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+.button-group .cancel-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* History list */
 .employment-list {
   margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  display: grid;
+  gap: 14px;
 }
 
 .employment-entry {
-  border-left: 4px solid #ccc;
-  padding-left: 15px;
-  background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   position: relative;
+  border-left: 3px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 16px 14px 18px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.18s ease, transform 0.06s ease;
+}
+
+.employment-entry:hover {
+  box-shadow: 0 8px 16px rgba(16, 24, 40, 0.08), 0 2px 4px rgba(16, 24, 40, 0.06);
+  transform: translateY(-1px);
 }
 
 .employment-entry::before {
   content: "";
   position: absolute;
-  left: -9px;
-  top: 12px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: #999;
+  left: -7px;
+  top: 16px;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #9ca3af;
 }
 
 .current-role {
-  border-left-color: #007bff;
+  border-left-color: #4f46e5;
 }
 
 .current-role::before {
-  background-color: #007bff;
+  background: #4f46e5;
 }
 
+/* Entry text */
 .employment-header h4 {
-  margin: 0;
+  margin: 0 0 4px;
+  font-weight: 700;
+  font-size: 1.05rem;
 }
-
 .company {
-  font-weight: bold;
-  color: #333;
+  font-weight: 600;
+  color: #111827;
 }
-
-.dates {
-  font-size: 0.9rem;
-  color: #555;
-}
-
+.dates,
 .location {
   font-size: 0.9rem;
-  color: #777;
+  color: #6b7280;
+}
+.description {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  color: #374151;
 }
 
-.description {
-  margin-top: 5px;
-  font-size: 0.9rem;
-  color: #555;
+/* Entry action buttons */
+.edit-btn,
+.delete-btn {
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
 }
 
 .edit-btn {
-  background: #007bff;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
-  cursor: pointer;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+.edit-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
 }
 
 .delete-btn {
-  background: #dc3545;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
-  cursor: pointer;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
+/* Profile summary avatar */
 .summary-avatar {
   width: 150px;
   height: 150px;
@@ -310,4 +290,7 @@ button:hover {
   border-radius: 50%;
   margin: 15px 0;
   border: 3px solid #ddd;
+}
+.summary-avatar:hover {
+  border-color: #4f46e5;
 }

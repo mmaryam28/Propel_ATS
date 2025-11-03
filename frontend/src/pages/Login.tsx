@@ -60,15 +60,30 @@ export default function Login() {
 
           {error && <p className="error">{error}</p>}
 
+          {/* NEW Forgot Password link */}
+          <p style={{ marginTop: 8 }}>
+            <Link to="/forgot-password">Forgot your password?</Link>
+          </p>
+
           <button type="submit">Sign In</button>
+
           <div style={{ margin: '16px 0' }}>
-            <button type="button" className="btn btn--oauth" onClick={() => window.location.href = '/auth/google'}>
+            <button
+              type="button"
+              className="btn btn--oauth"
+              onClick={() => (window.location.href = "/auth/google")}
+            >
               Sign in with Google
             </button>
-            <button type="button" className="btn btn--oauth" onClick={() => window.location.href = '/auth/linkedin'}>
+            <button
+              type="button"
+              className="btn btn--oauth"
+              onClick={() => (window.location.href = "/auth/linkedin")}
+            >
               Sign in with LinkedIn
             </button>
           </div>
+
           <p>
             <Link to="/register">Create an account →</Link>
           </p>
