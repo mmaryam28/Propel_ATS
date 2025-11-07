@@ -1,58 +1,116 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class CertificationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private supabase: SupabaseService) {}
 
   async create(data: any) {
+    const client = this.supabase.getClient();
     const payload: any = {
-      user: { connect: { id: String(data.userId) } },
+      user_id: String(data.userId),
       name: data.name,
-      issuingOrganization: data.issuingOrganization,
-      dateEarned: new Date(data.dateEarned),
-      expirationDate: data.expirationDate ? new Date(data.expirationDate) : null,
-      doesNotExpire: !!data.doesNotExpire,
-      certificationNumber: data.certificationNumber,
-      documentUrl: data.documentUrl,
+      issuing_organization: data.issuingOrganization,
+      date_earned: new Date(data.dateEarned).toISOString(),
+      expiration_date: data.expirationDate ? new Date(data.expirationDate).toISOString() : null,
+      does_not_expire: !!data.doesNotExpire,
+      certification_number: data.certificationNumber,
+      document_url: data.documentUrl,
       category: data.category,
-      renewalReminderDays: data.renewalReminderDays,
+      renewal_reminder_days: data.renewalReminderDays,
     };
-    // Debug logging
+    
     console.log('CertificationService.create called with userId:', data.userId);
-    console.log('Payload for Prisma:', JSON.stringify(payload, null, 2));
+    console.log('Payload for Supabase:', JSON.stringify(payload, null, 2));
+    
     try {
-      return await (this.prisma as any).certification.create({ data: payload });
+      const { data: certification, error } = await client
+        .from('certifications')
+        .insert(payload)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Supabase error during certification.create:', error);
+        throw error;
+      }
+      
+      return certification;
     } catch (err) {
-      console.error('Prisma error during certification.create:', err);
+      console.error('Error during certification.create:', err);
       throw err;
     }
   }
 
   async findAllByUser(userId: string) {
-    return (this.prisma as any).certification.findMany({ where: { userId: String(userId) }, orderBy: { dateEarned: 'desc' } });
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('certifications')
+      .select('*')
+      .eq('user_id', String(userId))
+      .order('date_earned', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
   }
 
   async findOne(id: number) {
-  return (this.prisma as any).certification.findUnique({ where: { id } });
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('certifications')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
   }
 
   async update(id: number, data: any) {
+    const client = this.supabase.getClient();
     const payload: any = { ...data };
-    if (data.dateEarned) payload.dateEarned = new Date(data.dateEarned);
-    if (data.expirationDate !== undefined) payload.expirationDate = data.expirationDate ? new Date(data.expirationDate) : null;
-  return (this.prisma as any).certification.update({ where: { id }, data: payload });
+    if (data.dateEarned) payload.dateEarned = new Date(data.dateEarned).toISOString();
+    if (data.expirationDate !== undefined) {
+      payload.expirationDate = data.expirationDate ? new Date(data.expirationDate).toISOString() : null;
+    }
+    
+    const { data: certification, error } = await client
+      .from('certifications')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return certification;
   }
 
   async remove(id: number) {
-  return (this.prisma as any).certification.delete({ where: { id } });
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('certifications')
+      .delete()
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
   }
 
   async searchOrganizations(q: string) {
-    return (this.prisma as any).certification.findMany({
-      where: { issuingOrganization: { contains: q, mode: 'insensitive' } },
-      take: 10,
-      distinct: ['issuingOrganization'],
-    });
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('certifications')
+      .select('issuing_organization')
+      .ilike('issuing_organization', `%${q}%`)
+      .limit(10);
+    // Remove duplicates
+    const orgs = Array.from(new Set(data?.map(c => c.issuing_organization) || []));
+    return orgs.map(org => ({ issuingOrganization: org }));
+    
+    if (error) throw error;
+    
+    // Remove duplicates
   }
 }

@@ -9,7 +9,9 @@ import { CertificationModule } from './certification/certification.module';
 import { ProjectsModule } from './projects/projects.module';
 import { MailModule } from './mail/mail.module';
 import { SkillsModule } from './skills/skills.module';
-import { PrismaService } from './prisma/prisma.service';
+import { SupabaseModule } from './supabase/supabase.module';
+import { ProfileModule } from './profile/profile.module';
+import { EmploymentModule } from './employment/employment.module';
 
 @Module({
   imports: [
@@ -17,16 +19,19 @@ import { PrismaService } from './prisma/prisma.service';
       isGlobal: true,
       envFilePath: ['.env'], // ensures backend/.env is loaded
     }),
+    SupabaseModule,
     AuthModule,
     ApplicationsModule,
     EducationModule,
     CertificationModule,
-    ProjectsModule,
-    MailModule,
-    SkillsModule,
+  ProjectsModule,
+  MailModule,
+  SkillsModule,
+  ProfileModule,
+  EmploymentModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
-  exports: [AppService, PrismaService],
+  providers: [AppService],
+  exports: [AppService],
 })
 export class AppModule {}

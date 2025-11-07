@@ -7,16 +7,14 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { SupabaseService } from '../supabase/supabase.service';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
-    private prisma: PrismaService,
+    private supabase: SupabaseService,
     private mail: MailService,
   ) {}
 
@@ -24,31 +22,52 @@ export class AuthService {
 
   async register(firstname: string, lastname: string, email: string, password: string) {
     const normalizedEmail = email.trim().toLowerCase();
+    const client = this.supabase.getClient();
 
-    const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    // Check if user already exists
+    const { data: existing } = await client
+      .from('users')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .single();
+
     if (existing) throw new ConflictException('Email already registered');
 
     const hash = await bcrypt.hash(password, 10);
 
     try {
-      const user = await this.prisma.user.create({
-        data: { firstname, lastname, email: normalizedEmail, password: hash },
-      });
+      const { data: user, error } = await client
+        .from('users')
+        .insert({
+          firstname,
+          lastname,
+          email: normalizedEmail,
+          password: hash,
+        })
+        .select()
+        .single();
+
+      if (error) throw new ConflictException(error.message);
+      if (!user) throw new ConflictException('Failed to create user');
+
       return this.issueLoginForUser(user.id);
     } catch (e: any) {
-      if (e instanceof PrismaClientKnownRequestError) {
-        if (e.code === 'P2002') throw new ConflictException('Email already registered');
-        if (e.code === 'P2003') throw new ConflictException('Foreign key constraint failed');
-        throw new ConflictException(`Prisma error: ${e.message}`);
-      }
+      if (e.code === '23505') throw new ConflictException('Email already registered');
       throw new ConflictException(e?.message || 'Unknown error during registration');
     }
   }
 
   async login(email: string, password: string) {
     const normalizedEmail = email.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    const client = this.supabase.getClient();
+
+    const { data: user, error } = await client
+      .from('users')
+      .select('*')
+      .eq('email', normalizedEmail)
+      .single();
+
+    if (error || !user) throw new UnauthorizedException('Invalid credentials');
 
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
@@ -62,20 +81,40 @@ export class AuthService {
   ) {
     const email = (profile.email || '').trim().toLowerCase();
     if (!email) throw new UnauthorizedException(`${provider} account does not provide an email`);
+    const client = this.supabase.getClient();
 
-    let user = await this.prisma.user.findUnique({ where: { email } });
+    let { data: user } = await client
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
     if (!user) {
       const hash = await bcrypt.hash(`oauth:${provider}:${email}:${Date.now()}`, 10);
       const firstname = profile.firstname || 'User';
       const lastname = profile.lastname || provider;
-      user = await this.prisma.user.create({ data: { email, password: hash, firstname, lastname } });
+      
+      const { data: newUser, error } = await client
+        .from('users')
+        .insert({ email, password: hash, firstname, lastname })
+        .select()
+        .single();
+
+      if (error || !newUser) throw new ConflictException('Failed to create OAuth user');
+      user = newUser;
     }
 
     return this.issueLoginForUser(user.id);
   }
 
   async getUserById(userId: string) {
-    return this.prisma.user.findUnique({ where: { id: userId } });
+    const client = this.supabase.getClient();
+    const { data } = await client
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    return data;
   }
 
   async updateUserProfile(userId: string, data: any) {
@@ -85,34 +124,52 @@ export class AuthService {
       if (data[key] !== undefined) update[key] = data[key];
     }
     if (update.email) update.email = update.email.trim().toLowerCase();
-    return this.prisma.user.update({ where: { id: userId }, data: update });
+    
+    const client = this.supabase.getClient();
+    const { data: updatedUser, error } = await client
+      .from('users')
+      .update(update)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+    return updatedUser;
   }
 
   // ===== Password reset: UC-006 request =====================================
 
   async requestPasswordReset(email: string) {
     const normalized = (email || '').trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email: normalized } });
+    const client = this.supabase.getClient();
+
+    const { data: user } = await client
+      .from('users')
+      .select('*')
+      .eq('email', normalized)
+      .single();
 
     // Always return generic success, but only create token if user exists
     if (user) {
       // Invalidate any previous unused tokens
-      await this.prisma.passwordResetToken.deleteMany({
-        where: { userId: user.id, usedAt: null },
-      });
+      await client
+        .from('PasswordResetToken')
+        .delete()
+        .eq('userId', user.id)
+        .is('usedAt', null);
 
       // Generate raw token and store only its hash
       const raw = crypto.randomBytes(48).toString('hex');
       const tokenHash = crypto.createHash('sha256').update(raw).digest('hex');
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-      await this.prisma.passwordResetToken.create({
-        data: {
+      await client
+        .from('PasswordResetToken')
+        .insert({
           userId: user.id,
           tokenHash,
-          expiresAt,
-        },
-      });
+          expiresAt: expiresAt.toISOString(),
+        });
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const appName = process.env.APP_NAME || 'Propel';
@@ -145,31 +202,39 @@ export class AuthService {
     this.validatePasswordPolicy(newPassword);
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const client = this.supabase.getClient();
 
-    const prt = await this.prisma.passwordResetToken.findUnique({
-      where: { tokenHash },
-      include: { user: true },
-    });
+    const { data: prt, error } = await client
+      .from('PasswordResetToken')
+      .select('*, user:users(*)')
+      .eq('tokenHash', tokenHash)
+      .single();
 
-    if (!prt || prt.usedAt || prt.expiresAt < new Date()) {
+    if (error || !prt || prt.usedAt || new Date(prt.expiresAt) < new Date()) {
       throw new UnauthorizedException('Invalid or expired reset link');
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: prt.userId },
-        data: { password: passwordHash },
-      }),
-      this.prisma.passwordResetToken.update({
-        where: { tokenHash },
-        data: { usedAt: new Date() },
-      }),
-      this.prisma.passwordResetToken.deleteMany({
-        where: { userId: prt.userId, usedAt: null, tokenHash: { not: tokenHash } },
-      }),
-    ]);
+    // Update user password
+    await client
+      .from('users')
+      .update({ password: passwordHash })
+      .eq('id', prt.userId);
+
+    // Mark token as used
+    await client
+      .from('PasswordResetToken')
+      .update({ usedAt: new Date().toISOString() })
+      .eq('tokenHash', tokenHash);
+
+    // Delete other unused tokens for this user
+    await client
+      .from('PasswordResetToken')
+      .delete()
+      .eq('userId', prt.userId)
+      .is('usedAt', null)
+      .neq('tokenHash', tokenHash);
 
     // Auto-login after reset
     return this.issueLoginForUser(prt.userId);
@@ -185,8 +250,14 @@ export class AuthService {
   }
 
   private async issueLoginForUser(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new UnauthorizedException('User not found');
+    const client = this.supabase.getClient();
+    const { data: user, error } = await client
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error || !user) throw new UnauthorizedException('User not found');
 
     return {
       token: this.jwtService.sign({ sub: user.id.toString(), email: user.email }),

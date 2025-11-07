@@ -1,3 +1,5 @@
-"node_modules/`ndist/`n.env*`nfrontend/.env*`nbackend/.env*`n.DS_Store" 
 
+.env
+frontend/.env
+backend/.env
 node_modules

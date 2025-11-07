@@ -6,9 +6,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseModule } from '../supabase/supabase.module';
 import { MailModule } from '../mail/mail.module';
-// import { JwtStrategy } from './jwt.strategy'; // if you have one
+import { JwtStrategy } from './jwt.strategy';
 
 // JSON Web Token "ms" style duration string type
 type MsString = `${number}${'ms'|'s'|'m'|'h'|'d'|'w'|'y'}`;
@@ -32,12 +32,12 @@ type MsString = `${number}${'ms'|'s'|'m'|'h'|'d'|'w'|'y'}`;
       },
     }),
     MailModule, // <-- ensures MailService is available here
+    SupabaseModule, // <-- provides SupabaseService
   ],
   controllers: [AuthController],
   providers: [
     AuthService,
-    PrismaService,
-    // JwtStrategy,
+    JwtStrategy,
   ],
   exports: [AuthService],
 })

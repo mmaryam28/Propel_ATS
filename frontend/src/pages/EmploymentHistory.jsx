@@ -1,8 +1,10 @@
 // src/pages/EmploymentHistory.jsx
-import React, { useState } from "react";
-import "../components/ProfileForm.css"; // keep using your CSS
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import "../components/ProfileForm.css";
 
 export default function EmploymentHistoryPage() {
+  const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
   const [employment, setEmployment] = useState({
     title: "",
     company: "",
@@ -12,16 +14,31 @@ export default function EmploymentHistoryPage() {
     current: false,
     description: "",
   });
-
   const [employmentHistory, setEmploymentHistory] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
   const [employmentError, setEmploymentError] = useState("");
   const [employmentSuccess, setEmploymentSuccess] = useState("");
   const [descCount, setDescCount] = useState(0);
+  const [userId, setUserId] = useState(null);
 
-  const handleEmploymentSubmit = () => {
+  // Fetch current user info on mount
+  useEffect(() => {
+    const token = window.localStorage.getItem('token');
+    if (!token) return;
+    axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => {
+        if (r.data?.user?.id) {
+          setUserId(r.data.user.id);
+          // Fetch employment history for this user
+          axios.get(`${API}/employment/${r.data.user.id}`)
+            .then((res) => setEmploymentHistory(Array.isArray(res.data) ? res.data : []))
+            .catch(() => setEmploymentHistory([]));
+        }
+      });
+  }, []);
+
+  const handleEmploymentSubmit = async () => {
     const { title, company, startDate, endDate, current } = employment;
-
     if (!title || !company || !startDate) {
       setEmploymentError("Please fill in all required fields (Title, Company, Start Date).");
       setEmploymentSuccess("");
@@ -32,28 +49,34 @@ export default function EmploymentHistoryPage() {
       setEmploymentSuccess("");
       return;
     }
-
-    const updated = [...employmentHistory];
-    if (editingIndex !== null) {
-      updated[editingIndex] = employment;
+    try {
+      if (editingIndex !== null && employmentHistory[editingIndex]?.id) {
+        // Update existing entry
+        await axios.put(`${API}/employment/${employmentHistory[editingIndex].id}`, employment);
+      } else {
+        // Add new entry
+        await axios.post(`${API}/employment`, { ...employment, userId });
+      }
+      // Refresh history
+  const res = await axios.get(`${API}/employment/${userId}`);
+  setEmploymentHistory(Array.isArray(res.data) ? res.data : []);
       setEditingIndex(null);
-    } else {
-      updated.unshift(employment); // newest first
+      setEmployment({
+        title: "",
+        company: "",
+        location: "",
+        startDate: "",
+        endDate: "",
+        current: false,
+        description: "",
+      });
+      setDescCount(0);
+      setEmploymentError("");
+      setEmploymentSuccess("Employment entry saved successfully!");
+    } catch (err) {
+      setEmploymentError("Failed to save employment entry.");
+      setEmploymentSuccess("");
     }
-
-    setEmploymentHistory(updated);
-    setEmployment({
-      title: "",
-      company: "",
-      location: "",
-      startDate: "",
-      endDate: "",
-      current: false,
-      description: "",
-    });
-    setDescCount(0);
-    setEmploymentError("");
-    setEmploymentSuccess("Employment entry saved successfully!");
   };
 
   const handleEmploymentCancel = () => {
@@ -79,11 +102,24 @@ export default function EmploymentHistoryPage() {
     setEmploymentSuccess("");
   };
 
-  const handleDeleteEmployment = (index) => {
+  const handleDeleteEmployment = async (index) => {
     if (window.confirm("Are you sure you want to delete this entry?")) {
-      setEmploymentHistory(employmentHistory.filter((_, i) => i !== index));
+      try {
+        const entry = employmentHistory[index];
+        if (entry?.id) {
+          await axios.delete(`${API}/employment/${entry.id}`);
+        }
+        // Refresh history
+  const res = await axios.get(`${API}/employment/${userId}`);
+  setEmploymentHistory(Array.isArray(res.data) ? res.data : []);
+      } catch {
+        // fallback: remove locally
+        setEmploymentHistory(employmentHistory.filter((_, i) => i !== index));
+      }
     }
   };
+
+  // (Removed duplicate handleDeleteEmployment)
 
   const handleFinish = () => {
     localStorage.setItem("employmentHistory", JSON.stringify(employmentHistory));
