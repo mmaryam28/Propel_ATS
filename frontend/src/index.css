@@ -72,8 +72,8 @@ body {
   small, .caption { @apply text-caption text-gray-600; }
 
   /* Links */
-  a { @apply text-indigo-600 font-medium; text-decoration: none; }
-  a:hover { @apply text-indigo-700 underline; }
+  a { color: var(--primary-color); font-weight: 500; text-decoration: none; }
+  a:hover { color: var(--secondary-color); text-decoration: underline; }
 
   /* Buttons */
   button { @apply rounded-md px-3 py-2; }
@@ -96,15 +96,19 @@ body {
   /* Button base */
   .btn {
     @apply inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 rounded-md;
-    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2;
-    @apply disabled:cursor-not-allowed disabled:opacity-60 relative;
+    @apply focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 relative;
   }
+  .btn:focus-visible { box-shadow: 0 0 0 2px rgba(30,136,229,.5); }
 
   /* Button Variants */
   .btn-primary {
-    @apply bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-sm;
-    @apply disabled:bg-indigo-300 disabled:shadow-none;
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(16,24,40,.06);
   }
+  .btn-primary:hover { background: var(--secondary-color); }
+  .btn-primary:active { filter: brightness(.95); }
+  .btn-primary:disabled { background: #9ec9f3; box-shadow: none; }
 
   .btn-secondary {
     @apply bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 active:bg-gray-100 hover:border-gray-400 shadow-sm;
@@ -112,9 +116,11 @@ body {
   }
 
   .btn-tertiary {
-    @apply bg-transparent text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50;
-    @apply disabled:text-gray-400 disabled:hover:bg-transparent;
+    background: transparent;
+    color: var(--primary-color);
   }
+  .btn-tertiary:hover { color: var(--secondary-color); background: rgba(30,136,229,.08); }
+  .btn-tertiary:disabled { color: #9ca3af; }
 
   .btn-danger {
     @apply bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-sm;
@@ -146,11 +152,17 @@ body {
   }
 
   .input:focus {
-    @apply outline-none ring-2 ring-indigo-400 border-indigo-500 ring-offset-0;
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(30,136,229,.25);
   }
 
   select.input {
-    @apply pr-10;
+    /* Hide native arrow to avoid doubling with our custom chevron */
+    padding-right: 2.5rem; /* pr-10 */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 0.5rem center;
     background-repeat: no-repeat;
@@ -181,7 +193,8 @@ body {
 
   /* Checkboxes / Radios */
   .checkbox, .radio {
-    @apply h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 transition duration-200;
+    @apply h-4 w-4 border-gray-300 transition duration-200;
+    accent-color: var(--primary-color);
   }
   .radio { @apply rounded-full; }
   .checkbox { @apply rounded; }

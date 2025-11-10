@@ -8,3 +8,79 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
   
 });
+
+// Attach Authorization header from localStorage, if present
+api.interceptors.request.use((config) => {
+  try {
+    const token = window.localStorage.getItem('token');
+    if (token) {
+      config.headers = config.headers || {};
+      // Preserve any existing Authorization header but prefer token from storage
+      if (!('Authorization' in config.headers)) {
+        (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+      }
+    }
+  } catch {
+    // no-op if localStorage is unavailable
+  }
+  return config;
+});
+
+export type Job = {
+  id: string;
+  title: string;
+  company: string;
+  location?: string;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  postingUrl?: string | null;
+  deadline?: string | null;          // ISO date
+  description?: string | null;       // <= 2000
+  industry?: string | null;
+  jobType?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type NewJobPayload = Omit<Job, 'id'|'createdAt'|'updatedAt'>;
+
+/* ---------- Endpoints ---------- */
+export async function listJobs(): Promise<Job[]> {
+  const { data } = await api.get('/jobs', { withCredentials: true });
+  return data;
+}
+
+export async function createJob(payload: NewJobPayload): Promise<Job> {
+  // enforce client-side max length just in case
+  const toNum = (v: unknown) => {
+    if (v === '' || v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const toStrOrNull = (v: unknown) => {
+    const s = (v ?? '').toString().trim();
+    return s.length ? s : null;
+  };
+  const toDateOrNull = (v: unknown) => {
+    const s = (v ?? '').toString().trim();
+    if (!s) return null;
+    // Accept YYYY-MM-DD as-is or any parseable date string
+    // Avoid timezone shifts by not forcing toISOString here
+    return s;
+  };
+
+  const body = {
+    title: toStrOrNull(payload.title)!,
+    company: toStrOrNull(payload.company)!,
+    location: toStrOrNull(payload.location),
+    postingUrl: toStrOrNull(payload.postingUrl),
+    deadline: toDateOrNull(payload.deadline),
+    description: toStrOrNull((payload.description ?? '').slice(0, 2000)),
+    industry: toStrOrNull(payload.industry),
+    jobType: toStrOrNull(payload.jobType),
+    salaryMin: toNum(payload.salaryMin),
+    salaryMax: toNum(payload.salaryMax),
+  } as const;
+  const { data } = await api.post('/jobs', body, { withCredentials: true });
+  return data;
+}

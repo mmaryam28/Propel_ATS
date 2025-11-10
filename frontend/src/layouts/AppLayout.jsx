@@ -7,7 +7,7 @@ const classNames = (...xs) => xs.filter(Boolean).join(" ");
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: "home" },
-  //{ to: "/jobs", label: "Jobs", icon: "job" },
+  { to: "/jobs", label: "Jobs", icon: "job" },
   //{ to: "/applications", label: "Applications", icon: "applications" },
   { to: "/education", label: "Education", icon: "education" },
   { to: "/certifications", label: "Certifications", icon: "certifications" },

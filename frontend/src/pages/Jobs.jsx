@@ -1,83 +1,107 @@
-import React, { useMemo, useState } from "react";
-import { Card } from "../components/ui/Card";
-import { Icon } from "../components/ui/Icon";
-
-// demo data; replace with API later
-const JOBS = [
-  { id: "123", title: "Frontend Engineer", company: "Acme Inc.", location: "Remote (US)", type: "Full-time", postedAt: "2025-02-01" },
-  { id: "456", title: "Backend Engineer",  company: "Globex",    location: "NYC, NY",     type: "Contract",  postedAt: "2025-01-20" },
-];
+// frontend/src/pages/Jobs.jsx
+import React from "react";
+import JobForm from "../components/JobForm";
+import { listJobs, createJob } from "../lib/api";
 
 export default function Jobs() {
-  const [q, setQ] = useState("");
+  const [jobs, setJobs] = React.useState([]);
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [createError, setCreateError] = React.useState("");
 
-  const results = useMemo(() => {
-    const v = q.trim().toLowerCase();
-    if (!v) return JOBS;
-    return JOBS.filter(j =>
-      [j.title, j.company, j.location, j.type].some(s => s.toLowerCase().includes(v))
-    );
-  }, [q]);
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await listJobs();
+      setJobs(data);
+    } catch (e) {
+      setError("Failed to load jobs.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  React.useEffect(() => { load(); }, []);
+
+  async function handleCreate(payload) {
+    try {
+      setCreateError("");
+      await createJob(payload);
+      setOpen(false);
+      await load();
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || "Failed to create job";
+      setCreateError(Array.isArray(msg) ? msg.join("; ") : msg);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Jobs</h1>
-          <p className="text-sm text-gray-600">Browse open roles and view details.</p>
+          <p className="text-sm text-gray-600">Add job opportunities to track them in your pipeline.</p>
         </div>
-
-        {/* Search */}
-        <div className="relative w-full sm:w-80">
-          <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search title, company, location…"
-            className="w-full rounded-lg border border-[var(--border-color)] bg-white pl-9 pr-3 py-2 text-sm outline-none
-                       focus:ring-2 focus:ring-[color:var(--primary-color)/0.25]"
-          />
-        </div>
+        <button className="btn btn-primary" onClick={() => setOpen(true)}>+ Add Job</button>
       </div>
 
-      {/* Results meta */}
-      <div className="text-sm text-gray-600">{results.length} result{results.length !== 1 ? "s" : ""}</div>
-
-      {/* Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {results.map((j) => (
-          <Card
-            key={j.id}
-            to={`/jobs/${j.id}`}
-            variant="hover"
-            size="large"
-            className="flex flex-col gap-3"
-          >
-            <Card.Header className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-gray-100 p-2"><Icon name="job" /></div>
-                <div>
-                  <Card.Title className="m-0">{j.title}</Card.Title>
-                  <Card.Description>{j.company}</Card.Description>
+      {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      {loading ? (
+        <div className="text-sm text-gray-600">Loading…</div>
+      ) : (
+        <>
+          <div className="text-sm text-gray-600">{jobs.length} job{jobs.length !== 1 ? "s" : ""}</div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {jobs.map(j => (
+              <div key={j.id} className="page-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-base font-semibold">{j.title}</div>
+                    <div className="text-sm text-gray-600">{j.company}</div>
+                  </div>
+                  {j.deadline && (
+                    <span className="text-xs rounded-md bg-gray-100 px-2 py-1">
+                      Deadline: {new Date(j.deadline).toLocaleDateString()}
+                    </span>
+                  )}
                 </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                  {j.location && <span className="rounded-md bg-gray-100 px-2 py-1">{j.location}</span>}
+                  {j.jobType && <span className="rounded-md bg-gray-100 px-2 py-1">{j.jobType}</span>}
+                  {j.industry && <span className="rounded-md bg-gray-100 px-2 py-1">{j.industry}</span>}
+                </div>
+                {j.postingUrl && (
+                  <a className="mt-3 inline-block text-sm font-medium text-[var(--primary-color)]"
+                     href={j.postingUrl} target="_blank" rel="noreferrer">
+                    View posting →
+                  </a>
+                )}
               </div>
-              <span className="text-xs text-gray-500">Posted {new Date(j.postedAt).toLocaleDateString()}</span>
-            </Card.Header>
+            ))}
+          </div>
+        </>
+      )}
 
-            <Card.Body>
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="rounded-md bg-gray-100 px-2 py-1">{j.location}</span>
-                <span className="rounded-md bg-gray-100 px-2 py-1">{j.type}</span>
-              </div>
-            </Card.Body>
-
-            <Card.Footer>
-              <span className="text-sm font-medium text-[var(--primary-color)]">View details →</span>
-            </Card.Footer>
-          </Card>
-        ))}
-      </div>
+      {open && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Add Job</h2>
+              <button className="btn btn-ghost" onClick={() => setOpen(false)}>✕</button>
+            </div>
+            <div className="mt-4">
+              {createError && (
+                <div className="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
+                  {createError}
+                </div>
+              )}
+              <JobForm onCancel={() => setOpen(false)} onSaved={handleCreate} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

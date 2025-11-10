@@ -12,6 +12,7 @@ import { SkillsModule } from './skills/skills.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { ProfileModule } from './profile/profile.module';
 import { EmploymentModule } from './employment/employment.module';
+import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { EmploymentModule } from './employment/employment.module';
   SkillsModule,
   ProfileModule,
   EmploymentModule,
+  JobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
