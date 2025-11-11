@@ -106,10 +106,10 @@ export default function Jobs() {
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Add Job</h2>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between sticky top-0 bg-white pb-3 mb-1">
+              <h2 className="text-lg font-semibold text-gray-900">Add Job</h2>
               <button className="btn btn-ghost" onClick={() => setOpen(false)}>✕</button>
             </div>
             <div className="mt-4">

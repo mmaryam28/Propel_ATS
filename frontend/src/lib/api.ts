@@ -106,3 +106,21 @@ export function daysInStage(job: Job): number | null {
   const now = Date.now();
   return Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
 }
+
+export type ImportJobResponse = {
+  success: boolean;
+  status: 'success' | 'partial' | 'failed';
+  data: {
+    title?: string;
+    company?: string;
+    location?: string;
+    description?: string;
+    postingUrl: string;
+  };
+  message: string;
+};
+
+export async function importJobFromUrl(url: string): Promise<ImportJobResponse> {
+  const { data } = await api.post('/jobs/import-from-url', { url }, { withCredentials: true });
+  return data;
+}
