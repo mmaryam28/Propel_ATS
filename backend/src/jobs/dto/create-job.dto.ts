@@ -1,4 +1,14 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, Min, IsIn } from 'class-validator';
+
+export const JOB_STATUSES = [
+  'Interested',
+  'Applied',
+  'Phone Screen',
+  'Interview',
+  'Offer',
+  'Rejected',
+] as const;
+export type JobStatus = typeof JOB_STATUSES[number];
 
 export class CreateJobDto {
   @IsString()
@@ -42,4 +52,9 @@ export class CreateJobDto {
   @IsInt()
   @Min(0)
   salaryMax?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(JOB_STATUSES as any)
+  status?: JobStatus;
 }

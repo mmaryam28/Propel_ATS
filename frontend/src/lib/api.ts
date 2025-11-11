@@ -38,6 +38,8 @@ export type Job = {
   description?: string | null;       // <= 2000
   industry?: string | null;
   jobType?: string | null;
+  status?: string;                   // pipeline stage
+  statusUpdatedAt?: string | null;   // ISO timestamp
   createdAt?: string;
   updatedAt?: string;
 };
@@ -45,8 +47,9 @@ export type Job = {
 export type NewJobPayload = Omit<Job, 'id'|'createdAt'|'updatedAt'>;
 
 /* ---------- Endpoints ---------- */
-export async function listJobs(): Promise<Job[]> {
-  const { data } = await api.get('/jobs', { withCredentials: true });
+export async function listJobs(status?: string): Promise<Job[]> {
+  const params = status ? { status } : undefined;
+  const { data } = await api.get('/jobs', { withCredentials: true, params });
   return data;
 }
 
@@ -80,7 +83,26 @@ export async function createJob(payload: NewJobPayload): Promise<Job> {
     jobType: toStrOrNull(payload.jobType),
     salaryMin: toNum(payload.salaryMin),
     salaryMax: toNum(payload.salaryMax),
+    // status intentionally omitted so backend default 'Interested' is used
   } as const;
   const { data } = await api.post('/jobs', body, { withCredentials: true });
   return data;
+}
+
+export async function updateJobStatus(id: string, status: string): Promise<Job> {
+  const { data } = await api.patch(`/jobs/${id}/status`, { status }, { withCredentials: true });
+  return data;
+}
+
+export async function bulkUpdateJobStatus(ids: string[], status: string): Promise<Job[]> {
+  const { data } = await api.post('/jobs/bulk-status', { ids, status }, { withCredentials: true });
+  return data;
+}
+
+export function daysInStage(job: Job): number | null {
+  if (!job.statusUpdatedAt) return null;
+  const start = new Date(job.statusUpdatedAt).getTime();
+  if (isNaN(start)) return null;
+  const now = Date.now();
+  return Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
 }

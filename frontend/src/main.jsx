@@ -6,6 +6,7 @@ import AppLayout from './layouts/AppLayout';
 // Pages
 import ProfileDashboard from './pages/ProfileDashboard.jsx';
 import Jobs from './pages/Jobs';
+import JobPipeline from './pages/JobPipeline.jsx';
 import JobDetails from './pages/JobDetails';
 import Applications from './pages/Applications';
 // import Documents from './pages/Documents';
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/dashboard', element: <ProfileDashboard /> },
       { path: '/jobs', element: <Jobs /> },
+  { path: '/jobs/pipeline', element: <JobPipeline /> },
       { path: '/jobs/:jobId', element: <JobDetails /> },
       { path: '/applications', element: <Applications /> },
       // { path: '/documents', element: <Documents /> },
