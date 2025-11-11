@@ -3,11 +3,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { JobsService } from './jobs.service';
 import { CreateJobDto, JOB_STATUSES } from './dto/create-job.dto';
 import type { JobStatus } from './dto/create-job.dto';
-<<<<<<< HEAD
+
 import { UpdateJobDto } from './dto/update-job.dto';
-=======
 import { ImportJobDto } from './dto/import-job.dto';
->>>>>>> feat/uc-041
+
 
 @Controller('jobs')
 @UseGuards(AuthGuard('jwt'))
@@ -59,15 +58,15 @@ export class JobsController {
     return this.jobs.bulkUpdateStatus(userId, ids, status);
   }
 
-<<<<<<< HEAD
+
   @Get(':id/history')
   async history(@Req() req: any, @Param('id') id: string) {
     const userId = req.user.userId;
     return this.jobs.getHistory(userId, id);
-=======
+  }
+
   @Post('import-from-url')
   async importFromUrl(@Body() dto: ImportJobDto) {
     return this.jobs.importFromUrl(dto.url);
->>>>>>> feat/uc-041
   }
 }

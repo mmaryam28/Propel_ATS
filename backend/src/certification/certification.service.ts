@@ -5,15 +5,22 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class CertificationService {
   constructor(private supabase: SupabaseService) {}
 
+  private toIsoOrNull(value: any): string | null {
+    if (value === undefined || value === null || value === '') return null;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
   async create(data: any) {
     const client = this.supabase.getClient();
     const payload: any = {
       user_id: String(data.userId),
       name: data.name,
       issuing_organization: data.issuingOrganization,
-      date_earned: new Date(data.dateEarned).toISOString(),
-      expiration_date: data.expirationDate ? new Date(data.expirationDate).toISOString() : null,
-      does_not_expire: !!data.doesNotExpire,
+      date_earned: this.toIsoOrNull(data.dateEarned),
+      // If it does not expire, force expiration_date to null
+      expiration_date: data?.doesNotExpire ? null : this.toIsoOrNull(data.expirationDate),
+      does_not_expire: !!data?.doesNotExpire,
       certification_number: data.certificationNumber,
       document_url: data.documentUrl,
       category: data.category,
@@ -68,11 +75,19 @@ export class CertificationService {
 
   async update(id: number, data: any) {
     const client = this.supabase.getClient();
-    const payload: any = { ...data };
-    if (data.dateEarned) payload.dateEarned = new Date(data.dateEarned).toISOString();
+    // Map incoming camelCase fields to DB snake_case columns and sanitize dates
+    const payload: any = {};
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.issuingOrganization !== undefined) payload.issuing_organization = data.issuingOrganization;
+    if (data.dateEarned !== undefined) payload.date_earned = this.toIsoOrNull(data.dateEarned);
+    if (data.doesNotExpire !== undefined) payload.does_not_expire = !!data.doesNotExpire;
     if (data.expirationDate !== undefined) {
-      payload.expirationDate = data.expirationDate ? new Date(data.expirationDate).toISOString() : null;
+      payload.expiration_date = data.doesNotExpire ? null : this.toIsoOrNull(data.expirationDate);
     }
+    if (data.certificationNumber !== undefined) payload.certification_number = data.certificationNumber;
+    if (data.documentUrl !== undefined) payload.document_url = data.documentUrl;
+    if (data.category !== undefined) payload.category = data.category;
+    if (data.renewalReminderDays !== undefined) payload.renewal_reminder_days = data.renewalReminderDays;
     
     const { data: certification, error } = await client
       .from('certifications')
@@ -105,12 +120,9 @@ export class CertificationService {
       .select('issuing_organization')
       .ilike('issuing_organization', `%${q}%`)
       .limit(10);
+    if (error) throw error;
     // Remove duplicates
     const orgs = Array.from(new Set(data?.map(c => c.issuing_organization) || []));
     return orgs.map(org => ({ issuingOrganization: org }));
-    
-    if (error) throw error;
-    
-    // Remove duplicates
   }
 }

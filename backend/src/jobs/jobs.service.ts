@@ -2,11 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateJobDto, JOB_STATUSES, JobStatus } from './dto/create-job.dto';
-<<<<<<< HEAD
-import { UpdateJobDto } from './dto/update-job.dto';
-=======
 import { ImportJobResponse } from './dto/import-job.dto';
->>>>>>> feat/uc-041
+import { UpdateJobDto } from './dto/update-job.dto';
 
 // DB <-> API mapping helpers
 // NOTE: Your Supabase table appears to have camelCase column names (userId, jobType, postingUrl, etc.)
