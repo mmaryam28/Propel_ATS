@@ -79,7 +79,7 @@ export default function Jobs() {
               <div key={j.id} className="page-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-base font-semibold">{j.title}</div>
+                    <Link to={`/jobs/${j.id}`} className="text-base font-semibold text-[var(--primary-color)] hover:underline">{j.title}</Link>
                     <div className="text-sm text-gray-600">{j.company}</div>
                   </div>
                   {j.deadline && (

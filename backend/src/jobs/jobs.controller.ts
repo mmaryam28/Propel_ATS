@@ -3,6 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { JobsService } from './jobs.service';
 import { CreateJobDto, JOB_STATUSES } from './dto/create-job.dto';
 import type { JobStatus } from './dto/create-job.dto';
+import { UpdateJobDto } from './dto/update-job.dto';
 
 @Controller('jobs')
 @UseGuards(AuthGuard('jwt'))
@@ -20,6 +21,18 @@ export class JobsController {
   async create(@Req() req: any, @Body() dto: CreateJobDto) {
     const userId = req.user.userId;
     return this.jobs.create(userId, dto);
+  }
+
+  @Get(':id')
+  async getOne(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.getById(userId, id);
+  }
+
+  @Patch(':id')
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateJobDto) {
+    const userId = req.user.userId;
+    return this.jobs.update(userId, id, dto);
   }
 
   @Patch(':id/status')
@@ -40,5 +53,11 @@ export class JobsController {
   ) {
     const userId = req.user.userId;
     return this.jobs.bulkUpdateStatus(userId, ids, status);
+  }
+
+  @Get(':id/history')
+  async history(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.getHistory(userId, id);
   }
 }

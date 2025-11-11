@@ -40,6 +40,15 @@ export type Job = {
   jobType?: string | null;
   status?: string;                   // pipeline stage
   statusUpdatedAt?: string | null;   // ISO timestamp
+  notes?: string | null;
+  negotiationNotes?: string | null;
+  interviewNotes?: string | null;
+  recruiterName?: string | null;
+  recruiterEmail?: string | null;
+  recruiterPhone?: string | null;
+  hiringManagerName?: string | null;
+  hiringManagerEmail?: string | null;
+  hiringManagerPhone?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -105,4 +114,22 @@ export function daysInStage(job: Job): number | null {
   if (isNaN(start)) return null;
   const now = Date.now();
   return Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
+}
+
+export async function getJob(id: string): Promise<Job> {
+  const { data } = await api.get(`/jobs/${id}`, { withCredentials: true });
+  return data;
+}
+
+export type UpdateJobPayload = Partial<Omit<Job, 'id'|'createdAt'|'updatedAt'>>;
+
+export async function updateJob(id: string, payload: UpdateJobPayload): Promise<Job> {
+  const { data } = await api.patch(`/jobs/${id}`, payload, { withCredentials: true });
+  return data;
+}
+
+export type JobHistoryItem = { id: string; status: string; note?: string | null; createdAt: string };
+export async function listJobHistory(id: string): Promise<JobHistoryItem[]> {
+  const { data } = await api.get(`/jobs/${id}/history`, { withCredentials: true });
+  return data;
 }

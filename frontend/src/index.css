@@ -47,7 +47,7 @@ body {
   html { font-size: 16px; }
 
   body {
-    @apply font-sans text-body text-gray-800 bg-white;
+    @apply font-sans text-base text-gray-800 bg-white;
     margin: 0;
     display: block;
     -webkit-font-smoothing: antialiased;
@@ -58,18 +58,18 @@ body {
   }
 
   /* Headings */
-  h1 { @apply font-heading text-h1 font-semibold text-gray-900; margin: 0 0 0.5rem; }
-  h2 { @apply font-heading text-h2 font-semibold text-gray-900; margin: 0 0 0.5rem; }
-  h3 { @apply font-heading text-h3 font-semibold text-gray-900; margin: 0 0 0.4rem; }
-  h4 { @apply font-heading text-h4 font-medium text-gray-900; margin: 0 0 0.4rem; }
-  h5 { @apply font-heading text-h5 font-medium text-gray-900; margin: 0 0 0.3rem; }
-  h6 { @apply font-heading text-h6 font-medium text-gray-900; margin: 0 0 0.3rem; }
+  h1 { @apply font-sans text-4xl md:text-5xl font-semibold text-gray-900; margin: 0 0 0.5rem; }
+  h2 { @apply font-sans text-3xl md:text-4xl font-semibold text-gray-900; margin: 0 0 0.5rem; }
+  h3 { @apply font-sans text-2xl md:text-3xl font-semibold text-gray-900; margin: 0 0 0.4rem; }
+  h4 { @apply font-sans text-xl md:text-2xl font-medium text-gray-900; margin: 0 0 0.4rem; }
+  h5 { @apply font-sans text-lg md:text-xl font-medium text-gray-900; margin: 0 0 0.3rem; }
+  h6 { @apply font-sans text-base md:text-lg font-medium text-gray-900; margin: 0 0 0.3rem; }
 
   /* Paragraphs and lists */
-  p, ul, ol, dl { @apply text-body mb-4; }
+  p, ul, ol, dl { @apply text-base mb-4; }
 
   /* Small text / captions */
-  small, .caption { @apply text-caption text-gray-600; }
+  small, .caption { @apply text-sm text-gray-600; }
 
   /* Links */
   a { color: var(--primary-color); font-weight: 500; text-decoration: none; }
@@ -114,6 +114,8 @@ body {
     @apply bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 active:bg-gray-100 hover:border-gray-400 shadow-sm;
     @apply disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 disabled:shadow-none;
   }
+  /* Ensure secondary button text stays readable when the element is an <a> link */
+  .btn.btn-secondary:hover { color: rgb(17 24 39); /* text-gray-900 */ }
 
   .btn-tertiary {
     background: transparent;
@@ -126,6 +128,15 @@ body {
     @apply bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-sm;
     @apply disabled:bg-red-300 disabled:shadow-none;
   }
+
+  /* Ghost (neutral subtle) */
+  .btn-ghost {
+    @apply text-gray-700 hover:bg-gray-100 active:bg-gray-200;
+    background: transparent;
+  }
+  /* Darken ghost button text on hover (Cancel button) */
+  .btn-ghost:hover { color: rgb(17 24 39); /* gray-900 */ }
+  .btn-ghost:disabled { @apply text-gray-400 hover:bg-transparent active:bg-transparent; }
 
   /* Sizes */
   .btn-sm { @apply text-sm px-2.5 py-1.5 h-8 rounded; }
