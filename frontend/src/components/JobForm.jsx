@@ -1,4 +1,5 @@
 import React from "react";
+import { importJobFromUrl } from "../lib/api";
 
 const INDUSTRIES = ["Software", "Finance", "Healthcare", "Education", "Other"];
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Internship", "Temporary"];
@@ -19,10 +20,53 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
   });
   const [errors, setErrors] = React.useState({});
   const [loading, setLoading] = React.useState(false);
+  
+  // URL Import state
+  const [importUrl, setImportUrl] = React.useState("");
+  const [importing, setImporting] = React.useState(false);
+  const [importStatus, setImportStatus] = React.useState(null); // { status: 'success'|'partial'|'failed', message: string }
 
   // ✅ renamed from "set" to "setValue" (avoids reserved conflicts)
   function setValue(key, val) {
     setForm((f) => ({ ...f, [key]: val }));
+  }
+
+  async function handleImport() {
+    if (!importUrl.trim()) {
+      setImportStatus({ status: 'failed', message: 'Please enter a URL' });
+      return;
+    }
+
+    setImporting(true);
+    setImportStatus(null);
+    
+    try {
+      const result = await importJobFromUrl(importUrl);
+      
+      setImportStatus({
+        status: result.status,
+        message: result.message
+      });
+
+      if (result.success) {
+        // Auto-populate form fields with imported data
+        setForm(f => ({
+          ...f,
+          title: result.data.title || f.title,
+          company: result.data.company || f.company,
+          location: result.data.location || f.location,
+          description: result.data.description || f.description,
+          postingUrl: result.data.postingUrl || f.postingUrl,
+        }));
+      }
+    } catch (error) {
+      setImportStatus({
+        status: 'failed',
+        message: error?.response?.data?.message || error?.message || 'Failed to import job details'
+      });
+    } finally {
+      setImporting(false);
+    }
   }
 
   function validate() {
@@ -63,6 +107,43 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* URL Import Section */}
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Import from URL</h3>
+        <p className="text-xs text-gray-600 mb-3">
+          Paste a job posting URL from LinkedIn, Indeed, or Glassdoor to auto-fill job details
+        </p>
+        <div className="grid grid-cols-[1fr_auto] gap-3 items-center">
+          <input
+            type="text"
+            className="input w-full text-sm border-2 border-gray-300"
+            placeholder="https://www.linkedin.com/jobs/view/..."
+            value={importUrl}
+            onChange={(e) => setImportUrl(e.target.value)}
+            disabled={importing}
+          />
+          <button
+            type="button"
+            className="btn btn-primary whitespace-nowrap text-sm px-6 py-2.5"
+            onClick={handleImport}
+            disabled={importing}
+          >
+            {importing ? "Importing..." : "Import"}
+          </button>
+        </div>
+        
+        {/* Import Status Messages */}
+        {importStatus && (
+          <div className={`mt-3 rounded-md p-3 text-sm ${
+            importStatus.status === 'success' ? 'bg-green-50 text-green-700' :
+            importStatus.status === 'partial' ? 'bg-yellow-50 text-yellow-700' :
+            'bg-red-50 text-red-700'
+          }`}>
+            {importStatus.message}
+          </div>
+        )}
+      </div>
+
       {/* Required */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>

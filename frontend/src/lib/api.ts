@@ -116,6 +116,7 @@ export function daysInStage(job: Job): number | null {
   return Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
 }
 
+<<<<<<< HEAD
 export async function getJob(id: string): Promise<Job> {
   const { data } = await api.get(`/jobs/${id}`, { withCredentials: true });
   return data;
@@ -131,5 +132,22 @@ export async function updateJob(id: string, payload: UpdateJobPayload): Promise<
 export type JobHistoryItem = { id: string; status: string; note?: string | null; createdAt: string };
 export async function listJobHistory(id: string): Promise<JobHistoryItem[]> {
   const { data } = await api.get(`/jobs/${id}/history`, { withCredentials: true });
+=======
+export type ImportJobResponse = {
+  success: boolean;
+  status: 'success' | 'partial' | 'failed';
+  data: {
+    title?: string;
+    company?: string;
+    location?: string;
+    description?: string;
+    postingUrl: string;
+  };
+  message: string;
+};
+
+export async function importJobFromUrl(url: string): Promise<ImportJobResponse> {
+  const { data } = await api.post('/jobs/import-from-url', { url }, { withCredentials: true });
+>>>>>>> feat/uc-041
   return data;
 }
