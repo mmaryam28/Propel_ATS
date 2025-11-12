@@ -9,6 +9,7 @@ import Jobs from './pages/Jobs';
 import JobPipeline from './pages/JobPipeline.jsx';
 import JobDetails from './pages/JobDetails';
 import Applications from './pages/Applications';
+
 // import Documents from './pages/Documents';
 import Profile from './pages/Profile';
 import CardPreview from './pages/CardPreview';
@@ -29,6 +30,15 @@ import Privacy from './pages/Privacy';
 import Logout from './pages/Logout';
 import PasswordResetRequest from './pages/PasswordResetRequest';
 import PasswordResetComplete from './pages/PasswordResetComplete';
+
+// Resume pages (UC-046 – UC-054)
+import ResumeDashboard from './pages/Resumes/ResumeDashboard.jsx';
+import TemplateManager from './pages/Resumes/TemplateManager.jsx';
+import AIResumeGenerator from './pages/Resumes/AIResumeGenerator.jsx';
+import SectionCustomizer from './pages/Resumes/SectionCustomizer.jsx';
+import VersionManager from './pages/Resumes/VersionManager.jsx';
+import ResumePreview from './pages/Resumes/ResumePreview.jsx';
+import FeedbackPanel from './pages/Resumes/FeedbackPanel.jsx';
 
 import './index.css';
 import './styles/globals.css';
@@ -59,7 +69,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/dashboard', element: <ProfileDashboard /> },
       { path: '/jobs', element: <Jobs /> },
-  { path: '/jobs/pipeline', element: <JobPipeline /> },
+      { path: '/jobs/pipeline', element: <JobPipeline /> },
       { path: '/jobs/:jobId', element: <JobDetails /> },
       { path: '/applications', element: <Applications /> },
       // { path: '/documents', element: <Documents /> },
@@ -71,6 +81,13 @@ const router = createBrowserRouter([
       { path: '/employment', element: <EmploymentHistoryPage /> },
       { path: '/cards', element: <CardPreview /> },
       { path: '/typography', element: <TypographyPreview /> },
+      { path: '/resumes', element: <ResumeDashboard /> },
+      { path: '/resumes/templates', element: <TemplateManager /> },
+      { path: '/resumes/ai', element: <AIResumeGenerator /> },
+      { path: '/resumes/customize', element: <SectionCustomizer /> },
+      { path: '/resumes/versions', element: <VersionManager /> },
+      { path: '/resumes/preview/:id', element: <ResumePreview /> },
+      { path: '/resumes/feedback', element: <FeedbackPanel /> },
     ],
   },
 ]);

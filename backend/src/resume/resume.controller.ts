@@ -42,9 +42,26 @@ export class ResumeController {
     return this.resumeService.remove(id);
   }
 
-  // 🔮 AI Resume Generation
+  // AI Resume Generation
   @Post('generate-ai')
   generateAI(@Body() dto: GenerateAIDto) {
     return this.resumeService.generateAI(dto);
   }
+
+  @Post('optimize-skills')
+  optimizeSkills(@Body() dto: GenerateAIDto) {
+    return this.resumeService.optimizeSkills(dto);
+  }
+
+  @Post('tailor-experience')
+  tailorExperience(@Body() dto: GenerateAIDto) {
+    return this.resumeService.tailorExperience(dto);
+  }
+
+  @Post('validate')
+  validateResume(@Body() dto: GenerateAIDto) {
+    return this.resumeService.validateResume(dto);
+  }
+
+
 }
