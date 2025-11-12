@@ -79,6 +79,8 @@ function toApi(row: any) {
     hiringManagerPhone: row.hiringManagerPhone ?? row.hiring_manager_phone ?? null,
     status: row.status ?? null,
     statusUpdatedAt: row.statusUpdatedAt ?? row.status_updated_at ?? null,
+    archivedAt: row.archivedAt ?? null,
+    archiveReason: row.archiveReason ?? null,
     createdAt: row.createdAt ?? row.created_at ?? null,
     updatedAt: row.updatedAt ?? row.updated_at ?? null,
     userId: row.userId ?? row.user_id,
@@ -89,12 +91,19 @@ function toApi(row: any) {
 export class JobsService {
   constructor(private supabase: SupabaseService) {}
 
-  async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string) {
+  async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string, showArchived?: boolean) {
     const client = this.supabase.getClient();
     let query = client
       .from('jobs')
       .select('*')
       .eq('userId', String(userId));
+    
+    // Filter by archived status
+    if (showArchived) {
+      query = query.not('archivedAt', 'is', null);
+    } else {
+      query = query.is('archivedAt', null);
+    }
     
     if (status) {
       query = query.eq('status', status);
@@ -950,5 +959,78 @@ export class JobsService {
     const m = text.match(re);
     if (!m) return '';
     return (m[1] || m[2] || '').trim();
+  }
+
+  // Archive a job
+  async archive(userId: string, jobId: string, reason?: string) {
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('jobs')
+      .update({
+        archivedAt: new Date().toISOString(),
+        archiveReason: reason || null,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('id', jobId)
+      .eq('userId', userId)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+    return toApi(data);
+  }
+
+  // Restore an archived job
+  async restore(userId: string, jobId: string) {
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('jobs')
+      .update({
+        archivedAt: null,
+        archiveReason: null,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('id', jobId)
+      .eq('userId', userId)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+    return toApi(data);
+  }
+
+  // Permanently delete a job
+  async delete(userId: string, jobId: string) {
+    const client = this.supabase.getClient();
+    const { error } = await client
+      .from('jobs')
+      .delete()
+      .eq('id', jobId)
+      .eq('userId', userId);
+
+    if (error) throw new BadRequestException(error.message);
+    return { success: true, message: 'Job deleted successfully' };
+  }
+
+  // Bulk archive multiple jobs
+  async bulkArchive(userId: string, jobIds: string[], reason?: string) {
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('jobs')
+      .update({
+        archivedAt: new Date().toISOString(),
+        archiveReason: reason || null,
+        updatedAt: new Date().toISOString(),
+      })
+      .in('id', jobIds)
+      .eq('userId', userId)
+      .select();
+
+    if (error) throw new BadRequestException(error.message);
+    return { 
+      success: true, 
+      message: `${data.length} job(s) archived successfully`,
+      count: data.length 
+    };
   }
 }

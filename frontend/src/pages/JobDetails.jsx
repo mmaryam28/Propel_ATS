@@ -1,11 +1,13 @@
 import React from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
-import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl } from "../lib/api";
+import { Toast } from "../components/Toast";
+import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob } from "../lib/api";
 
 export default function JobDetails() {
   const { jobId } = useParams();
+  const navigate = useNavigate();
   const [job, setJob] = React.useState(null);
   const [edit, setEdit] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -14,6 +16,13 @@ export default function JobDetails() {
   const [news, setNews] = React.useState({ company: '', articles: [] });
   const [importUrl, setImportUrl] = React.useState("");
   const [importing, setImporting] = React.useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = React.useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [archiveReason, setArchiveReason] = React.useState("");
+  const [archiving, setArchiving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [showToast, setShowToast] = React.useState(false);
+  const [archivedJobId, setArchivedJobId] = React.useState(null);
 
   React.useEffect(() => { (async () => {
     try {
@@ -105,6 +114,58 @@ export default function JobDetails() {
     } finally { setSaving(false); }
   }
 
+  async function onArchive() {
+    if (!job) return;
+    setArchiving(true);
+    setError("");
+    try {
+      await archiveJob(jobId, archiveReason || undefined);
+      setArchivedJobId(jobId);
+      setShowToast(true);
+      setShowArchiveConfirm(false);
+      // Delay navigation to allow undo
+      setTimeout(() => {
+        if (archivedJobId) navigate('/jobs');
+      }, 5000);
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || "Failed to archive";
+      setError(Array.isArray(msg) ? msg.join("; ") : msg);
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  async function handleUndo() {
+    if (!archivedJobId) return;
+    try {
+      await restoreJob(archivedJobId);
+      setShowToast(false);
+      setArchivedJobId(null);
+      // Reload the job data
+      const j = await getJob(jobId);
+      setJob(j);
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || "Failed to undo";
+      setError(Array.isArray(msg) ? msg.join("; ") : msg);
+    }
+  }
+
+  async function onDelete() {
+    if (!job) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await deleteJob(jobId);
+      navigate('/jobs');
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || "Failed to delete";
+      setError(Array.isArray(msg) ? msg.join("; ") : msg);
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
   if (!job) return <div className="text-sm text-gray-600">Loading…</div>;
 
   return (
@@ -117,7 +178,11 @@ export default function JobDetails() {
         </div>
         <div className="flex gap-2">
           {!edit && (
-            <button className="btn btn-secondary" onClick={() => setEdit(true)}>Edit</button>
+            <>
+              <button className="btn btn-secondary" onClick={() => setEdit(true)}>Edit</button>
+              <button className="btn btn-ghost" onClick={() => setShowArchiveConfirm(true)}>Archive</button>
+              <button className="btn btn-ghost text-red-600 hover:bg-red-50" onClick={() => setShowDeleteConfirm(true)}>Delete</button>
+            </>
           )}
           {edit && (
             <>
@@ -415,6 +480,85 @@ export default function JobDetails() {
           </Card.Body>
         </Card>
       </div>
+
+      {/* Archive Confirmation Modal */}
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4">Archive Job</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to archive this job? You can restore it later from the archived jobs page.
+            </p>
+            <div className="mb-4">
+              <label className="form-label">Reason (optional)</label>
+              <input
+                className="input w-full"
+                placeholder="e.g., Position filled, Not interested..."
+                value={archiveReason}
+                onChange={(e) => setArchiveReason(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  setShowArchiveConfirm(false);
+                  setArchiveReason("");
+                }}
+                disabled={archiving}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={onArchive}
+                disabled={archiving}
+              >
+                {archiving ? "Archiving..." : "Archive"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4 text-red-600">Delete Job</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to permanently delete this job? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn bg-red-600 text-white hover:bg-red-700"
+                onClick={onDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete Permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      <Toast
+        message="Job archived successfully"
+        show={showToast}
+        onUndo={handleUndo}
+        onClose={() => {
+          setShowToast(false);
+          if (archivedJobId) navigate('/jobs');
+        }}
+      />
     </div>
   );
 }

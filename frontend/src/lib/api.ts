@@ -50,6 +50,8 @@ export type Job = {
   glassdoorUrl?: string | null;
   status?: string;                   // pipeline stage
   statusUpdatedAt?: string | null;   // ISO timestamp
+  archivedAt?: string | null;        // ISO timestamp when archived
+  archiveReason?: string | null;     // reason for archiving
   notes?: string | null;
   negotiationNotes?: string | null;
   interviewNotes?: string | null;
@@ -218,5 +220,35 @@ export type EnrichCompanyResponse = {
 
 export async function enrichCompanyFromUrl(url: string): Promise<EnrichCompanyResponse> {
   const { data } = await api.post('/jobs/enrich-company', { url }, { withCredentials: true });
+  return data;
+}
+
+// Archive a job
+export async function archiveJob(id: string, reason?: string): Promise<Job> {
+  const { data } = await api.patch(`/jobs/${id}/archive`, { reason }, { withCredentials: true });
+  return data;
+}
+
+// Restore an archived job
+export async function restoreJob(id: string): Promise<Job> {
+  const { data } = await api.patch(`/jobs/${id}/restore`, {}, { withCredentials: true });
+  return data;
+}
+
+// Delete a job permanently
+export async function deleteJob(id: string): Promise<{ success: boolean; message: string }> {
+  const { data } = await api.delete(`/jobs/${id}`, { withCredentials: true });
+  return data;
+}
+
+// List archived jobs
+export async function listArchivedJobs(): Promise<Job[]> {
+  const { data } = await api.get('/jobs', { withCredentials: true, params: { archived: 'true' } });
+  return data;
+}
+
+// Bulk archive multiple jobs
+export async function bulkArchiveJobs(ids: string[], reason?: string): Promise<{ success: boolean; message: string; count: number }> {
+  const { data } = await api.post('/jobs/bulk-archive', { ids, reason }, { withCredentials: true });
   return data;
 }
