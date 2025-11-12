@@ -102,6 +102,45 @@ export default function Jobs() {
     );
   }
 
+  function getDeadlineInfo(deadline) {
+    if (!deadline) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const deadlineDate = new Date(deadline);
+    deadlineDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = deadlineDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    let urgencyClass = '';
+    let text = '';
+    
+    if (diffDays < 0) {
+      // Overdue
+      urgencyClass = 'bg-red-100 text-red-800 border border-red-300';
+      text = `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''}`;
+    } else if (diffDays === 0) {
+      // Due today
+      urgencyClass = 'bg-red-100 text-red-800 border border-red-300';
+      text = 'Due today!';
+    } else if (diffDays <= 2) {
+      // Critical (1-2 days)
+      urgencyClass = 'bg-red-100 text-red-800 border border-red-300';
+      text = `${diffDays} day${diffDays !== 1 ? 's' : ''} left`;
+    } else if (diffDays <= 7) {
+      // Warning (3-7 days)
+      urgencyClass = 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+      text = `${diffDays} days left`;
+    } else {
+      // Safe (>7 days)
+      urgencyClass = 'bg-green-100 text-green-800 border border-green-300';
+      text = `${diffDays} days left`;
+    }
+    
+    return { text, urgencyClass, diffDays };
+  }
+
   async function handleCreate(payload) {
     try {
       setCreateError("");
@@ -244,6 +283,7 @@ export default function Jobs() {
         </div>
         <div className="flex gap-2">
           <Link className="btn btn-secondary" to="/jobs/pipeline">Pipeline View</Link>
+          <Link className="btn btn-secondary" to="/jobs/calendar">📅 Calendar</Link>
           <button className="btn btn-primary" onClick={() => setOpen(true)}>+ Add Job</button>
         </div>
       </div>
@@ -255,19 +295,26 @@ export default function Jobs() {
         <>
           <div className="text-sm text-gray-600">{jobs.length} job{jobs.length !== 1 ? "s" : ""}{statusFilter ? ` in '${statusFilter}'` : ''}</div>
           <div className="grid gap-4 md:grid-cols-2">
-            {jobs.map(j => (
+            {jobs.map(j => {
+              const deadlineInfo = getDeadlineInfo(j.deadline);
+              return (
               <div key={j.id} className="page-card p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="flex-1">
                     <Link to={`/jobs/${j.id}`} className="text-base font-semibold text-[var(--primary-color)] hover:underline">
                       {highlightText(j.title, searchTerm)}
                     </Link>
                     <div className="text-sm text-gray-600">{highlightText(j.company, searchTerm)}</div>
                   </div>
-                  {j.deadline && (
-                    <span className="text-xs rounded-md bg-gray-100 px-2 py-1">
-                      Deadline: {new Date(j.deadline).toLocaleDateString()}
-                    </span>
+                  {deadlineInfo && (
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`text-xs rounded-md px-2 py-1 font-medium ${deadlineInfo.urgencyClass}`}>
+                        {deadlineInfo.text}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(j.deadline).toLocaleDateString()}
+                      </span>
+                    </div>
                   )}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-sm">
@@ -282,7 +329,8 @@ export default function Jobs() {
                   </a>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         </>
       )}

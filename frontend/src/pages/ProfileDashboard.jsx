@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Card, Container, Section } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
+import UpcomingDeadlinesWidget from '../components/UpcomingDeadlinesWidget';
 
 const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
 
@@ -74,6 +75,11 @@ export default function ProfileDashboard() {
       <Section className="pb-4">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Profile Overview</h1>
         <p className="mt-1 text-sm text-gray-600">Keep your profile fresh to increase your match quality.</p>
+      </Section>
+
+      {/* Upcoming Deadlines Widget */}
+      <Section className="pt-0">
+        <UpcomingDeadlinesWidget />
       </Section>
 
       {/* Stats */}

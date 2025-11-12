@@ -59,12 +59,19 @@ export default function JobDetails() {
     if (!job) return;
     setSaving(true); setError("");
     try {
+      // Format deadline to avoid timezone issues
+      let deadlineValue = job.deadline ?? null;
+      if (deadlineValue && !deadlineValue.includes('T')) {
+        // If it's just a date (YYYY-MM-DD), add time at noon UTC
+        deadlineValue = deadlineValue + 'T12:00:00.000Z';
+      }
+      
       const payload = {
         title: job.title,
         company: job.company,
         location: job.location ?? null,
         postingUrl: job.postingUrl ?? null,
-        deadline: job.deadline ?? null,
+        deadline: deadlineValue,
         description: job.description ?? null,
         industry: job.industry ?? null,
         jobType: job.jobType ?? null,
@@ -266,6 +273,14 @@ export default function JobDetails() {
               <input className="input" value={job.postingUrl||""} onChange={e=>setField('postingUrl', e.target.value)} />
             ) : job.postingUrl ? (
               <a className="text-sm text-[var(--primary-color)]" href={job.postingUrl} target="_blank" rel="noreferrer">Open posting</a>
+            ) : (<div className="text-sm">—</div>)}
+          </div>
+          <div>
+            <div className="form-label">Deadline</div>
+            {edit ? (
+              <input type="date" className="input" value={job.deadline?.split('T')[0] || ""} onChange={e=>setField('deadline', e.target.value)} />
+            ) : job.deadline ? (
+              <div className="text-sm">{new Date(job.deadline).toLocaleDateString()}</div>
             ) : (<div className="text-sm">—</div>)}
           </div>
         </Card.Body>

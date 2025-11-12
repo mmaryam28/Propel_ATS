@@ -8,6 +8,7 @@ import ProfileDashboard from './pages/ProfileDashboard.jsx';
 import Jobs from './pages/Jobs';
 import JobPipeline from './pages/JobPipeline.jsx';
 import JobDetails from './pages/JobDetails';
+import JobCalendar from './pages/JobCalendar';
 import Applications from './pages/Applications';
 // import Documents from './pages/Documents';
 import Profile from './pages/Profile';
@@ -60,6 +61,7 @@ const router = createBrowserRouter([
       { path: '/dashboard', element: <ProfileDashboard /> },
       { path: '/jobs', element: <Jobs /> },
   { path: '/jobs/pipeline', element: <JobPipeline /> },
+      { path: '/jobs/calendar', element: <JobCalendar /> },
       { path: '/jobs/:jobId', element: <JobDetails /> },
       { path: '/applications', element: <Applications /> },
       // { path: '/documents', element: <Documents /> },
