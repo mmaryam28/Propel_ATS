@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateJobDto, JOB_STATUSES, JobStatus } from './dto/create-job.dto';
 import { ImportJobResponse } from './dto/import-job.dto';
+import type { EnrichCompanyResponse } from './dto/enrich-company.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 
 // DB <-> API mapping helpers
@@ -24,6 +25,16 @@ function toDb(dto: CreateJobDto & { userId: string }) {
     jobType: toNull(dto.jobType),
     salaryMin: toInt(dto.salaryMin),
     salaryMax: toInt(dto.salaryMax),
+    // Company profile fields
+    companySize: toNull((dto as any).companySize),
+    companyWebsite: toNull((dto as any).companyWebsite),
+    companyDescription: toNull((dto as any).companyDescription),
+    companyMission: toNull((dto as any).companyMission),
+    companyLogoUrl: toNull((dto as any).companyLogoUrl),
+    companyContactEmail: toNull((dto as any).companyContactEmail),
+    companyContactPhone: toNull((dto as any).companyContactPhone),
+    glassdoorRating: (dto as any).glassdoorRating ?? null,
+    glassdoorUrl: toNull((dto as any).glassdoorUrl),
     // status fields
     status: (dto.status as JobStatus) ?? 'Interested',
     statusUpdatedAt: new Date().toISOString(),
@@ -47,6 +58,16 @@ function toApi(row: any) {
     jobType: row.jobType ?? row.job_type ?? null,
     salaryMin: row.salaryMin ?? row.salary_min ?? null,
     salaryMax: row.salaryMax ?? row.salary_max ?? null,
+    // Company profile fields
+    companySize: row.companySize ?? null,
+    companyWebsite: row.companyWebsite ?? null,
+    companyDescription: row.companyDescription ?? null,
+    companyMission: row.companyMission ?? null,
+    companyLogoUrl: row.companyLogoUrl ?? null,
+    companyContactEmail: row.companyContactEmail ?? null,
+    companyContactPhone: row.companyContactPhone ?? null,
+    glassdoorRating: row.glassdoorRating ?? null,
+    glassdoorUrl: row.glassdoorUrl ?? null,
     notes: row.notes ?? null,
     negotiationNotes: row.negotiationNotes ?? row.negotiation_notes ?? null,
     interviewNotes: row.interviewNotes ?? row.interview_notes ?? null,
@@ -147,6 +168,16 @@ export class JobsService {
       jobType: dto.jobType ?? undefined,
       salaryMin: dto.salaryMin !== undefined ? toInt(dto.salaryMin) : undefined,
       salaryMax: dto.salaryMax !== undefined ? toInt(dto.salaryMax) : undefined,
+      // Company profile fields
+      companySize: (dto as any).companySize ?? undefined,
+      companyWebsite: (dto as any).companyWebsite ?? undefined,
+      companyDescription: (dto as any).companyDescription ?? undefined,
+      companyMission: (dto as any).companyMission ?? undefined,
+      companyLogoUrl: (dto as any).companyLogoUrl ?? undefined,
+      companyContactEmail: (dto as any).companyContactEmail ?? undefined,
+      companyContactPhone: (dto as any).companyContactPhone ?? undefined,
+      glassdoorRating: (dto as any).glassdoorRating !== undefined ? (dto as any).glassdoorRating : undefined,
+      glassdoorUrl: (dto as any).glassdoorUrl ?? undefined,
       notes: dto.notes ?? undefined,
       negotiationNotes: dto.negotiationNotes ?? undefined,
       interviewNotes: dto.interviewNotes ?? undefined,
@@ -249,6 +280,60 @@ export class JobsService {
     }));
   }
 
+  async getCompanyNews(userId: string, jobId: string) {
+    const client = this.supabase.getClient();
+    // Fetch job to get company name
+    const { data: job, error: jobErr } = await client
+      .from('jobs')
+      .select('company')
+      .eq('id', jobId)
+      .eq('userId', userId)
+      .single();
+    if (jobErr) throw jobErr;
+    const company = job?.company;
+    if (!company) return { company, articles: [] };
+
+    const apiKey = process.env.NEWS_API_KEY;
+    // Primary: NewsAPI.org when key available
+    if (apiKey) {
+      try {
+        const url = new URL('https://newsapi.org/v2/everything');
+        url.searchParams.set('q', `"${company}"`);
+        url.searchParams.set('language', 'en');
+        url.searchParams.set('sortBy', 'publishedAt');
+        url.searchParams.set('pageSize', '5');
+        const res = await fetch(url.toString(), { headers: { 'X-Api-Key': apiKey } });
+        const json = await res.json();
+        if (res.ok && Array.isArray(json.articles) && json.articles.length) {
+          const articles = json.articles.map((a: any) => ({
+            title: a.title,
+            url: a.url,
+            source: a.source?.name,
+            publishedAt: a.publishedAt,
+            description: a.description,
+          }));
+          return { company, articles };
+        }
+      } catch {/* fall through to RSS */}
+    }
+
+    // Fallback: Google News RSS (no key required)
+    try {
+      const rssUrl = new URL('https://news.google.com/rss/search');
+      rssUrl.searchParams.set('q', `"${company}"`);
+      rssUrl.searchParams.set('hl', 'en-US');
+      rssUrl.searchParams.set('gl', 'US');
+      rssUrl.searchParams.set('ceid', 'US:en');
+      const res = await fetch(rssUrl.toString());
+      if (!res.ok) return { company, articles: [] };
+      const xml = await res.text();
+      const items = this.parseGoogleNewsRss(xml).slice(0, 5);
+      return { company, articles: items };
+    } catch {
+      return { company, articles: [] };
+    }
+  }
+
   async importFromUrl(url: string): Promise<ImportJobResponse> {
     try {
       // Validate URL
@@ -307,6 +392,8 @@ export class JobsService {
         
         // Extract job details using simple patterns
         const extractedData = this.parseJobHtml(html, hostname);
+        // Also try to enrich company info from the same URL/page
+        const companyEnrichment = this.extractCompanyFromHtml(html, url);
         
         if (!extractedData.title && !extractedData.company) {
           return {
@@ -319,11 +406,19 @@ export class JobsService {
 
         const hasAllFields = extractedData.title && extractedData.company && extractedData.description;
         
+        // Resolve Glassdoor profile link if we can
+        let gdUrl: string | null = null;
+        if (!companyEnrichment.glassdoorUrl && extractedData.company) {
+          gdUrl = await this.resolveGlassdoorProfileUrl(extractedData.company);
+        }
+
         return {
           success: true,
           status: hasAllFields ? 'success' : 'partial',
           data: {
             ...extractedData,
+            ...companyEnrichment,
+            glassdoorUrl: companyEnrichment.glassdoorUrl || gdUrl || this.buildGlassdoorSearchUrl(extractedData.company || hostname),
             postingUrl: url,
           },
           message: hasAllFields 
@@ -436,5 +531,378 @@ export class JobsService {
       .replace(/&#39;/g, "'")
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  // New: Public service to enrich company profile from a URL
+  async enrichCompanyFromUrl(url: string): Promise<EnrichCompanyResponse> {
+    // Validate URL
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return { success: false, message: 'Invalid URL', data: { companyWebsite: null } };
+    }
+
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        },
+      });
+      if (!res.ok) {
+        // Fall back to only domain-derived fields
+        const base = parsed.origin;
+        const host = parsed.hostname;
+        return {
+          success: true,
+          message: `Fetched with status ${res.status}. Returned minimal data from domain.`,
+          data: {
+            company: this.deriveCompanyNameFromHost(host),
+            companyWebsite: base,
+            companyLogoUrl: `https://logo.clearbit.com/${host}`,
+            glassdoorUrl: this.buildGlassdoorSearchUrl(this.deriveCompanyNameFromHost(host) || host),
+          },
+        };
+      }
+      const html = await res.text();
+      const enriched = this.extractCompanyFromHtml(html, url);
+      // Ensure website/logo defaults from domain
+      const host = parsed.hostname;
+      const base = parsed.origin;
+      const data = {
+        company: enriched.company ?? this.deriveCompanyNameFromHost(host),
+        companyWebsite: enriched.companyWebsite ?? base,
+        companyDescription: enriched.companyDescription ?? null,
+        companyMission: enriched.companyMission ?? null,
+        companyLogoUrl: enriched.companyLogoUrl ?? `https://logo.clearbit.com/${host}`,
+        companyContactEmail: enriched.companyContactEmail ?? null,
+        companyContactPhone: enriched.companyContactPhone ?? null,
+        companySize: enriched.companySize ?? null,
+        glassdoorUrl: enriched.glassdoorUrl ?? null,
+      } as EnrichCompanyResponse['data'];
+
+      // Try to resolve a direct Glassdoor profile URL if possible (optional Bing Search API)
+      if (!data.glassdoorUrl && data.company) {
+        const gd = await this.resolveGlassdoorProfileUrl(data.company);
+        data.glassdoorUrl = gd ?? this.buildGlassdoorSearchUrl(data.company);
+      } else if (!data.glassdoorUrl) {
+        data.glassdoorUrl = this.buildGlassdoorSearchUrl(this.deriveCompanyNameFromHost(host) || host);
+      }
+
+      // If key fields missing, probe a couple of common pages (about/contact/mission)
+      const needContact = !data.companyContactEmail || !data.companyContactPhone;
+      const needMission = !data.companyMission;
+      const needSize = !data.companySize;
+      if (needContact || needMission || needSize) {
+        const candidates = ['/about', '/about-us', '/company', '/who-we-are', '/mission', '/our-mission', '/contact', '/contact-us'];
+        for (const p of candidates) {
+          try {
+            const u = new URL(p, base).toString();
+            const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html,application/xhtml+xml' } });
+            if (!r.ok) continue;
+            const h = await r.text();
+            const extra = this.extractContactsAndMission(h, base);
+            if (!data.companyContactEmail && extra.companyContactEmail) data.companyContactEmail = extra.companyContactEmail;
+            if (!data.companyContactPhone && extra.companyContactPhone) data.companyContactPhone = extra.companyContactPhone;
+            if (!data.companyMission && extra.companyMission) data.companyMission = extra.companyMission;
+            if (!data.companySize && extra.companySize) data.companySize = extra.companySize;
+            if (!data.companyDescription && extra.companyDescription) data.companyDescription = extra.companyDescription;
+            // Stop early if we have enough
+            if ((!needContact || (data.companyContactEmail || data.companyContactPhone)) && (!needMission || data.companyMission) && (!needSize || data.companySize)) {
+              break;
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
+      // Optional: attempt Clearbit enrichment for company size if available
+      const clearbitKey = process.env.CLEARBIT_API_KEY;
+      if (clearbitKey) {
+        try {
+          const resp = await fetch(`https://company.clearbit.com/v2/companies/find?domain=${encodeURIComponent(host)}`, {
+            headers: { Authorization: `Bearer ${clearbitKey}` },
+          });
+          if (resp.ok) {
+            const json: any = await resp.json();
+            // Map selected fields if present
+            if (json?.metrics?.employeesRange) {
+              data.companySize = json.metrics.employeesRange as string;
+            } else if (typeof json?.metrics?.employees === 'number') {
+              data.companySize = `${json.metrics.employees}`;
+            }
+            if (!data.companyDescription && json?.description) data.companyDescription = json.description;
+            if (!data.company && json?.name) data.company = json.name;
+            if (!data.companyLogoUrl && json?.logo) data.companyLogoUrl = json.logo;
+          }
+        } catch {
+          // ignore API issues; we already have best-effort data
+        }
+      }
+
+      return { success: true, message: 'Enriched company info', data };
+    } catch (e: any) {
+      const host = parsed.hostname;
+      return {
+        success: true,
+        message: 'Network error fetching page. Returned minimal data from domain.',
+        data: {
+          company: this.deriveCompanyNameFromHost(host),
+          companyWebsite: parsed.origin,
+          companyLogoUrl: `https://logo.clearbit.com/${host}`,
+          glassdoorUrl: this.buildGlassdoorSearchUrl(this.deriveCompanyNameFromHost(host) || host),
+        },
+      };
+    }
+  }
+
+  private extractCompanyFromHtml(html: string, sourceUrl: string): Partial<{
+    company: string;
+    companyWebsite: string | null;
+    companyDescription: string | null;
+    companyMission: string | null;
+    companyLogoUrl: string | null;
+    companyContactEmail: string | null;
+    companyContactPhone: string | null;
+    companySize: string | null;
+    glassdoorUrl: string | null;
+  }> {
+    const out: any = {};
+    const url = new URL(sourceUrl);
+    const origin = url.origin;
+    const host = url.hostname;
+
+    // Try JSON-LD first (Organization schema)
+    try {
+      const jsonld = this.parseJsonLd(html);
+      const org = jsonld.find(o => {
+        const t = Array.isArray(o['@type']) ? o['@type'] : [o['@type']];
+        return t.some((v: any) => typeof v === 'string' && /Organization|LocalBusiness|Corporation/i.test(v));
+      }) as any;
+      if (org) {
+        if (org.name && !out.company) out.company = this.cleanText(String(org.name));
+        if (org.description && !out.companyDescription) out.companyDescription = this.cleanText(String(org.description)).slice(0, 2000);
+        if (org.logo && !out.companyLogoUrl) out.companyLogoUrl = this.toAbsoluteUrl(String(org.logo), origin);
+        // numberOfEmployees could be a QuantitativeValue { value, minValue, maxValue }
+        const nEmp = org.numberOfEmployees || org.employees || org.employee || org.staff;
+        if (nEmp) {
+          if (typeof nEmp === 'number') out.companySize = String(nEmp);
+          else if (typeof nEmp === 'string') out.companySize = nEmp;
+          else if (typeof nEmp?.value === 'number') out.companySize = String(nEmp.value);
+          else if (typeof nEmp?.minValue === 'number' && typeof nEmp?.maxValue === 'number') out.companySize = `${nEmp.minValue}-${nEmp.maxValue}`;
+        }
+        // contactPoint array or direct fields
+        const contactPoints = ([] as any[]).concat(org.contactPoint || []);
+        for (const cp of contactPoints) {
+          if (!out.companyContactEmail && typeof cp?.email === 'string') out.companyContactEmail = cp.email.toLowerCase();
+          if (!out.companyContactPhone && typeof cp?.telephone === 'string') out.companyContactPhone = cp.telephone;
+        }
+        if (!out.companyContactEmail && typeof org.email === 'string') out.companyContactEmail = org.email.toLowerCase();
+        if (!out.companyContactPhone && typeof org.telephone === 'string') out.companyContactPhone = org.telephone;
+      }
+    } catch { /* ignore JSON-LD parsing errors */ }
+
+    // Site name or company name
+    const siteName = this.matchFirst(html, [
+      /<meta[^>]*property=["']og:site_name["'][^>]*content=["']([^"']+)["']/i,
+      /<meta[^>]*name=["']application-name["'][^>]*content=["']([^"']+)["']/i,
+      /<title[^>]*>([^<]+)<\/title>/i,
+    ]);
+    if (siteName) out.company = this.cleanText(siteName);
+
+    // Description
+    const desc = this.matchFirst(html, [
+      /<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i,
+      /<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i,
+    ]);
+    if (desc) out.companyDescription = this.cleanText(desc).slice(0, 2000);
+
+    // Logo/icon
+    const logo = this.matchFirst(html, [
+      /<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i,
+      /<link[^>]*rel=["']apple-touch-icon[^"']*["'][^>]*href=["']([^"']+)["']/i,
+      /<link[^>]*rel=["']icon["'][^>]*href=["']([^"']+)["']/i,
+    ]);
+    if (logo) out.companyLogoUrl = this.toAbsoluteUrl(logo, origin);
+
+    // Contact email/phone
+    const email = this.matchFirst(html, [
+      /mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,})/i,
+      /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,})/i,
+    ]);
+    if (email) out.companyContactEmail = email.toLowerCase();
+    const phone = this.matchFirst(html, [
+      /tel:([+()\d\s-]{7,})/i,
+      /(?:\+?\d[\d\s-().]{7,}\d)/,
+    ]);
+    if (phone) out.companyContactPhone = phone.trim();
+
+    // Website
+    out.companyWebsite = origin;
+
+    // Glassdoor URL (search fallback)
+    const nameForSearch = out.company || this.deriveCompanyNameFromHost(host) || host;
+    out.glassdoorUrl = this.buildGlassdoorSearchUrl(nameForSearch);
+
+    return out;
+  }
+
+  private extractContactsAndMission(html: string, origin: string): Partial<{
+    companyDescription: string | null;
+    companyMission: string | null;
+    companyContactEmail: string | null;
+    companyContactPhone: string | null;
+    companySize: string | null;
+  }> {
+    const out: any = {};
+    // reuse email/phone regexes
+    const email = this.matchFirst(html, [
+      /mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,})/i,
+      /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,})/i,
+    ]);
+    if (email) out.companyContactEmail = email.toLowerCase();
+    const phone = this.matchFirst(html, [
+      /tel:([+()\d\s-]{7,})/i,
+      /(?:\+?\d[\d\s-().]{7,}\d)/,
+    ]);
+    if (phone) out.companyContactPhone = phone.trim();
+
+    // Mission: find heading containing Mission and the following paragraph text
+    const missionBlock = this.matchFirst(html, [
+      /<h[12][^>]*>\s*[^<]*mission[^<]*<\/h[12]>[\s\S]{0,400}<p[^>]*>([\s\S]{40,600}?)<\/p>/i,
+      /mission[^<]{0,50}:\s*<\/?(?:strong|b)>?\s*<p[^>]*>([\s\S]{40,600}?)<\/p>/i,
+    ]);
+    if (missionBlock) out.companyMission = this.cleanText(missionBlock).slice(0, 600);
+
+    // If description not present, grab a long paragraph from the page as fallback
+    if (!out.companyDescription) {
+      const desc = this.matchFirst(html, [
+        /<meta[^>]*name=["']description["'][^>]*content=["']([^"']{50,2000})["']/i,
+        /<p[^>]*>([\s\S]{120,600}?)<\/p>/i,
+      ]);
+      if (desc) out.companyDescription = this.cleanText(desc).slice(0, 2000);
+    }
+
+    // Size heuristics: "10,000+ employees", "over 500 employees"
+    const sizeText = this.matchFirst(html, [
+      /([0-9][0-9.,]{2,})\+?\s*(?:employees|staff)\b/i,
+      /over\s+([0-9][0-9.,]{2,})\s*(?:employees|staff)\b/i,
+    ]);
+    if (sizeText) out.companySize = sizeText.replace(/[,\.]/g, '') + '+';
+
+    // JSON-LD might also be present on inner pages
+    try {
+      const jsonld = this.parseJsonLd(html);
+      const org = jsonld.find(o => {
+        const t = Array.isArray(o['@type']) ? o['@type'] : [o['@type']];
+        return t.some((v: any) => typeof v === 'string' && /Organization|LocalBusiness|Corporation/i.test(v));
+      }) as any;
+      if (org) {
+        if (!out.companyMission && typeof org?.slogan === 'string') out.companyMission = this.cleanText(org.slogan).slice(0, 600);
+        if (!out.companyContactEmail && typeof org?.email === 'string') out.companyContactEmail = org.email.toLowerCase();
+        if (!out.companyContactPhone && typeof org?.telephone === 'string') out.companyContactPhone = org.telephone;
+        const nEmp = org.numberOfEmployees || org.employees || org.employee || org.staff;
+        if (!out.companySize && nEmp) {
+          if (typeof nEmp === 'number') out.companySize = String(nEmp);
+          else if (typeof nEmp === 'string') out.companySize = nEmp;
+          else if (typeof nEmp?.value === 'number') out.companySize = String(nEmp.value);
+          else if (typeof nEmp?.minValue === 'number' && typeof nEmp?.maxValue === 'number') out.companySize = `${nEmp.minValue}-${nEmp.maxValue}`;
+        }
+      }
+    } catch { /* ignore */ }
+
+    return out;
+  }
+
+  private parseJsonLd(html: string): any[] {
+    const out: any[] = [];
+    const scriptRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = scriptRegex.exec(html))) {
+      const raw = m[1];
+      try {
+        const json = JSON.parse(raw.trim());
+        if (Array.isArray(json)) out.push(...json);
+        else out.push(json);
+      } catch { /* skip invalid JSON-LD */ }
+    }
+    return out;
+  }
+
+  private toAbsoluteUrl(possibleUrl: string, origin: string): string {
+    try {
+      const u = new URL(possibleUrl, origin);
+      return u.toString();
+    } catch {
+      return possibleUrl;
+    }
+  }
+
+  private matchFirst(html: string, patterns: RegExp[]): string | null {
+    for (const re of patterns) {
+      const m = html.match(re);
+      if (m && m[1]) return m[1];
+    }
+    return null;
+  }
+
+  private deriveCompanyNameFromHost(host: string): string | null {
+    // Strip common subdomains
+    const parts = host.split('.');
+    if (parts.length <= 2) return parts[0] ? this.capitalize(parts[0]) : null;
+    const core = parts.slice(-2)[0];
+    return this.capitalize(core);
+  }
+
+  private capitalize(s: string): string { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+  private buildGlassdoorSearchUrl(query: string): string {
+    // User prefers direct Glassdoor search page rather than Google site query.
+    return `https://www.glassdoor.com/Reviews/index.htm?keyword=${encodeURIComponent(query)}`;
+  }
+
+  // Attempt to resolve a direct Glassdoor company profile URL using Bing Web Search (optional)
+  private async resolveGlassdoorProfileUrl(company: string): Promise<string | null> {
+    const key = process.env.BING_SEARCH_API_KEY || process.env.AZURE_BING_SEARCH_KEY;
+    if (!key || !company) return null;
+    try {
+      const q = `site:glassdoor.com "${company}" Reviews`;
+      const url = new URL('https://api.bing.microsoft.com/v7.0/search');
+      url.searchParams.set('q', q);
+      url.searchParams.set('count', '5');
+      url.searchParams.set('mkt', 'en-US');
+      const res = await fetch(url.toString(), { headers: { 'Ocp-Apim-Subscription-Key': key } });
+      if (!res.ok) return null;
+      const json: any = await res.json();
+      const items: any[] = json?.webPages?.value || [];
+      const pick = items.find(i => typeof i?.url === 'string' && /glassdoor\.com\//i.test(i.url) && /(\/Reviews\/|\/Overview\/)/i.test(i.url));
+      return pick?.url || null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Parse a subset of Google News RSS to article list
+  private parseGoogleNewsRss(xml: string): Array<{ title: string; url: string; source?: string; publishedAt?: string; description?: string }> {
+    const items: Array<{ title: string; url: string; source?: string; publishedAt?: string; description?: string }> = [];
+    const itemRe = /<item>([\s\S]*?)<\/item>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = itemRe.exec(xml))) {
+      const block = m[1];
+      const title = this.cleanText(this.capture(block, /<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>|<title>([\s\S]*?)<\/title>/i));
+      const link = this.capture(block, /<link>([^<]+)<\/link>/i);
+      const pub = this.capture(block, /<pubDate>([^<]+)<\/pubDate>/i);
+      const source = this.cleanText(this.capture(block, /<source[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/source>|<source[^>]*>([\s\S]*?)<\/source>/i));
+      if (link && title) {
+        items.push({ title, url: link, source: source || undefined, publishedAt: pub || undefined });
+      }
+    }
+    return items;
+  }
+
+  private capture(text: string, re: RegExp): string {
+    const m = text.match(re);
+    if (!m) return '';
+    return (m[1] || m[2] || '').trim();
   }
 }

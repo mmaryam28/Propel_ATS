@@ -6,6 +6,7 @@ import type { JobStatus } from './dto/create-job.dto';
 
 import { UpdateJobDto } from './dto/update-job.dto';
 import { ImportJobDto } from './dto/import-job.dto';
+import { EnrichCompanyDto } from './dto/enrich-company.dto';
 
 
 @Controller('jobs')
@@ -68,5 +69,16 @@ export class JobsController {
   @Post('import-from-url')
   async importFromUrl(@Body() dto: ImportJobDto) {
     return this.jobs.importFromUrl(dto.url);
+  }
+
+  @Post('enrich-company')
+  async enrichCompany(@Body() dto: EnrichCompanyDto) {
+    return this.jobs.enrichCompanyFromUrl(dto.url);
+  }
+
+  @Get(':id/company-news')
+  async companyNews(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.getCompanyNews(userId, id);
   }
 }
