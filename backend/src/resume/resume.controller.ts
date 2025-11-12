@@ -42,6 +42,35 @@ export class ResumeController {
     return this.resumeService.remove(id);
   }
 
+  // Resume Template Management (UC-046)
+  @Get('templates')
+  getTemplates() {
+    // Simple default data for now (you can later pull from Supabase)
+    return {
+      templates: [
+        {
+          id: 'chronological',
+          name: 'Chronological',
+          type: 'chronological',
+          preview: null,
+        },
+        {
+          id: 'functional',
+          name: 'Functional',
+          type: 'functional',
+          preview: null,
+        },
+        {
+          id: 'hybrid',
+          name: 'Hybrid',
+          type: 'hybrid',
+          preview: null,
+        },
+      ],
+    };
+  }
+
+
   // AI Resume Generation
   @Post('generate-ai')
   generateAI(@Body() dto: GenerateAIDto) {

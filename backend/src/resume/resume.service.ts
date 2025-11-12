@@ -66,23 +66,34 @@ export class ResumeService {
     return { message: 'Resume deleted successfully' };
   }
 
+  async getTemplates() {
+    const { data, error } = await this.supabase.getClient().from('ResumeTemplate').select('*');
+    if (error) throw new Error(error.message);
+    return { templates: data };
+  }
+
+
   /* ------------------------------------------------------------------
    *                         AI HELPERS
    * ------------------------------------------------------------------ */
 
   private async askAI(prompt: string) {
     const response = await completion({
-      model: process.env.LITELLM_MODEL || 'ollama/mistral',
+      model: 'ollama/phi3',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 512,
     });
 
-    const text = response.choices[0]?.message?.content || '{}';
+    let text = response.choices[0]?.message?.content || '{}';
+    text = text.replace(/```json/gi, '')
+               .replace(/```/g, '')
+               .trim();
     try {
       return JSON.parse(text);
-    } catch {
-      return { raw: text };
+    } catch (err) {
+      console.error("AI ERROR:", err);
+      return { error: "AI backend failed", details: err.message };
     }
   }
 
