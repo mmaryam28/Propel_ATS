@@ -14,6 +14,7 @@ import { ProfileModule } from './profile/profile.module';
 import { EmploymentModule } from './employment/employment.module';
 import { JobsModule } from './jobs/jobs.module';
 import { CoverlettersModule } from './coverletters/coverletters.module';
+import { StatisticsModule } from './statistics/statistics.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { CoverlettersModule } from './coverletters/coverletters.module';
   EmploymentModule,
   JobsModule,
   CoverlettersModule,
+  StatisticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

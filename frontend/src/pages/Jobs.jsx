@@ -336,11 +336,14 @@ export default function Jobs() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Link className="btn btn-secondary" to="/jobs/pipeline">Pipeline View</Link>
-          <Link className="btn btn-secondary" to="/jobs/calendar">📅 Calendar</Link>
-          <Link className="btn btn-secondary" to="/jobs/archived">📦 Archived</Link>
-          <button className="btn btn-primary" onClick={() => setOpen(true)}>+ Add Job</button>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Link className="btn btn-secondary" to="/jobs/pipeline">Pipeline View</Link>
+            <Link className="btn btn-secondary" to="/jobs/calendar">📅 Calendar</Link>
+            <Link className="btn btn-secondary" to="/jobs/archived">📦 Archived</Link>
+            <Link className="btn btn-secondary" to="/jobs/statistics">📊 Statistics</Link>
+          </div>
+          <button className="btn btn-primary w-full" onClick={() => setOpen(true)}>+ Add Job</button>
         </div>
       </div>
 

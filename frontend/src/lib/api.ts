@@ -233,7 +233,6 @@ export async function enrichCompanyFromUrl(url: string): Promise<EnrichCompanyRe
   return data;
 }
 
-<<<<<<< HEAD
 // Archive a job
 export async function archiveJob(id: string, reason?: string): Promise<Job> {
   const { data } = await api.patch(`/jobs/${id}/archive`, { reason }, { withCredentials: true });
@@ -262,13 +261,12 @@ export async function listArchivedJobs(): Promise<Job[]> {
 export async function bulkArchiveJobs(ids: string[], reason?: string): Promise<{ success: boolean; message: string; count: number }> {
   const { data } = await api.post('/jobs/bulk-archive', { ids, reason }, { withCredentials: true });
   return data;
-=======
+}
 
 export async function getMaterialsUsage(): Promise<{ resume: { id: string; count: number }[]; coverLetter: { id: string; count: number }[] }> {
   const { data } = await api.get('/jobs/materials/usage', { withCredentials: true });
   return data;
 }
-
 
 export async function getUserMaterialDefaults(): Promise<{ defaultResumeVersionId: string | null; defaultCoverLetterVersionId: string | null }> {
   const { data } = await api.get('/jobs/materials/defaults', { withCredentials: true });
@@ -278,5 +276,68 @@ export async function getUserMaterialDefaults(): Promise<{ defaultResumeVersionI
 export async function setUserMaterialDefaults(payload: { defaultResumeVersionId?: string | null; defaultCoverLetterVersionId?: string | null }) {
   const { data } = await api.post('/jobs/materials/defaults', payload, { withCredentials: true });
   return data as { defaultResumeVersionId: string | null; defaultCoverLetterVersionId: string | null };
->>>>>>> 4bf41d389fc79c0338c487000383ffb7619a6c84
+}
+
+// ========== Statistics API ==========
+
+export interface JobStatistics {
+  totalJobs: number;
+  byStatus: {
+    interested: number;
+    applied: number;
+    phoneScreen: number;
+    interview: number;
+    offer: number;
+    rejected: number;
+  };
+  interviewSuccessRate: number;
+  responseRate: number;
+  averageTimeInStages: {
+    interested: number | null;
+    applied: number | null;
+    phoneScreen: number | null;
+    interview: number | null;
+  };
+  deadlineAdherence: {
+    upcoming: number;
+    missed: number;
+    adherenceRate: number;
+  };
+  timeToOffer: number | null;
+}
+
+export interface MonthlyVolume {
+  month: string;
+  count: number;
+}
+
+export async function getStatisticsOverview(): Promise<JobStatistics> {
+  const { data } = await api.get('/statistics/overview', { withCredentials: true });
+  return data;
+}
+
+export async function getMonthlyVolume(months: number = 12): Promise<MonthlyVolume[]> {
+  const { data } = await api.get('/statistics/monthly-volume', {
+    params: { months },
+    withCredentials: true,
+  });
+  return data;
+}
+
+export async function exportStatisticsCSV(): Promise<void> {
+  const response = await api.get('/statistics/export-csv', {
+    withCredentials: true,
+    responseType: 'blob',
+  });
+  
+  // Create download link
+  const blob = new Blob([response.data], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `job-statistics-${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 }

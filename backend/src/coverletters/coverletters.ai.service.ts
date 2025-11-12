@@ -3,16 +3,17 @@ import OpenAI from 'openai';
 
 @Injectable()
 export class CoverletterAIService {
-  private openai: OpenAI;
+  private openai: OpenAI | null;
 
   constructor() {
     if (!process.env.OPENAI_API_KEY) {
-      console.warn('OPENAI_API_KEY not found in environment variables');
+      console.warn('OPENAI_API_KEY not found in environment variables - AI features will be disabled');
+      this.openai = null;
+    } else {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
     }
-
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
   }
 
   async generateCoverLetter({
@@ -42,6 +43,10 @@ ${profileSummary}
 
 Return only the completed cover letter text.
       `;
+
+      if (!this.openai) {
+        throw new Error('OpenAI is not configured. Please add OPENAI_API_KEY to your environment variables.');
+      }
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',

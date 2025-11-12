@@ -2,12 +2,8 @@ import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
-<<<<<<< HEAD
 import { Toast } from "../components/Toast";
-import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob } from "../lib/api";
-=======
-import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults } from "../lib/api";
->>>>>>> 4bf41d389fc79c0338c487000383ffb7619a6c84
+import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults } from "../lib/api";
 
 export default function JobDetails() {
   const { jobId } = useParams();
@@ -20,7 +16,6 @@ export default function JobDetails() {
   const [news, setNews] = React.useState({ company: '', articles: [] });
   const [importUrl, setImportUrl] = React.useState("");
   const [importing, setImporting] = React.useState(false);
-<<<<<<< HEAD
   const [showArchiveConfirm, setShowArchiveConfirm] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [archiveReason, setArchiveReason] = React.useState("");
@@ -28,10 +23,8 @@ export default function JobDetails() {
   const [deleting, setDeleting] = React.useState(false);
   const [showToast, setShowToast] = React.useState(false);
   const [archivedJobId, setArchivedJobId] = React.useState(null);
-=======
   const [materialsHistory, setMaterialsHistory] = React.useState([]);
   const [defaults, setDefaults] = React.useState({ defaultResumeVersionId: null, defaultCoverLetterVersionId: null });
->>>>>>> 4bf41d389fc79c0338c487000383ffb7619a6c84
 
   React.useEffect(() => { (async () => {
     try {
