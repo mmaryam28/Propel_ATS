@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppLayout from './layouts/AppLayout';
@@ -20,7 +20,6 @@ import ProjectsPage from './pages/ProjectsPage';
 import Skills from './pages/Skills';
 import EmploymentHistoryPage from './pages/EmploymentHistory';
 
-
 // Public pages
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -35,6 +34,8 @@ import './index.css';
 import './styles/globals.css';
 import './styles/theme.css';
 
+const TemplatesPage = lazy(() => import('./coverletters/pages/TemplatesPage'));
+
 // UC-014 color system tokens
 // import "./CS490/UC-014/styles/colors.css";
 
@@ -47,10 +48,10 @@ const router = createBrowserRouter([
   { path: '/privacy', element: <Privacy /> },
 
   // Password reset (keep both legacy + new)
-  { path: '/reset-password', element: <PasswordResetRequest /> },         // legacy
+  { path: '/reset-password', element: <PasswordResetRequest /> }, // legacy
   { path: '/reset-password/:token', element: <PasswordResetComplete /> }, // legacy
-  { path: '/forgot-password', element: <PasswordResetRequest /> },        // new
-  { path: '/reset/:token', element: <PasswordResetComplete /> },          // new
+  { path: '/forgot-password', element: <PasswordResetRequest /> }, // new
+  { path: '/reset/:token', element: <PasswordResetComplete /> }, // new
 
   { path: '/logout', element: <Logout /> },
 
@@ -73,6 +74,16 @@ const router = createBrowserRouter([
       { path: '/employment', element: <EmploymentHistoryPage /> },
       { path: '/cards', element: <CardPreview /> },
       { path: '/typography', element: <TypographyPreview /> },
+
+      // ✅ New Cover Letter Templates route
+      {
+        path: '/coverletters/templates',
+        element: (
+          <Suspense fallback={<div>Loading templates…</div>}>
+            <TemplatesPage />
+          </Suspense>
+        ),
+      },
     ],
   },
 ]);
