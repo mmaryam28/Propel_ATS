@@ -56,9 +56,30 @@ export type Job = {
 export type NewJobPayload = Omit<Job, 'id'|'createdAt'|'updatedAt'>;
 
 /* ---------- Endpoints ---------- */
-export async function listJobs(status?: string): Promise<Job[]> {
-  const params = status ? { status } : undefined;
-  const { data } = await api.get('/jobs', { withCredentials: true, params });
+export async function listJobs(
+  status?: string,
+  search?: string,
+  industry?: string,
+  location?: string,
+  salaryMin?: number,
+  salaryMax?: number,
+  deadlineFrom?: string,
+  deadlineTo?: string,
+  sortBy?: string,
+  sortOrder?: string
+): Promise<Job[]> {
+  const params: any = {};
+  if (status) params.status = status;
+  if (search) params.search = search;
+  if (industry) params.industry = industry;
+  if (location) params.location = location;
+  if (salaryMin) params.salaryMin = salaryMin.toString();
+  if (salaryMax) params.salaryMax = salaryMax.toString();
+  if (deadlineFrom) params.deadlineFrom = deadlineFrom;
+  if (deadlineTo) params.deadlineTo = deadlineTo;
+  if (sortBy) params.sortBy = sortBy;
+  if (sortOrder) params.sortOrder = sortOrder;
+  const { data } = await api.get('/jobs', { withCredentials: true, params: Object.keys(params).length ? params : undefined });
   return data;
 }
 

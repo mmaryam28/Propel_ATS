@@ -14,10 +14,22 @@ export class JobsController {
   constructor(private jobs: JobsService) {}
 
   @Get()
-  async list(@Req() req: any, @Query('status') status?: string) {
+  async list(
+    @Req() req: any,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('industry') industry?: string,
+    @Query('location') location?: string,
+    @Query('salaryMin') salaryMin?: string,
+    @Query('salaryMax') salaryMax?: string,
+    @Query('deadlineFrom') deadlineFrom?: string,
+    @Query('deadlineTo') deadlineTo?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ) {
     const userId = req.user.userId;
     const s = status && JOB_STATUSES.includes(status as JobStatus) ? (status as JobStatus) : undefined;
-    return this.jobs.list(userId, s);
+    return this.jobs.list(userId, s, search, industry, location, salaryMin, salaryMax, deadlineFrom, deadlineTo, sortBy, sortOrder);
   }
 
   @Post()

@@ -68,16 +68,62 @@ function toApi(row: any) {
 export class JobsService {
   constructor(private supabase: SupabaseService) {}
 
-  async list(userId: string, status?: JobStatus) {
+  async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string) {
     const client = this.supabase.getClient();
     let query = client
       .from('jobs')
       .select('*')
-      .eq('userId', String(userId))
-      .order('createdAt', { ascending: false });
+      .eq('userId', String(userId));
+    
     if (status) {
       query = query.eq('status', status);
     }
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      // Search in title, company, and description fields (case-insensitive)
+      query = query.or(`title.ilike.${searchTerm},company.ilike.${searchTerm},description.ilike.${searchTerm}`);
+    }
+    if (industry && industry.trim()) {
+      query = query.eq('industry', industry.trim());
+    }
+    if (location && location.trim()) {
+      // Case-insensitive partial match for location
+      query = query.ilike('location', `%${location.trim()}%`);
+    }
+    if (salaryMin) {
+      const min = Number(salaryMin);
+      if (!isNaN(min)) {
+        // Job's max salary must be >= user's min (job can pay at least what user wants)
+        query = query.gte('salaryMax', min);
+      }
+    }
+    if (salaryMax) {
+      const max = Number(salaryMax);
+      if (!isNaN(max)) {
+        // Job's min salary must be <= user's max (job doesn't require more than user's max)
+        query = query.lte('salaryMin', max);
+      }
+    }
+    if (deadlineFrom && deadlineFrom.trim()) {
+      query = query.gte('deadline', deadlineFrom.trim());
+    }
+    if (deadlineTo && deadlineTo.trim()) {
+      query = query.lte('deadline', deadlineTo.trim());
+    }
+
+    // Apply sorting
+    const ascending = sortOrder === 'asc';
+    if (sortBy === 'deadline') {
+      query = query.order('deadline', { ascending, nullsFirst: false });
+    } else if (sortBy === 'company') {
+      query = query.order('company', { ascending });
+    } else if (sortBy === 'salary') {
+      query = query.order('salaryMax', { ascending, nullsFirst: false });
+    } else {
+      // Default: sort by createdAt (newest first unless specified)
+      query = query.order('createdAt', { ascending: sortOrder === 'asc' });
+    }
+
     const { data, error } = await query;
     if (error) {
       // PGRST205 => table not found in schema cache
