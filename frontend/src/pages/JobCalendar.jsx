@@ -94,7 +94,7 @@ export default function JobCalendar() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Job Deadlines Calendar</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Job Deadlines Calendar</h1>
         <div className="text-gray-600">Loading...</div>
       </div>
     );
@@ -105,14 +105,14 @@ export default function JobCalendar() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Job Deadlines Calendar</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Job Deadlines Calendar</h1>
         <p className="text-gray-600">View all your job application deadlines in calendar format</p>
       </div>
 
       <div className="page-card p-6">
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-xl font-semibold text-gray-900">
             {monthNames[month]} {year}
           </h2>
           <div className="flex gap-2">
