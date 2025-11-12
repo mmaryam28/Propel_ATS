@@ -25,32 +25,66 @@ export default function TemplatePreviewModal({
   if (!slug) return null;
 
   // === UC-056 + UC-057: Generate AI Cover Letter with Company Research ===
-  async function handleGenerate() {
-    setLoading(true);
-    setAiOutput("Generating...");
-    try {
-      const res = await fetch("http://localhost:3000/coverletters/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          templateSlug: slug,
-          jobDescription:
-            "Software Engineer Intern at Google focusing on React.",
-          profileSummary:
-            "Computer Science student with React and Node.js experience, strong teamwork skills, and passion for frontend development.",
-          tone,
-          company, // ✅ Send the company name to backend
-        }),
-      });
+async function handleGenerate() {
+  setLoading(true);
+  setAiOutput("Generating...");
+  try {
+    // Fetch the full template (includes category/industry info)
+    if (!slug) return;
+      const templateData = await getTemplate(slug);
 
-      const data = await res.json();
-      setAiOutput(data.generated || "No content generated.");
-    } catch (err) {
-      console.error("Error generating AI cover letter:", err);
-      setAiOutput("Error generating cover letter.");
-    }
-    setLoading(false);
+
+    const industry = templateData?.category?.name || "General";
+
+    const roleByIndustry: Record<string, string> = {
+      "Software Engineering": "Software Engineer",
+      "Finance & Consulting": "Financial Analyst",
+      "Marketing & Design": "Marketing Associate",
+      "Healthcare & Life Sciences": "Clinical Research Assistant",
+      "Education & Training": "Teacher or Instructor",
+      "Law & Policy": "Legal Analyst",
+    };
+
+    const role = roleByIndustry[industry] || "Professional";
+
+
+    const jobDescription = `${role} position at ${company} in the ${industry} field.`;
+
+    const profileSummary =
+      industry === "Healthcare & Life Sciences"
+        ? "Dedicated healthcare professional experienced in patient care, research, and evidence-based practice."
+        : industry === "Education & Training"
+        ? "Passionate educator with experience in curriculum development and student engagement."
+        : industry === "Law & Policy"
+        ? "Analytical and detail-oriented individual with experience in policy research and legal documentation."
+        : industry === "Finance & Consulting"
+        ? "Data-driven problem solver skilled in business analysis and financial modeling."
+        : industry === "Marketing & Design"
+        ? "Creative professional experienced in branding, social media campaigns, and storytelling."
+        : "Computer Science student experienced in React, Node.js, and modern web development.";
+
+    const res = await fetch("http://localhost:3000/coverletters/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        templateSlug: slug,
+        jobDescription,
+        profileSummary,
+        tone,
+        company,
+        industry,
+      }),
+    });
+
+    const data = await res.json();
+    setAiOutput(data.generated || "No content generated.");
+  } catch (err) {
+    console.error("Error generating AI cover letter:", err);
+    setAiOutput("Error generating cover letter.");
   }
+  setLoading(false);
+}
+
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">

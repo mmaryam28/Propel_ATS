@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
-dotenv.config(); // safe to include here too
+dotenv.config();
 
 @Injectable()
 export class CoverlettersService {
@@ -24,6 +24,7 @@ export class CoverlettersService {
     );
   }
 
+  // === UC-055: List all templates with category info ===
   async listTemplates(q?: string, category?: string) {
     let query = this.supabase
       .from('cl_templates')
@@ -46,15 +47,25 @@ export class CoverlettersService {
     return data;
   }
 
+  // === UC-056: Get a single template by slug (with latest version + category) ===
   async getTemplateBySlug(slug: string) {
+    //Include category join here
     const { data: tpl, error } = await this.supabase
       .from('cl_templates')
-      .select('id, title, slug, description, tokens')
+      .select(`
+        id,
+        title,
+        slug,
+        description,
+        tokens,
+        category:cl_template_categories(name, slug)
+      `)
       .eq('slug', slug)
       .single();
 
     if (error || !tpl) throw new NotFoundException('Template not found');
 
+    // Fetch the latest version of this template
     const { data: ver, error: e2 } = await this.supabase
       .from('cl_template_versions')
       .select('version, body, changelog, created_at')
@@ -64,6 +75,8 @@ export class CoverlettersService {
       .maybeSingle();
 
     if (e2) throw e2;
+
+    //Return both version and category info
     return { ...tpl, latest: ver };
   }
 }
