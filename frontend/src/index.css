@@ -152,15 +152,21 @@ body {
   .form-row { @apply flex flex-wrap gap-4 mb-4; }
 
   .form-label { 
-    @apply block text-sm font-medium text-gray-700 select-none cursor-pointer;
+    /* Make all field titles bold as requested (replace font-medium with font-semibold) */
+    display:block;
+    font-size:0.875rem; /* text-sm */
+    font-weight:600; /* font-semibold */
+    color:#374151; /* text-gray-700 */
+    user-select:none;
+    cursor:pointer;
   }
 
-  .form-label.required::after { content: "*"; @apply text-red-500 ml-1; }
+  .form-label.required::after { content: "*"; color:#ef4444; margin-left:0.25rem; }
 
   .input {
-    @apply block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 placeholder-gray-400 transition duration-200;
-    @apply disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed;
+    display:block; width:100%; border:1px solid #d1d5db; background:#ffffff; border-radius:0.375rem; padding:0.5rem 0.75rem; font-size:1rem; color:#111827; transition:0.2s;
   }
+  .input:disabled { background:#f9fafb; color:#6b7280; cursor:not-allowed; }
 
   .input:focus {
     outline: none;
@@ -182,47 +188,40 @@ body {
     print-color-adjust: exact;
   }
 
-  textarea.input { @apply min-h-[6rem] resize-y; }
+  textarea.input { min-height:6rem; resize:vertical; }
 
   /* Input errors */
-  .input-error { @apply border-red-500 ring-2 ring-red-100; }
-  .form-error {
-    @apply text-sm text-red-600 mt-1 flex items-center gap-1;
-  }
-  .form-error::before { content: "⚠"; @apply text-xs; }
+  .input-error { border-color:#ef4444; box-shadow:0 0 0 2px rgba(239,68,68,.15); }
+  .form-error { font-size:0.875rem; color:#dc2626; margin-top:0.25rem; display:flex; align-items:center; gap:0.25rem; }
+  .form-error::before { content:"⚠"; font-size:0.75rem; }
 
   /* Help text */
-  .form-help { @apply text-sm text-gray-500 mt-1; }
+  .form-help { font-size:0.875rem; color:#6b7280; margin-top:0.25rem; }
 
   /* Input group */
-  .input-group { @apply relative flex rounded-md shadow-sm; }
-  .input-group > .input:not(:last-child) { @apply rounded-r-none border-r-0; }
-  .input-group > .input:not(:first-child) { @apply rounded-l-none; }
-  .input-group-text {
-    @apply inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm;
-  }
+  .input-group { position:relative; display:flex; border-radius:0.375rem; box-shadow:0 1px 2px rgba(16,24,40,.06); }
+  .input-group > .input:not(:last-child) { border-top-right-radius:0; border-bottom-right-radius:0; border-right:0; }
+  .input-group > .input:not(:first-child) { border-top-left-radius:0; border-bottom-left-radius:0; }
+  .input-group-text { display:inline-flex; align-items:center; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-right:0; border-radius:0.375rem 0 0 0.375rem; background:#f9fafb; color:#6b7280; font-size:0.875rem; }
 
   /* Checkboxes / Radios */
-  .checkbox, .radio {
-    @apply h-4 w-4 border-gray-300 transition duration-200;
-    accent-color: var(--primary-color);
-  }
-  .radio { @apply rounded-full; }
-  .checkbox { @apply rounded; }
+  .checkbox, .radio { height:1rem; width:1rem; border:1px solid #d1d5db; transition:0.2s; accent-color:var(--primary-color); }
+  .radio { border-radius:9999px; }
+  .checkbox { border-radius:0.25rem; }
 
   /* Form Sections */
-  .form-section { @apply space-y-4 py-4; }
-  .form-section:not(:last-child) { @apply border-b border-gray-200; }
-  .form-section-title { @apply text-lg font-medium text-gray-900 mb-2; }
+  .form-section { padding:1rem 0; }
+  .form-section:not(:last-child) { border-bottom:1px solid #e5e7eb; }
+  .form-section-title { font-size:1.125rem; font-weight:500; color:#111827; margin-bottom:0.5rem; }
 
   /* Form Actions */
-  .form-actions {
-    @apply flex flex-wrap items-center gap-3 mt-6 pt-4 border-t border-gray-200;
-  }
+  .form-actions { display:flex; flex-wrap:wrap; align-items:center; gap:0.75rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid #e5e7eb; }
 
   /* Page Card Components */
-  .page-card { @apply bg-white border border-gray-200 rounded-xl shadow-sm; }
-  .page-card-inner { @apply p-4 sm:p-6 lg:p-8; }
+  .page-card { background:#ffffff; border:1px solid #e5e7eb; border-radius:0.75rem; box-shadow:0 1px 2px rgba(16,24,40,.06); }
+  .page-card-inner { padding:1rem; }
+  @media (min-width:640px){ .page-card-inner{ padding:1.5rem; } }
+  @media (min-width:1024px){ .page-card-inner{ padding:2rem; } }
 }
 
 /* ================================

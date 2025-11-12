@@ -38,6 +38,16 @@ export type Job = {
   description?: string | null;       // <= 2000
   industry?: string | null;
   jobType?: string | null;
+  // Company profile (UC-043)
+  companySize?: string | null;
+  companyWebsite?: string | null;
+  companyDescription?: string | null;
+  companyMission?: string | null;
+  companyLogoUrl?: string | null;
+  companyContactEmail?: string | null;
+  companyContactPhone?: string | null;
+  glassdoorRating?: number | null;
+  glassdoorUrl?: string | null;
   status?: string;                   // pipeline stage
   statusUpdatedAt?: string | null;   // ISO timestamp
   notes?: string | null;
@@ -113,6 +123,16 @@ export async function createJob(payload: NewJobPayload): Promise<Job> {
     jobType: toStrOrNull(payload.jobType),
     salaryMin: toNum(payload.salaryMin),
     salaryMax: toNum(payload.salaryMax),
+    // Optional company profile fields at creation time
+    companySize: toStrOrNull((payload as any).companySize),
+    companyWebsite: toStrOrNull((payload as any).companyWebsite),
+    companyDescription: toStrOrNull((payload as any).companyDescription),
+    companyMission: toStrOrNull((payload as any).companyMission),
+    companyLogoUrl: toStrOrNull((payload as any).companyLogoUrl),
+    companyContactEmail: toStrOrNull((payload as any).companyContactEmail),
+    companyContactPhone: toStrOrNull((payload as any).companyContactPhone),
+    glassdoorRating: (payload as any).glassdoorRating ?? null,
+    glassdoorUrl: toStrOrNull((payload as any).glassdoorUrl),
     // status intentionally omitted so backend default 'Interested' is used
   } as const;
   const { data } = await api.post('/jobs', body, { withCredentials: true });
@@ -155,6 +175,12 @@ export async function listJobHistory(id: string): Promise<JobHistoryItem[]> {
   return data;
 }
 
+export type CompanyNews = { company: string; articles: { title: string; url: string; source?: string; publishedAt?: string; description?: string }[] };
+export async function getCompanyNews(id: string): Promise<CompanyNews> {
+  const { data } = await api.get(`/jobs/${id}/company-news`, { withCredentials: true });
+  return data;
+}
+
 export type ImportJobResponse = {
   success: boolean;
   status: 'success' | 'partial' | 'failed';
@@ -170,5 +196,27 @@ export type ImportJobResponse = {
 
 export async function importJobFromUrl(url: string): Promise<ImportJobResponse> {
   const { data } = await api.post('/jobs/import-from-url', { url }, { withCredentials: true });
+  return data;
+}
+
+// Company enrichment (auto-populate profile fields from a company or job URL)
+export type EnrichCompanyResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    company?: string | null;
+    companyWebsite?: string | null;
+    companyDescription?: string | null;
+    companyMission?: string | null;
+    companyLogoUrl?: string | null;
+    companyContactEmail?: string | null;
+    companyContactPhone?: string | null;
+    companySize?: string | null;
+    glassdoorUrl?: string | null;
+  };
+};
+
+export async function enrichCompanyFromUrl(url: string): Promise<EnrichCompanyResponse> {
+  const { data } = await api.post('/jobs/enrich-company', { url }, { withCredentials: true });
   return data;
 }
