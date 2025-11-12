@@ -35,6 +35,9 @@ function toDb(dto: CreateJobDto & { userId: string }) {
     companyContactPhone: toNull((dto as any).companyContactPhone),
     glassdoorRating: (dto as any).glassdoorRating ?? null,
     glassdoorUrl: toNull((dto as any).glassdoorUrl),
+  // UC-042 materials linkage
+  resumeVersionId: toNull((dto as any).resumeVersionId),
+  coverLetterVersionId: toNull((dto as any).coverLetterVersionId),
     // status fields
     status: (dto.status as JobStatus) ?? 'Interested',
     statusUpdatedAt: new Date().toISOString(),
@@ -68,6 +71,9 @@ function toApi(row: any) {
     companyContactPhone: row.companyContactPhone ?? null,
     glassdoorRating: row.glassdoorRating ?? null,
     glassdoorUrl: row.glassdoorUrl ?? null,
+  // UC-042 materials linkage
+  resumeVersionId: row.resumeVersionId ?? null,
+  coverLetterVersionId: row.coverLetterVersionId ?? null,
     notes: row.notes ?? null,
     negotiationNotes: row.negotiationNotes ?? row.negotiation_notes ?? null,
     interviewNotes: row.interviewNotes ?? row.interview_notes ?? null,
@@ -158,7 +164,23 @@ export class JobsService {
 
   async create(userId: string, dto: CreateJobDto) {
     const client = this.supabase.getClient();
-    const payload = toDb({ ...dto, userId });
+    // Try applying user defaults for materials if not provided
+    let resumeVersionId: string | null | undefined = (dto as any).resumeVersionId;
+    let coverLetterVersionId: string | null | undefined = (dto as any).coverLetterVersionId;
+    try {
+      if (resumeVersionId === undefined || coverLetterVersionId === undefined) {
+        const { data: defaults, error: defErr } = await client
+          .from('user_material_defaults')
+          .select('*')
+          .eq('userId', String(userId))
+          .single();
+        if (!defErr && defaults) {
+          if (resumeVersionId === undefined) resumeVersionId = defaults.defaultResumeVersionId ?? null;
+          if (coverLetterVersionId === undefined) coverLetterVersionId = defaults.defaultCoverLetterVersionId ?? null;
+        }
+      }
+    } catch { /* ignore missing table */ }
+    const payload = toDb({ ...dto, userId, ...(resumeVersionId !== undefined ? { resumeVersionId } : {}), ...(coverLetterVersionId !== undefined ? { coverLetterVersionId } : {} ) } as any);
     const { data, error } = await client
       .from('jobs')
       .insert(payload)
@@ -181,6 +203,19 @@ export class JobsService {
         note: 'Created',
         createdat: new Date().toISOString(),
       });
+      // Also record initial materials linkage if present
+      if ((payload as any).resumeVersionId || (payload as any).coverLetterVersionId) {
+        try {
+          await client.from('job_material_history').insert({
+            id: uuidv4(),
+            jobid: (data as any).id,
+            userid: userId,
+            resumeversionid: (payload as any).resumeVersionId ?? null,
+            coverletterversionid: (payload as any).coverLetterVersionId ?? null,
+            changedat: new Date().toISOString(),
+          });
+        } catch { /* ignore */ }
+      }
     } catch (e) {
       // ignore missing table/permissions
     }
@@ -224,6 +259,9 @@ export class JobsService {
       companyContactPhone: (dto as any).companyContactPhone ?? undefined,
       glassdoorRating: (dto as any).glassdoorRating !== undefined ? (dto as any).glassdoorRating : undefined,
       glassdoorUrl: (dto as any).glassdoorUrl ?? undefined,
+  // UC-042 materials
+  resumeVersionId: (dto as any).resumeVersionId !== undefined ? (dto as any).resumeVersionId : undefined,
+  coverLetterVersionId: (dto as any).coverLetterVersionId !== undefined ? (dto as any).coverLetterVersionId : undefined,
       notes: dto.notes ?? undefined,
       negotiationNotes: dto.negotiationNotes ?? undefined,
       interviewNotes: dto.interviewNotes ?? undefined,
@@ -246,6 +284,19 @@ export class JobsService {
       .select('*')
       .single();
     if (error) throw error;
+    // Record materials history if materials were part of this update
+    try {
+      if ((dto as any).resumeVersionId !== undefined || (dto as any).coverLetterVersionId !== undefined) {
+        await client.from('job_material_history').insert({
+          id: uuidv4(),
+          jobid: id,
+          userid: userId,
+          resumeversionid: (dto as any).resumeVersionId ?? null,
+          coverletterversionid: (dto as any).coverLetterVersionId ?? null,
+          changedat: new Date().toISOString(),
+        });
+      }
+    } catch { /* ignore missing table */ }
     return toApi(data);
   }
 
@@ -324,6 +375,111 @@ export class JobsService {
       note: row.note ?? null,
       createdAt: row.createdat ?? row.createdAt ?? row.created_at ?? null,
     }));
+  }
+
+  // UC-042: Materials history per job
+  async getMaterialsHistory(userId: string, jobId: string) {
+    const client = this.supabase.getClient();
+    try {
+      const { data, error } = await client
+        .from('job_material_history')
+        .select('*')
+        .eq('jobid', jobId)
+        .eq('userid', userId)
+        .order('changedat', { ascending: false });
+      if (error) {
+        if ((error as any).code === 'PGRST205') return [];
+        throw error;
+      }
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        resumeVersionId: row.resumeversionid ?? null,
+        coverLetterVersionId: row.coverletterversionid ?? null,
+        changedAt: row.changedat ?? row.changedAt ?? row.changed_at ?? null,
+      }));
+    } catch (e: any) {
+      if ((e as any).code === 'PGRST205') return [];
+      throw e;
+    }
+  }
+
+  // UC-042: Materials usage analytics
+  async getMaterialsUsage(userId: string) {
+    const client = this.supabase.getClient();
+    try {
+      const { data, error } = await client
+        .from('jobs')
+        .select('resumeVersionId, coverLetterVersionId')
+        .eq('userId', String(userId));
+      if (error) {
+        if ((error as any).code === 'PGRST205' || (error as any).code === 'PGRST204') return { resume: [], coverLetter: [] };
+        throw error;
+      }
+      const resumeCounts = new Map<string, number>();
+      const coverCounts = new Map<string, number>();
+      for (const row of data || []) {
+        const r = (row as any).resumeVersionId as string | null;
+        const c = (row as any).coverLetterVersionId as string | null;
+        if (r) resumeCounts.set(r, (resumeCounts.get(r) || 0) + 1);
+        if (c) coverCounts.set(c, (coverCounts.get(c) || 0) + 1);
+      }
+      return {
+        resume: Array.from(resumeCounts.entries()).map(([id, count]) => ({ id, count })).sort((a, b) => b.count - a.count),
+        coverLetter: Array.from(coverCounts.entries()).map(([id, count]) => ({ id, count })).sort((a, b) => b.count - a.count),
+      };
+    } catch {
+      return { resume: [], coverLetter: [] };
+    }
+  }
+
+  // UC-042: User material defaults
+  async getUserMaterialDefaults(userId: string) {
+    const client = this.supabase.getClient();
+    try {
+      const { data, error } = await client
+        .from('user_material_defaults')
+        .select('*')
+        .eq('userId', String(userId))
+        .single();
+      if (error) {
+        if ((error as any).code === 'PGRST205' || (error as any).code === 'PGRST116') return { defaultResumeVersionId: null, defaultCoverLetterVersionId: null };
+        throw error;
+      }
+      return {
+        defaultResumeVersionId: data?.defaultResumeVersionId ?? null,
+        defaultCoverLetterVersionId: data?.defaultCoverLetterVersionId ?? null,
+      };
+    } catch {
+      return { defaultResumeVersionId: null, defaultCoverLetterVersionId: null };
+    }
+  }
+
+  async setUserMaterialDefaults(userId: string, defaults: { defaultResumeVersionId?: string | null; defaultCoverLetterVersionId?: string | null }) {
+    const client = this.supabase.getClient();
+    try {
+      const payload: any = {
+        userId: String(userId),
+        defaultResumeVersionId: defaults.defaultResumeVersionId ?? null,
+        defaultCoverLetterVersionId: defaults.defaultCoverLetterVersionId ?? null,
+        updatedAt: new Date().toISOString(),
+      };
+      const { data, error } = await client
+        .from('user_material_defaults')
+        .upsert(payload, { onConflict: 'userId' })
+        .select('*')
+        .single();
+      if (error) throw error;
+      return {
+        defaultResumeVersionId: data?.defaultResumeVersionId ?? null,
+        defaultCoverLetterVersionId: data?.defaultCoverLetterVersionId ?? null,
+      };
+    } catch (e) {
+      // Missing table or permissions: return what was requested so UI can reflect the intent even if persistence failed
+      return {
+        defaultResumeVersionId: defaults.defaultResumeVersionId ?? null,
+        defaultCoverLetterVersionId: defaults.defaultCoverLetterVersionId ?? null,
+      };
+    }
   }
 
   async getCompanyNews(userId: string, jobId: string) {

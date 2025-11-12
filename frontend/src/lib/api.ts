@@ -48,6 +48,9 @@ export type Job = {
   companyContactPhone?: string | null;
   glassdoorRating?: number | null;
   glassdoorUrl?: string | null;
+  // UC-042: Materials linkage
+  resumeVersionId?: string | null;
+  coverLetterVersionId?: string | null;
   status?: string;                   // pipeline stage
   statusUpdatedAt?: string | null;   // ISO timestamp
   notes?: string | null;
@@ -175,6 +178,13 @@ export async function listJobHistory(id: string): Promise<JobHistoryItem[]> {
   return data;
 }
 
+
+export type JobMaterialsHistoryItem = { id: string; resumeVersionId?: string | null; coverLetterVersionId?: string | null; changedAt?: string | null };
+export async function listJobMaterialsHistory(id: string): Promise<JobMaterialsHistoryItem[]> {
+  const { data } = await api.get(`/jobs/${id}/materials-history`, { withCredentials: true });
+  return data;
+}
+
 export type CompanyNews = { company: string; articles: { title: string; url: string; source?: string; publishedAt?: string; description?: string }[] };
 export async function getCompanyNews(id: string): Promise<CompanyNews> {
   const { data } = await api.get(`/jobs/${id}/company-news`, { withCredentials: true });
@@ -219,4 +229,21 @@ export type EnrichCompanyResponse = {
 export async function enrichCompanyFromUrl(url: string): Promise<EnrichCompanyResponse> {
   const { data } = await api.post('/jobs/enrich-company', { url }, { withCredentials: true });
   return data;
+}
+
+
+export async function getMaterialsUsage(): Promise<{ resume: { id: string; count: number }[]; coverLetter: { id: string; count: number }[] }> {
+  const { data } = await api.get('/jobs/materials/usage', { withCredentials: true });
+  return data;
+}
+
+
+export async function getUserMaterialDefaults(): Promise<{ defaultResumeVersionId: string | null; defaultCoverLetterVersionId: string | null }> {
+  const { data } = await api.get('/jobs/materials/defaults', { withCredentials: true });
+  return data;
+}
+
+export async function setUserMaterialDefaults(payload: { defaultResumeVersionId?: string | null; defaultCoverLetterVersionId?: string | null }) {
+  const { data } = await api.post('/jobs/materials/defaults', payload, { withCredentials: true });
+  return data as { defaultResumeVersionId: string | null; defaultCoverLetterVersionId: string | null };
 }

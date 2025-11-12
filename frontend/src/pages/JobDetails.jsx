@@ -2,7 +2,7 @@ import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
-import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl } from "../lib/api";
+import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults } from "../lib/api";
 
 export default function JobDetails() {
   const { jobId } = useParams();
@@ -14,15 +14,19 @@ export default function JobDetails() {
   const [news, setNews] = React.useState({ company: '', articles: [] });
   const [importUrl, setImportUrl] = React.useState("");
   const [importing, setImporting] = React.useState(false);
+  const [materialsHistory, setMaterialsHistory] = React.useState([]);
+  const [defaults, setDefaults] = React.useState({ defaultResumeVersionId: null, defaultCoverLetterVersionId: null });
 
   React.useEffect(() => { (async () => {
     try {
-      const [j, h, n] = await Promise.all([
+      const [j, h, n, mh, defs] = await Promise.all([
         getJob(jobId),
         listJobHistory(jobId).catch(() => []),
         getCompanyNews(jobId).catch(() => ({ company: '', articles: [] })),
+        listJobMaterialsHistory(jobId).catch(() => []),
+        getUserMaterialDefaults().catch(() => ({ defaultResumeVersionId: null, defaultCoverLetterVersionId: null })),
       ]);
-      setJob(j); setHistory(h); setNews(n);
+      setJob(j); setHistory(h); setNews(n); setMaterialsHistory(mh); setDefaults(defs);
     } catch { setError("Failed to load job"); }
   })(); }, [jobId]);
 
@@ -95,10 +99,15 @@ export default function JobDetails() {
         hiringManagerName: job.hiringManagerName ?? null,
         hiringManagerEmail: job.hiringManagerEmail ?? null,
         hiringManagerPhone: job.hiringManagerPhone ?? null,
+        // UC-042 materials linkage
+        resumeVersionId: job.resumeVersionId ?? null,
+        coverLetterVersionId: job.coverLetterVersionId ?? null,
       };
       const updated = await updateJob(jobId, payload);
       setJob(updated);
       setEdit(false);
+  // refresh materials history after save
+  try { setMaterialsHistory(await listJobMaterialsHistory(jobId)); } catch {}
     } catch (e) {
       const msg = e?.response?.data?.message || e?.message || "Failed to save";
       setError(Array.isArray(msg) ? msg.join("; ") : msg);
@@ -134,6 +143,66 @@ export default function JobDetails() {
           </Link>
         </div>
       </div>
+      {/* Application Materials */}
+      <Card variant="default" size="large">
+        <Card.Header>
+          <div className="flex items-center justify-between w-full">
+            <Card.Title>Application Materials</Card.Title>
+            {!edit && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                Defaults: Resume {defaults.defaultResumeVersionId ? <span className="font-mono">{defaults.defaultResumeVersionId}</span> : '—'} • Cover Letter {defaults.defaultCoverLetterVersionId ? <span className="font-mono">{defaults.defaultCoverLetterVersionId}</span> : '—'}
+              </div>
+            )}
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="form-label">Resume Version ID</div>
+              {edit ? (
+                <input className="input font-mono" value={job.resumeVersionId || ""} onChange={e=>setField('resumeVersionId', e.target.value)} placeholder="UUID provided by Materials feature" />
+              ) : (
+                <div className="text-sm font-mono">{job.resumeVersionId || '—'}</div>
+              )}
+              {job.resumeVersionId && /^https?:\/\//i.test(job.resumeVersionId) ? (
+                <a href={job.resumeVersionId} target="_blank" rel="noreferrer" className="text-sm text-[var(--primary-color)] mt-1 inline-block">View Resume</a>
+              ) : (
+                <div className="text-xs text-gray-500 mt-1">Viewing will work when document service provides a URL for this version.</div>
+              )}
+            </div>
+            <div>
+              <div className="form-label">Cover Letter Version ID</div>
+              {edit ? (
+                <input className="input font-mono" value={job.coverLetterVersionId || ""} onChange={e=>setField('coverLetterVersionId', e.target.value)} placeholder="UUID provided by Materials feature" />
+              ) : (
+                <div className="text-sm font-mono">{job.coverLetterVersionId || '—'}</div>
+              )}
+              {job.coverLetterVersionId && /^https?:\/\//i.test(job.coverLetterVersionId) ? (
+                <a href={job.coverLetterVersionId} target="_blank" rel="noreferrer" className="text-sm text-[var(--primary-color)] mt-1 inline-block">View Cover Letter</a>
+              ) : (
+                <div className="text-xs text-gray-500 mt-1">Viewing will work when document service provides a URL for this version.</div>
+              )}
+            </div>
+          </div>
+          {!edit && (
+            <div className="mt-4 flex gap-2">
+              <button
+                className="btn btn-secondary"
+                onClick={async ()=>{
+                  try {
+                    const next = await setUserMaterialDefaults({ defaultResumeVersionId: job.resumeVersionId ?? null, defaultCoverLetterVersionId: job.coverLetterVersionId ?? null });
+                    setDefaults(next);
+                  } catch {}
+                }}
+                disabled={!job.resumeVersionId && !job.coverLetterVersionId}
+              >
+                Set these as my defaults
+              </button>
+            </div>
+          )}
+        </Card.Body>
+      </Card>
+
 
       {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
@@ -349,6 +418,28 @@ export default function JobDetails() {
               </ul>
             ) : (
               <div className="text-sm text-gray-600">No history yet.</div>
+            )}
+          </Card.Body>
+        </Card>
+
+        {/* Materials History */}
+        <Card variant="default" size="large">
+          <Card.Header><Card.Title>Materials History</Card.Title></Card.Header>
+          <Card.Body>
+            {materialsHistory && materialsHistory.length > 0 ? (
+              <ul className="space-y-2">
+                {materialsHistory.map(item => (
+                  <li key={item.id} className="text-sm flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="text-xs text-gray-600">Resume: <span className="font-mono">{item.resumeVersionId || '—'}</span></div>
+                      <div className="text-xs text-gray-600">Cover Letter: <span className="font-mono">{item.coverLetterVersionId || '—'}</span></div>
+                    </div>
+                    <span className="text-gray-500 text-xs">{item.changedAt ? new Date(item.changedAt).toLocaleString() : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-gray-600">No materials changes recorded.</div>
             )}
           </Card.Body>
         </Card>
