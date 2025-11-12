@@ -3,6 +3,8 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import session from 'express-session';
 
+console.log('Loaded SUPABASE_URL:', process.env.SUPABASE_URL);
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({

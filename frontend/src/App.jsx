@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
 
@@ -24,6 +24,12 @@ import CertificationsPage from "./pages/CertificationsPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProfileForm from "./components/ProfileForm";
 import ProfileSummary from "./components/ProfileSummary";
+
+const TemplatesPage = React.lazy(() =>
+  import("./coverletters/pages/TemplatesPage")
+);
+
+
 
 export default function App() {
   return (
@@ -57,6 +63,15 @@ export default function App() {
         <Route path="/profile/edit" element={<ProfileForm />} />
         <Route path="/profile/summary" element={<ProfileSummary />} />
         <Route path="/delete-account" element={<DeleteAccount />} />
+
+        <Route
+          path="/coverletters/templates"
+          element={
+            <React.Suspense fallback={<div>Loading templates…</div>}>
+              <TemplatesPage />
+            </React.Suspense>
+          }
+        />
 
         {/* Optional 404 */}
         {/* <Route path="*" element={<NotFound />} /> */}

@@ -1,4 +1,4 @@
-import { IsEmail, IsInt, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, Min, Max } from 'class-validator';
+import { IsEmail, IsInt, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, IsUUID, Min, Max } from 'class-validator';
 
 export const JOB_STATUSES = [
   'Interested',
@@ -68,4 +68,8 @@ export class CreateJobDto {
   @IsOptional() @IsString() companyContactPhone?: string | null;
   @IsOptional() @IsNumber() @Min(0) @Max(5) glassdoorRating?: number | null;
   @IsOptional() @IsUrl({ require_tld: false }, { message: 'glassdoorUrl must be a valid URL' }) glassdoorUrl?: string | null;
+
+  // UC-042: Application materials linkage at creation time (optional)
+  @IsOptional() @IsUUID() resumeVersionId?: string | null;
+  @IsOptional() @IsUUID() coverLetterVersionId?: string | null;
 }

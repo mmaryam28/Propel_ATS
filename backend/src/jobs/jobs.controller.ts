@@ -80,6 +80,13 @@ export class JobsController {
     return this.jobs.getHistory(userId, id);
   }
 
+  // UC-042: Materials history
+  @Get(':id/materials-history')
+  async materialsHistory(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.getMaterialsHistory(userId, id);
+  }
+
   @Post('import-from-url')
   async importFromUrl(@Body() dto: ImportJobDto) {
     return this.jobs.importFromUrl(dto.url);
@@ -96,6 +103,7 @@ export class JobsController {
     return this.jobs.getCompanyNews(userId, id);
   }
 
+<<<<<<< HEAD
   @Patch(':id/archive')
   async archive(
     @Req() req: any,
@@ -126,5 +134,29 @@ export class JobsController {
   ) {
     const userId = req.user.userId;
     return this.jobs.bulkArchive(userId, ids, reason);
+=======
+  // UC-042: Materials usage analytics
+  @Get('materials/usage')
+  async materialsUsage(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getMaterialsUsage(userId);
+  }
+
+  // UC-042: User material defaults
+  @Get('materials/defaults')
+  async getMaterialDefaults(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getUserMaterialDefaults(userId);
+  }
+
+  @Post('materials/defaults')
+  async setMaterialDefaults(
+    @Req() req: any,
+    @Body('defaultResumeVersionId') defaultResumeVersionId?: string | null,
+    @Body('defaultCoverLetterVersionId') defaultCoverLetterVersionId?: string | null,
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.setUserMaterialDefaults(userId, { defaultResumeVersionId, defaultCoverLetterVersionId });
+>>>>>>> 4bf41d389fc79c0338c487000383ffb7619a6c84
   }
 }
