@@ -1,12 +1,14 @@
 import { Controller, Get, Post, Query, Param, Body } from '@nestjs/common';
 import { CoverlettersService } from './coverletters.service';
 import { CoverletterAIService } from './coverletters.ai.service';
+import { CompanyResearchService } from './coverletters.research.service';
 
 @Controller('coverletters')
 export class CoverlettersController {
   constructor(
     private readonly svc: CoverlettersService,
     private readonly ai: CoverletterAIService,
+    private readonly research: CompanyResearchService,
   ) {}
 
   // === UC-055: Template Library Endpoints ===
@@ -29,11 +31,15 @@ export class CoverlettersController {
       throw new Error('Template or template.latest is null');
     }
 
+    const companyInfo = await this.research.getCompanyInsights(body.company || '');
+
+
     const result = await this.ai.generateCoverLetter({
       templateBody: template.latest.body,
       jobDescription: body.jobDescription,
       profileSummary: body.profileSummary,
       tone: body.tone || 'formal',
+      companyInfo,
     });
 
     return { generated: result };

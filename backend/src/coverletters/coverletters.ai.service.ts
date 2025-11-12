@@ -21,11 +21,13 @@ export class CoverletterAIService {
     jobDescription,
     profileSummary,
     tone,
+    companyInfo,
   }: {
     templateBody: string;
     jobDescription: string;
     profileSummary: string;
     tone: string;
+    companyInfo?: string;
   }) {
     try {
       const prompt = `
@@ -41,6 +43,8 @@ ${jobDescription}
 User Profile:
 ${profileSummary}
 
+${companyInfo ? `Company Research:\n${companyInfo}` : ''}
+Incorporate the company’s mission, values, or recent achievements naturally into the letter.
 Return only the completed cover letter text.
       `;
 

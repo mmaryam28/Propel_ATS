@@ -8,6 +8,7 @@ export default function TemplatePreviewModal({
   slug: string | null;
   onClose: () => void;
 }) {
+  const [company, setCompany] = useState("");
   const [body, setBody] = useState<string>("");
   const [aiOutput, setAiOutput] = useState<string>("");
   const [tone, setTone] = useState("formal");
@@ -23,7 +24,7 @@ export default function TemplatePreviewModal({
 
   if (!slug) return null;
 
-  // === UC-056: Generate AI Cover Letter ===
+  // === UC-056 + UC-057: Generate AI Cover Letter with Company Research ===
   async function handleGenerate() {
     setLoading(true);
     setAiOutput("Generating...");
@@ -38,6 +39,7 @@ export default function TemplatePreviewModal({
           profileSummary:
             "Computer Science student with React and Node.js experience, strong teamwork skills, and passion for frontend development.",
           tone,
+          company, // ✅ Send the company name to backend
         }),
       });
 
@@ -65,6 +67,20 @@ export default function TemplatePreviewModal({
         <pre className="whitespace-pre-wrap text-sm border rounded p-3 bg-gray-50 max-h-[40vh] overflow-auto mb-3">
           {body}
         </pre>
+
+        {/* Company Input */}
+        <div className="mb-2">
+          <label className="text-sm font-medium block mb-1">
+            Company Name:
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. Google"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            className="border rounded px-2 py-1 text-sm w-full"
+          />
+        </div>
 
         {/* Tone Selection + Generate Button */}
         <div className="flex items-center gap-2 mb-3">
