@@ -88,7 +88,7 @@ async function handleGenerate() {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl p-4 shadow-lg">
+      <div className="bg-white rounded-xl w-full max-w-2xl p-4 shadow-lg text-gray-900">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div className="font-semibold text-lg">Cover Letter Preview</div>
@@ -98,13 +98,13 @@ async function handleGenerate() {
         </div>
 
         {/* Template Body */}
-        <pre className="whitespace-pre-wrap text-sm border rounded p-3 bg-gray-50 max-h-[40vh] overflow-auto mb-3">
+        <pre className="whitespace-pre-wrap text-sm border rounded p-3 bg-gray-50 text-gray-800 max-h-[40vh] overflow-auto mb-3">
           {body}
         </pre>
 
         {/* Company Input */}
         <div className="mb-2">
-          <label className="text-sm font-medium block mb-1">
+          <label className="text-sm font-medium block mb-1 text-gray-900">
             Company Name:
           </label>
           <input
@@ -112,15 +112,15 @@ async function handleGenerate() {
             placeholder="e.g. Google"
             value={company}
             onChange={(e) => setCompany(e.target.value)}
-            className="border rounded px-2 py-1 text-sm w-full"
+            className="border rounded px-2 py-1 text-sm w-full text-gray-900"
           />
         </div>
 
         {/* Tone Selection + Generate Button */}
         <div className="flex items-center gap-2 mb-3">
-          <label className="text-sm font-medium">Tone:</label>
+          <label className="text-sm font-medium text-gray-900">Tone:</label>
           <select
-            className="border rounded px-2 py-1 text-sm"
+            className="border rounded px-2 py-1 text-sm text-gray-900"
             value={tone}
             onChange={(e) => setTone(e.target.value)}
           >
@@ -144,8 +144,8 @@ async function handleGenerate() {
         {/* AI Output */}
         {aiOutput && (
           <div>
-            <div className="font-semibold text-sm mb-1">AI Output:</div>
-            <pre className="whitespace-pre-wrap text-sm border rounded p-3 bg-gray-50 max-h-[40vh] overflow-auto">
+            <div className="font-semibold text-sm mb-1 text-gray-900">AI Output:</div>
+            <pre className="whitespace-pre-wrap text-sm border rounded p-3 bg-gray-50 text-gray-800 max-h-[40vh] overflow-auto">
               {aiOutput}
             </pre>
           </div>

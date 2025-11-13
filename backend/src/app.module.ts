@@ -13,8 +13,13 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { ProfileModule } from './profile/profile.module';
 import { EmploymentModule } from './employment/employment.module';
 import { JobsModule } from './jobs/jobs.module';
+import { ResumeModule } from './resume/resume.module';
 import { CoverlettersModule } from './coverletters/coverletters.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { ResearchModule } from './research/research.module';
+import { MatchModule } from "./match/match.module";
+import { SalaryModule } from './salary/salary.module';
+import { InterviewModule } from './interview/interview.module';
 
 @Module({
   imports: [
@@ -33,8 +38,12 @@ import { StatisticsModule } from './statistics/statistics.module';
   ProfileModule,
   EmploymentModule,
   JobsModule,
+  ResumeModule,
   CoverlettersModule,
   StatisticsModule,
+  MatchModule,
+  SalaryModule,
+  InterviewModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -24,7 +24,7 @@ export class EducationService {
       };
     
     const { data: education, error } = await client
-      .from('Education')
+      .from('education')
       .insert(payload)
       .select()
       .single();

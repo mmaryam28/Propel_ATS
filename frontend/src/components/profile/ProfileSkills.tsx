@@ -67,7 +67,12 @@ export default function ProfileSkills({ userId }: Props) {
       'Industry-Specific': { Beginner: 0, Intermediate: 0, Advanced: 0, Expert: 0 },
     };
     filtered.forEach((s) => {
-      res[s.category][s.proficiency] += 1;
+      // Defensive check to prevent undefined errors
+      if (res[s.category] && res[s.category][s.proficiency] !== undefined) {
+        res[s.category][s.proficiency] += 1;
+      } else {
+        console.warn('Unknown skill data:', s); // helps debug invalid entries
+      }
     });
     return res;
   }, [filtered]);
