@@ -43,6 +43,12 @@ import VersionManager from './pages/Resumes/VersionManager.jsx';
 import ResumePreview from './pages/Resumes/ResumePreview.jsx';
 import FeedbackPanel from './pages/Resumes/FeedbackPanel.jsx';
 
+// Job Search pages
+import CompanyResearch from './pages/CompanyResearch';
+import JobMatch from './pages/JobMatch';
+import SalaryAnalysis from './pages/SalaryAnalysis';
+import InterviewInsights from './pages/InterviewInsights';
+
 import './index.css';
 import './styles/globals.css';
 import './styles/theme.css';
@@ -96,6 +102,10 @@ const router = createBrowserRouter([
       { path: '/resumes/versions', element: <VersionManager /> },
       { path: '/resumes/preview/:id', element: <ResumePreview /> },
       { path: '/resumes/feedback', element: <FeedbackPanel /> },
+      { path: '/research', element: <CompanyResearch /> },
+      { path: '/job-match', element: <JobMatch /> },
+      { path: '/salary-analysis', element: <SalaryAnalysis /> },
+      { path: '/interview-insights', element: <InterviewInsights /> },
 
       // ✅ New Cover Letter Templates route
       {
