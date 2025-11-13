@@ -4,23 +4,37 @@ import { listJobs } from '../lib/api';
 
 export default function JobCalendar() {
   const [jobs, setJobs] = useState([]);
+  const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
 
   useEffect(() => {
-    loadJobs();
+    loadData();
   }, []);
 
-  async function loadJobs() {
+  async function loadData() {
     try {
       setLoading(true);
-      const data = await listJobs();
-      // Filter jobs with deadlines
-      const jobsWithDeadlines = data.filter(j => j.deadline);
+      console.log('📅 [JobCalendar] Loading calendar data...');
+      
+      const { getInterviews } = await import('../lib/api');
+      const [jobsData, interviewsData] = await Promise.all([
+        listJobs(),
+        getInterviews(),
+      ]);
+      
+      console.log('✅ [JobCalendar] Jobs loaded:', jobsData.length);
+      console.log('✅ [JobCalendar] Interviews loaded:', interviewsData.length);
+      console.log('📋 [JobCalendar] Interview data:', interviewsData);
+      
+      const jobsWithDeadlines = jobsData.filter(j => j.deadline);
       setJobs(jobsWithDeadlines);
+      setInterviews(interviewsData);
+      
+      console.log('📊 [JobCalendar] State updated - jobs:', jobsWithDeadlines.length, 'interviews:', interviewsData.length);
     } catch (e) {
-      console.error('Failed to load jobs', e);
+      console.error('❌ [JobCalendar] Failed to load calendar data:', e);
     } finally {
       setLoading(false);
     }
@@ -37,12 +51,32 @@ export default function JobCalendar() {
     return { daysInMonth, startingDayOfWeek, year, month };
   }
 
-  function getJobsForDate(date) {
+  function getEventsForDate(date) {
     const dateStr = date.toISOString().split('T')[0];
-    return jobs.filter(job => {
+    
+    console.log('🔍 [getEventsForDate] Checking date:', dateStr);
+    
+    const deadlines = jobs.filter(job => {
       const jobDate = new Date(job.deadline).toISOString().split('T')[0];
       return jobDate === dateStr;
     });
+
+    const interviewsOnDate = interviews.filter(interview => {
+      const intDate = new Date(interview.scheduled_at).toISOString().split('T')[0];
+      const matches = intDate === dateStr;
+      if (matches) {
+        console.log('✅ [getEventsForDate] Found interview for date:', interview);
+      }
+      return matches;
+    });
+
+    console.log('📊 [getEventsForDate] Results:', { 
+      date: dateStr, 
+      deadlines: deadlines.length, 
+      interviews: interviewsOnDate.length 
+    });
+
+    return { deadlines, interviews: interviewsOnDate };
   }
 
   function getDeadlineUrgency(deadline) {
@@ -100,7 +134,7 @@ export default function JobCalendar() {
     );
   }
 
-  const selectedDateJobs = selectedDate ? getJobsForDate(selectedDate) : [];
+  const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : {};
 
   return (
     <div className="space-y-6">
@@ -162,14 +196,14 @@ export default function JobCalendar() {
 
             const date = new Date(year, month, day);
             date.setHours(0, 0, 0, 0);
-            const dateJobs = getJobsForDate(date);
+            const dateEvents = getEventsForDate(date);
             const isToday = date.getTime() === today.getTime();
             const isSelected = selectedDate && date.getTime() === selectedDate.getTime();
 
             // Get most urgent job for this date
             let urgencyClass = '';
-            if (dateJobs.length > 0) {
-              const urgencies = dateJobs.map(j => getDeadlineUrgency(j.deadline));
+            if (dateEvents.deadlines.length > 0) {
+              const urgencies = dateEvents.deadlines.map(j => getDeadlineUrgency(j.deadline));
               if (urgencies.includes('overdue') || urgencies.includes('critical')) {
                 urgencyClass = 'bg-red-200 border-red-400';
               } else if (urgencies.includes('warning')) {
@@ -177,6 +211,11 @@ export default function JobCalendar() {
               } else {
                 urgencyClass = 'bg-green-200 border-green-400';
               }
+            }
+
+            // ✅ NEW: Add purple highlight for interviews
+            if (dateEvents.interviews.length > 0 && !urgencyClass) {
+              urgencyClass = 'bg-purple-100 border-purple-300';
             }
 
             return (
@@ -188,7 +227,7 @@ export default function JobCalendar() {
                   ${urgencyClass || 'border-gray-200 hover:border-gray-300'}
                   ${isToday ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
                   ${isSelected ? 'ring-2 ring-[var(--primary-color)] ring-offset-2' : ''}
-                  ${dateJobs.length > 0 ? 'cursor-pointer' : 'cursor-default'}
+                  ${dateEvents.deadlines.length > 0 || dateEvents.interviews.length > 0 ? 'cursor-pointer' : 'cursor-default'}
                   relative
                 `}
               >
@@ -196,10 +235,20 @@ export default function JobCalendar() {
                   <span className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
                     {day}
                   </span>
-                  {dateJobs.length > 0 && (
-                    <span className="text-xs font-bold mt-auto">
-                      {dateJobs.length}
-                    </span>
+                  {/* ✅ Show count of BOTH deadlines AND interviews */}
+                  {(dateEvents.deadlines.length > 0 || dateEvents.interviews.length > 0) && (
+                    <div className="text-xs font-bold mt-auto flex flex-col gap-0.5">
+                      {dateEvents.deadlines.length > 0 && (
+                        <span className="bg-white/70 rounded px-1">
+                          📄 {dateEvents.deadlines.length}
+                        </span>
+                      )}
+                      {dateEvents.interviews.length > 0 && (
+                        <span className="bg-purple-200/70 rounded px-1">
+                          📅 {dateEvents.interviews.length}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </button>
@@ -209,49 +258,81 @@ export default function JobCalendar() {
       </div>
 
       {/* Selected Date Details */}
-      {selectedDate && selectedDateJobs.length > 0 && (
-        <div className="page-card p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            Deadlines on {selectedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </h3>
-          <div className="space-y-3">
-            {selectedDateJobs.map(job => {
-              const urgency = getDeadlineUrgency(job.deadline);
-              let urgencyBadge = '';
-              if (urgency === 'overdue') urgencyBadge = 'bg-red-100 text-red-800 border-red-300';
-              else if (urgency === 'critical') urgencyBadge = 'bg-red-100 text-red-800 border-red-300';
-              else if (urgency === 'warning') urgencyBadge = 'bg-yellow-100 text-yellow-800 border-yellow-300';
-              else urgencyBadge = 'bg-green-100 text-green-800 border-green-300';
-
-              return (
-                <Link
-                  key={job.id}
-                  to={`/jobs/${job.id}`}
-                  className="block p-4 border border-gray-200 rounded-lg hover:border-[var(--primary-color)] hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{job.title}</div>
-                      <div className="text-sm text-gray-600">{job.company}</div>
-                      {job.status && (
-                        <div className="text-xs text-gray-500 mt-1">Status: {job.status}</div>
-                      )}
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded border font-medium ${urgencyBadge}`}>
-                      {urgency === 'overdue' ? 'Overdue' : urgency === 'critical' ? 'Critical' : urgency === 'warning' ? 'Soon' : 'Upcoming'}
-                    </span>
+      {selectedDate && (
+        (() => {
+          const events = getEventsForDate(selectedDate);
+          return (events.deadlines.length > 0 || events.interviews.length > 0) && (
+            <div className="page-card p-6">
+              <h3 className="text-lg font-semibold mb-4">
+                Events on {selectedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </h3>
+              
+              {/* Interviews */}
+              {events.interviews.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-md font-medium mb-2 text-purple-700">Interviews</h4>
+                  <div className="space-y-2">
+                    {events.interviews.map(interview => (
+                      <div key={interview.id} className="p-3 border border-purple-200 rounded-lg bg-purple-50">
+                        <div className="font-medium text-gray-900">{interview.title}</div>
+                        {interview.job && (
+                          <div className="text-xs text-gray-500 mb-1">
+                            {interview.job.title} at {interview.job.company}
+                          </div>
+                        )}
+                        <div className="text-sm text-gray-600">
+                          {new Date(interview.scheduled_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          {interview.location && ` • ${interview.location}`}
+                        </div>
+                        {interview.interviewer_name && (
+                          <div className="text-xs text-gray-500 mt-1">with {interview.interviewer_name}</div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                </div>
+              )}
 
-      {selectedDate && selectedDateJobs.length === 0 && (
-        <div className="page-card p-6">
-          <p className="text-gray-600">No deadlines on {selectedDate.toLocaleDateString()}</p>
-        </div>
+              {/* Deadlines */}
+              {events.deadlines.length > 0 && (
+                <div>
+                  <h4 className="text-md font-medium mb-2">Application Deadlines</h4>
+                  <div className="space-y-2">
+                    {events.deadlines.map(job => {
+                      const urgency = getDeadlineUrgency(job.deadline);
+                      let urgencyBadge = '';
+                      if (urgency === 'overdue') urgencyBadge = 'bg-red-100 text-red-800 border-red-300';
+                      else if (urgency === 'critical') urgencyBadge = 'bg-red-100 text-red-800 border-red-300';
+                      else if (urgency === 'warning') urgencyBadge = 'bg-yellow-100 text-yellow-800 border-yellow-300';
+                      else urgencyBadge = 'bg-green-100 text-green-800 border-green-300';
+
+                      return (
+                        <Link
+                          key={job.id}
+                          to={`/jobs/${job.id}`}
+                          className="block p-3 border border-gray-200 rounded-lg hover:border-[var(--primary-color)] hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{job.title}</div>
+                              <div className="text-sm text-gray-600">{job.company}</div>
+                              {job.status && (
+                                <div className="text-xs text-gray-500 mt-1">Status: {job.status}</div>
+                              )}
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded border font-medium ${urgencyBadge}`}>
+                              {urgency === 'overdue' ? 'Overdue' : urgency === 'critical' ? 'Critical' : urgency === 'warning' ? 'Soon' : 'Upcoming'}
+                            </span>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()
       )}
     </div>
   );

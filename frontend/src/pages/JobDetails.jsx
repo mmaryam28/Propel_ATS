@@ -4,6 +4,7 @@ import { Card } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
 import { Toast } from "../components/Toast";
 import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults } from "../lib/api";
+import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
 
 export default function JobDetails() {
   const { jobId } = useParams();
@@ -25,17 +26,20 @@ export default function JobDetails() {
   const [archivedJobId, setArchivedJobId] = React.useState(null);
   const [materialsHistory, setMaterialsHistory] = React.useState([]);
   const [defaults, setDefaults] = React.useState({ defaultResumeVersionId: null, defaultCoverLetterVersionId: null });
+  const [showScheduleInterview, setShowScheduleInterview] = React.useState(false);
+  const [interviews, setInterviews] = React.useState([]);
 
   React.useEffect(() => { (async () => {
     try {
-      const [j, h, n, mh, defs] = await Promise.all([
+      const [j, h, n, mh, defs, ints] = await Promise.all([
         getJob(jobId),
         listJobHistory(jobId).catch(() => []),
         getCompanyNews(jobId).catch(() => ({ company: '', articles: [] })),
         listJobMaterialsHistory(jobId).catch(() => []),
         getUserMaterialDefaults().catch(() => ({ defaultResumeVersionId: null, defaultCoverLetterVersionId: null })),
+        (async () => { const { getInterviews } = await import('../lib/api'); return getInterviews(jobId); })().catch(() => []),
       ]);
-      setJob(j); setHistory(h); setNews(n); setMaterialsHistory(mh); setDefaults(defs);
+      setJob(j); setHistory(h); setNews(n); setMaterialsHistory(mh); setDefaults(defs); setInterviews(ints);
     } catch { setError("Failed to load job"); }
   })(); }, [jobId]);
 
@@ -175,6 +179,10 @@ export default function JobDetails() {
     }
   }
 
+  async function handleInterviewScheduled(interview) {
+    setInterviews(prev => [...prev, interview]);
+  }
+
   if (!job) return <div className="text-sm text-gray-600">Loading…</div>;
 
   return (
@@ -188,6 +196,12 @@ export default function JobDetails() {
         <div className="flex gap-2">
           {!edit && (
             <>
+              <Link to="/jobs/calendar" className="btn btn-secondary">
+                📅 View Calendar
+              </Link>
+              <button className="btn btn-secondary" onClick={() => setShowScheduleInterview(true)}>
+                Schedule Interview
+              </button>
               <button className="btn btn-secondary" onClick={() => setEdit(true)}>Edit</button>
               <button className="btn btn-ghost" onClick={() => setShowArchiveConfirm(true)}>Archive</button>
               <button className="btn btn-ghost text-red-600 hover:bg-red-50" onClick={() => setShowDeleteConfirm(true)}>Delete</button>
@@ -572,6 +586,38 @@ export default function JobDetails() {
         </Card>
       </div>
 
+      {/* Scheduled Interviews */}
+      {interviews.length > 0 && (
+        <Card variant="default" size="large">
+          <Card.Header><Card.Title>Scheduled Interviews</Card.Title></Card.Header>
+          <Card.Body>
+            <div className="space-y-3">
+              {interviews.map(interview => (
+                <div key={interview.id} className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{interview.title}</div>
+                    <div className="text-sm text-gray-600">
+                      {new Date(interview.scheduled_at).toLocaleString()}
+                      {interview.location && ` • ${interview.location}`}
+                    </div>
+                    {interview.interviewer_name && (
+                      <div className="text-xs text-gray-500">with {interview.interviewer_name}</div>
+                    )}
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    interview.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    interview.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {interview.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card.Body>
+        </Card>
+      )}
+
       {/* Archive Confirmation Modal */}
       {showArchiveConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -650,6 +696,16 @@ export default function JobDetails() {
           if (archivedJobId) navigate('/jobs');
         }}
       />
+
+      {/* Schedule Interview Modal */}
+      {showScheduleInterview && (
+        <ScheduleInterviewModal
+          jobId={jobId}  // This is a UUID string from useParams
+          jobTitle={job.title}
+          onClose={() => setShowScheduleInterview(false)}
+          onScheduled={handleInterviewScheduled}
+        />
+      )}
     </div>
   );
 }

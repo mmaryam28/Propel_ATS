@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateJobDto, JOB_STATUSES, JobStatus } from './dto/create-job.dto';
@@ -1188,5 +1188,331 @@ export class JobsService {
       message: `${data.length} job(s) archived successfully`,
       count: data.length 
     };
+  }
+
+  // Interview Scheduling
+  async scheduleInterview(userId: string, dto: any) {
+    const client = this.supabase.getClient();
+    
+    // Verify job belongs to user
+    const { data: job } = await client
+      .from('jobs')
+      .select('id')
+      .eq('id', dto.jobId)
+      .eq('userId', userId)
+      .single();
+    
+    if (!job) throw new NotFoundException('Job not found');
+
+    // Create interview record using job_id (UUID) instead of job_application_id (integer)
+    const { data: interview, error } = await client
+      .from('interviews')
+      .insert({
+        job_id: dto.jobId,  // ✅ Use UUID directly, not parseInt()
+        user_id: userId,
+        interview_type: dto.title || 'General Interview',
+        title: dto.title,
+        scheduled_at: dto.scheduledAt,
+        duration: dto.duration || '60',
+        location: dto.location,
+        interviewer_name: dto.interviewerName,
+        interviewer_email: dto.interviewerEmail,
+        notes: dto.notes,
+        details: dto.notes,
+        status: 'scheduled',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Create timeline event (only if you have a related job_application)
+    // Since interviews now reference jobs table, skip this or create a matching job_application first
+    try {
+      // Optional: Create timeline event if you have a job_application_id mapping
+      // For now, we'll skip it since we're using job_id
+    } catch {
+      // Ignore timeline errors
+    }
+
+    // Create reminder if requested
+    if (dto.setReminder) {
+      const reminderTime = this.calculateReminderTime(dto.scheduledAt, dto.reminderBefore || '1h');
+      await client.from('reminders').insert({
+        user_id: userId,
+        related_id: interview.id,
+        related_type: 'interview',
+        type: 'interview',
+        message: `Interview: ${dto.title}`,
+        reminder_time: reminderTime,
+        due_date: reminderTime,
+      });
+    }
+
+    return interview;
+  }
+
+  async getInterviews(userId: string, jobId?: string) {
+    const client = this.supabase.getClient();
+    
+    console.log('📅 [getInterviews] Called with:', { userId, jobId });
+    
+    try {
+      // Try to select interviews with a proper join
+      // If the foreign key name is different, Supabase might fail
+      let query = client
+        .from('interviews')
+        .select('*')
+        .eq('user_id', userId)
+        .order('scheduled_at', { ascending: true });
+
+      if (jobId) {
+        query = query.eq('job_id', jobId);
+        console.log('📅 [getInterviews] Filtering by jobId:', jobId);
+      }
+
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('❌ [getInterviews] Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('✅ [getInterviews] Raw data from database:', data);
+      
+      // If we got data, try to fetch job details separately
+      if (data && data.length > 0) {
+        const interviewsWithJobs = await Promise.all(
+          data.map(async (interview) => {
+            if (interview.job_id) {
+              const { data: job } = await client
+                .from('jobs')
+                .select('id, title, company')
+                .eq('id', interview.job_id)
+                .single();
+              
+              return { ...interview, job };
+            }
+            return interview;
+          })
+        );
+        
+        console.log('✅ [getInterviews] Enriched with job data:', interviewsWithJobs.length);
+        return interviewsWithJobs;
+      }
+      
+      console.log('✅ [getInterviews] Found interviews:', data?.length || 0);
+      return data || [];
+    } catch (error) {
+      console.error('❌ [getInterviews] Unexpected error:', error);
+      // Return empty array instead of throwing to prevent 500 errors
+      return [];
+    }
+  }
+
+  async updateInterview(userId: string, interviewId: string, dto: any) {
+    const client = this.supabase.getClient();
+    
+    const updateData: any = {};
+    if (dto.title) updateData.title = dto.title;
+    if (dto.scheduledAt) updateData.scheduled_at = dto.scheduledAt;
+    if (dto.duration) updateData.duration = dto.duration;
+    if (dto.location) updateData.location = dto.location;
+    if (dto.interviewerName) updateData.interviewer_name = dto.interviewerName;
+    if (dto.interviewerEmail) updateData.interviewer_email = dto.interviewerEmail;
+    if (dto.notes) {
+      updateData.notes = dto.notes;
+      updateData.details = dto.notes;
+    }
+    if (dto.status) updateData.status = dto.status;
+
+    const { data: interview, error } = await client
+      .from('interviews')
+      .update(updateData)
+      .eq('id', interviewId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Skip timeline event since we don't have job_application_id anymore
+    return interview;
+  }
+
+  // Analytics
+  async getAnalytics(userId: string) {
+    const client = this.supabase.getClient();
+
+    // Total applications - using your 'job_applications' table
+    const { count: totalApps } = await client
+      .from('job_applications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    // Applications by status
+    const { data: statusData } = await client
+      .from('job_applications')
+      .select('status')
+      .eq('user_id', userId);
+
+    const byStatus = (statusData || []).reduce((acc, job) => {
+      const status = job.status || 'APPLIED';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Response rate calculation
+    const applied = byStatus['APPLIED'] || 0;
+    const responded = Object.keys(byStatus)
+      .filter(s => s !== 'APPLIED' && s !== 'REJECTED')
+      .reduce((sum, key) => sum + (byStatus[key] || 0), 0);
+    const responseRate = applied > 0 ? ((responded / applied) * 100).toFixed(1) : '0';
+
+    // Time to offer
+    const { data: offers } = await client
+      .from('job_applications')
+      .select('applied_date')
+      .eq('user_id', userId)
+      .eq('status', 'OFFER');
+
+    let avgTimeToOffer = 0;
+    if (offers && offers.length > 0) {
+      const totalDays = offers.reduce((sum, job) => {
+        if (!job.applied_date) return sum;
+        const start = new Date(job.applied_date).getTime();
+        const end = Date.now();
+        return sum + Math.floor((end - start) / (1000 * 60 * 60 * 24));
+      }, 0);
+      avgTimeToOffer = Math.round(totalDays / offers.length);
+    }
+
+    // Applications over time (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const { data: recentApps } = await client
+      .from('job_applications')
+      .select('applied_date')
+      .eq('user_id', userId)
+      .gte('applied_date', thirtyDaysAgo.toISOString());
+
+    const appsByDay = (recentApps || []).reduce((acc, job) => {
+      if (!job.applied_date) return acc;
+      const day = new Date(job.applied_date).toISOString().split('T')[0];
+      acc[day] = (acc[day] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Upcoming interviews
+    const { data: upcomingInterviews } = await client
+      .from('interviews')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('scheduled_at', new Date().toISOString())
+      .order('scheduled_at', { ascending: true })
+      .limit(5);
+
+    return {
+      totalApplications: totalApps || 0,
+      byStatus,
+      responseRate: parseFloat(responseRate),
+      avgTimeToOffer,
+      applicationsByDay: appsByDay,
+      upcomingInterviews: upcomingInterviews || [],
+    };
+  }
+
+  // Automation Rules - no changes needed, uses your existing table structure
+  async createAutomationRule(userId: string, dto: any) {
+    const client = this.supabase.getClient();
+    
+    const { data, error } = await client
+      .from('application_automation_rules')
+      .insert({
+        user_id: userId,
+        rule_name: dto.ruleName,
+        trigger_event: dto.triggerEvent,
+        condition: dto.condition || {},
+        action: dto.action,
+        action_params: dto.actionParams || {},
+        active: dto.active ?? true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getAutomationRules(userId: string) {
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('application_automation_rules')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async updateAutomationRule(userId: string, ruleId: string, dto: any) {
+    const client = this.supabase.getClient();
+    
+    const { data, error } = await client
+      .from('application_automation_rules')
+      .update({ ...dto, updated_at: new Date().toISOString() })
+      .eq('id', ruleId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteAutomationRule(userId: string, ruleId: string) {
+    const client = this.supabase.getClient();
+    
+    const { error } = await client
+      .from('application_automation_rules')
+      .delete()
+      .eq('id', ruleId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return { success: true, message: 'Rule deleted' };
+  }
+
+  // Helper methods
+  private calculateReminderTime(scheduledAt: string, reminderBefore: string): string {
+    const scheduled = new Date(scheduledAt);
+    const match = reminderBefore.match(/^(\d+)(h|d|m)$/);
+    
+    if (!match) return new Date(scheduled.getTime() - 60 * 60 * 1000).toISOString();
+    
+    const [, amount, unit] = match;
+    const num = parseInt(amount);
+    
+    switch (unit) {
+      case 'm': return new Date(scheduled.getTime() - num * 60 * 1000).toISOString();
+      case 'h': return new Date(scheduled.getTime() - num * 60 * 60 * 1000).toISOString();
+      case 'd': return new Date(scheduled.getTime() - num * 24 * 60 * 60 * 1000).toISOString();
+      default: return new Date(scheduled.getTime() - 60 * 60 * 1000).toISOString();
+    }
+  }
+
+  async deleteInterview(userId: string, interviewId: string) {
+    const client = this.supabase.getClient();
+    
+    const { error } = await client
+      .from('interviews')
+      .delete()
+      .eq('id', interviewId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return { success: true, message: 'Interview deleted' };
   }
 }

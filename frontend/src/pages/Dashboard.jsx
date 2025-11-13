@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import UpcomingDeadlinesWidget from '../components/UpcomingDeadlinesWidget';
+import AnalyticsDashboard from '../components/AnalyticsDashboard';
 
 const API = import.meta.env?.VITE_API_URL || 'http://localhost:3000';
 
@@ -18,11 +19,12 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-gray-600">Welcome! Use the nav to explore the app.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600">Track your application progress and analytics</p>
       </div>
       
       <UpcomingDeadlinesWidget />
+      <AnalyticsDashboard />
       
       <div className="page-card p-4">
         <h2 className="text-lg font-semibold mb-3">Education Summary</h2>
