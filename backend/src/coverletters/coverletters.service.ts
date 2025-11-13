@@ -1,30 +1,27 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import * as dotenv from 'dotenv';
-dotenv.config();
 
 @Injectable()
 export class CoverlettersService {
   private supabase: SupabaseClient;
 
   constructor() {
-    console.log('SUPABASE_URL at service startup:', process.env.SUPABASE_URL);
-    console.log('SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-
     if (!process.env.SUPABASE_URL) {
-      throw new Error('SUPABASE_URL is missing from environment');
+      throw new Error('SUPABASE_URL missing');
     }
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('SUPABASE_SERVICE_ROLE_KEY is missing from environment');
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY missing');
     }
 
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
   }
 
-  // === UC-055: List all templates with category info ===
+  // ===============================================================
+  // UC-055: List Templates
+  // ===============================================================
   async listTemplates(q?: string, category?: string) {
     let query = this.supabase
       .from('cl_templates')
@@ -47,9 +44,10 @@ export class CoverlettersService {
     return data;
   }
 
-  // === UC-056: Get a single template by slug (with latest version + category) ===
+  // ===============================================================
+  // UC-055 / UC-056: Get Template + Latest Version
+  // ===============================================================
   async getTemplateBySlug(slug: string) {
-    //Include category join here
     const { data: tpl, error } = await this.supabase
       .from('cl_templates')
       .select(`
@@ -65,7 +63,6 @@ export class CoverlettersService {
 
     if (error || !tpl) throw new NotFoundException('Template not found');
 
-    // Fetch the latest version of this template
     const { data: ver, error: e2 } = await this.supabase
       .from('cl_template_versions')
       .select('version, body, changelog, created_at')
@@ -76,7 +73,6 @@ export class CoverlettersService {
 
     if (e2) throw e2;
 
-    //Return both version and category info
     return { ...tpl, latest: ver };
   }
 }
