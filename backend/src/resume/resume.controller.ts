@@ -17,8 +17,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import type { Express } from 'express';
 import type { Response } from 'express';
-import { ResumeService } from './resume.service';
 import { extname } from 'path';
+
+import { ResumeService } from './resume.service';
 import { CreateResumeDto } from './dto/create-resume.dto';
 import { UpdateResumeDto } from './dto/update-resume.dto';
 import { GenerateAIDto } from './dto/generate-ai.dto';
@@ -27,12 +28,13 @@ import { GenerateAIDto } from './dto/generate-ai.dto';
 export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}
 
-  // IMPORTANT: Static routes MUST come before dynamic :id routes
-  // Otherwise :id will match strings like "generate-ai" and cause UUID errors
+  // ============================================
+  // STATIC ROUTES (must come before dynamic ones)
+  // ============================================
 
   @Post()
-  create(@Body() createResumeDto: CreateResumeDto) {
-    return this.resumeService.create(createResumeDto);
+  create(@Body() dto: CreateResumeDto) {
+    return this.resumeService.create(dto);
   }
 
   @Get()
@@ -40,51 +42,10 @@ export class ResumeController {
     return this.resumeService.findAll(userId);
   }
 
+  // --- Validation ---
   @Post('validate')
   validateResume(@Body('userProfile') profile: any) {
     return this.resumeService.validateResume(profile);
-  }
-
-  @Post('upload')
-  @UseInterceptors(
-    FileInterceptor('resumeFile', {
-      storage: diskStorage({
-        destination: './uploads/resumes',
-        filename: (req, file, cb) => {
-          const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, unique + extname(file.originalname));
-        },
-      }),
-    }),
-  )
-  upload(@UploadedFile() file: any, @Body('userId') userId: string) {
-    return this.resumeService.uploadResume(file, userId);
-  }
-
-  @Get('templates')
-  getTemplates() {
-    return {
-      templates: [
-        {
-          id: 'chronological',
-          name: 'Chronological',
-          type: 'chronological',
-          preview: null,
-        },
-        {
-          id: 'functional',
-          name: 'Functional',
-          type: 'functional',
-          preview: null,
-        },
-        {
-          id: 'hybrid',
-          name: 'Hybrid',
-          type: 'hybrid',
-          preview: null,
-        },
-      ],
-    };
   }
 
   // Health check for Ollama connection
@@ -93,7 +54,7 @@ export class ResumeController {
     return this.resumeService.checkOllamaConnection();
   }
 
-  // AI Resume Generation endpoints
+  // --- AI Resume Generator ---
   @Post('generate-ai')
   async generateAI(@Body() dto: any, @Query('format') format?: string, @Res({ passthrough: true }) res?: Response) {
     console.log('\n📥 [Controller] Received generate-ai request');
@@ -251,7 +212,34 @@ export class ResumeController {
     return result;
   }
 
-  // Dynamic routes MUST come last to avoid matching static route names
+  // --- Resume Template Management ---
+  @Get('templates')
+  getTemplates() {
+    return this.resumeService.getTemplates();
+  }
+
+  // --- SINGLE Upload Route (fixed) ---
+  @Post('upload')
+  @UseInterceptors(
+    FileInterceptor('resumeFile', {
+      storage: diskStorage({
+        destination: './uploads/resumes',
+        filename: (req, file, cb) => {
+          const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, unique + extname(file.originalname));
+        },
+      }),
+    }),
+  )
+  uploadResume(@UploadedFile() file: any, @Body('userId') userId: string) {
+    return this.resumeService.uploadResume(file, userId);
+  }
+
+  // =====================================================
+  // DYNAMIC ROUTES (must come last so they don't override)
+  // =====================================================
+
+  // Dynamic route for PDF export
   @Get(':id/export/pdf')
   async exportPDF(@Param('id') id: string, @Res() res: Response) {
     const resume = await this.resumeService.findOne(id);
@@ -279,5 +267,4 @@ export class ResumeController {
   remove(@Param('id') id: string) {
     return this.resumeService.remove(id);
   }
-
 }

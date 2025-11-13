@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import ResumeTemplatePreview from "./ResumeTemplatePreview";
+
 const API = "http://localhost:3000/resume";
 
 export default function AIResumeGenerator() {
   const [jobDesc, setJobDesc] = useState("");
+  const [templateType, setTemplateType] = useState("chronological");
   const [profile, setProfile] = useState({
     userId: null, // Will be set from localStorage
     email: "user@example.com",
@@ -282,6 +287,13 @@ export default function AIResumeGenerator() {
           </div>
 
           {/* Tailored Resume Bullets */}
+          {result.aiContent && (
+            <ResumeTemplatePreview
+              data={result.aiContent}
+              templateType={templateType}
+            />
+          )}
+
           {result.experience && (
             <div>
               <h2 className="text-lg font-semibold text-blue-700">Tailored Experience Bullets</h2>

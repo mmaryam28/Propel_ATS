@@ -10,10 +10,13 @@ import { GenerateAIDto } from './dto/generate-ai.dto';
 import axios from 'axios';
 import * as fs from 'fs/promises';
 const pdfParse = require('pdf-parse');
-const mammoth = require('mammoth');
+import mammoth from 'mammoth';
+import type { Multer } from 'multer';
 import { PostgrestError } from '@supabase/supabase-js';
 import PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
+
+
 
 @Injectable()
 export class ResumeService {
@@ -22,6 +25,7 @@ export class ResumeService {
   constructor(private readonly supabase: SupabaseService) {
     this.ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
   }
+  private readonly model = process.env.OLLAMA_MODEL || 'phi3';
 
   //----------------------------------------------------
   // UTILITIES
@@ -111,6 +115,9 @@ export class ResumeService {
     }
   }
 
+  //----------------------------------------------------
+  // AI ENGINE - Your enhanced version with logging
+  //----------------------------------------------------
   private async askAI(prompt: string) {
     const startTime = Date.now();
     console.log('\n🤖 [AI Request] Starting Ollama API call...');
@@ -118,10 +125,10 @@ export class ResumeService {
     
     try {
       console.log(`🌐 Connecting to: ${this.ollamaUrl}/api/generate`);
-      console.log(`🎯 Model: phi3`);
+      console.log(`🎯 Model: ${this.model}`);
       
       const response = await axios.post(`${this.ollamaUrl}/api/generate`, {
-        model: 'phi3',
+        model: this.model,
         prompt: prompt,
         stream: false,
         options: {
@@ -154,6 +161,37 @@ export class ResumeService {
       return { error: 'AI parsing failed', raw: err.message };
     }
   }
+
+  //----------------------------------------------------
+  // AI ENGINE - Teammate's fetch-based version for compatibility
+  //----------------------------------------------------
+  private async callAI(prompt: string) {
+    try {
+      const res = await fetch(`${this.ollamaUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.model,
+          prompt,
+          stream: false,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error('Ollama API Error:', await res.text());
+        return { error: 'Failed to generate AI content.' };
+      }
+
+      const data: any = await res.json();
+      const raw = (data.response || '').trim();
+
+      return this.sanitizeAIResponse(raw);
+    } catch (err) {
+      console.error('AI Error:', err);
+      return { error: 'AI request failed', raw: err.message };
+    }
+  }
+
 
 
   //----------------------------------------------------
@@ -259,6 +297,7 @@ export class ResumeService {
     console.log('\n🎨 [Generate AI] Starting resume generation...');
     console.log(`📋 Job description length: ${dto.jobDescription?.length || 0} chars`);
     console.log(`👤 User profile keys:`, Object.keys(dto.userProfile || {}));
+    console.log(`📄 Template type: ${dto.templateType || 'default'}`);
     
     const startTime = Date.now();
     
@@ -268,6 +307,117 @@ export class ResumeService {
       ? `Use the existing projects from the user profile and enhance them.` 
       : `IMPORTANT: Since the user has no projects listed, create 2-3 relevant technical projects that would be appropriate for this role. Make them realistic and aligned with the job requirements. Include specific technologies, achievements, and outcomes.`;
     
+    // Use template-based prompt if templateType is provided
+    if (dto.templateType) {
+      const prompt = `
+  You are a professional resume writer.  
+  Generate resume content in clean JSON ONLY, using this template type:
+
+  TEMPLATE TYPE: ${dto.templateType.toUpperCase()}
+
+  Job Description:
+  ${dto.jobDescription}
+
+  User Profile:
+  ${JSON.stringify(dto.userProfile, null, 2)}
+
+  ==============================
+  TEMPLATE RULES
+  ==============================
+
+  If the template is **CHRONOLOGICAL**:
+  Return JSON with:
+  {
+    "header": {...},
+    "summary": "string",
+    "experience": [
+      {
+        "title": "string",
+        "company": "string",
+        "location": "string",
+        "startDate": "YYYY-MM",
+        "endDate": "YYYY-MM or Present",
+        "bullets": ["action bullet", ...]
+      }
+    ],
+    "skills": {
+      "technical": [...],
+      "soft": [...],
+      "tools": [...]
+    },
+    "education": [...]
+  }
+
+  If the template is **FUNCTIONAL**:
+  Return JSON with:
+  {
+    "header": {...},
+    "summary": "string",
+    "skillsSummary": [
+      {
+        "category": "Skill Area",
+        "details": ["skill", "skill", ...]
+      }
+    ],
+    "achievements": ["bullet", "bullet"],
+    "experience": [
+      {
+        "company": "string",
+        "role": "string",
+        "notes": ["short, factual notes without full bullets"]
+      }
+    ],
+    "education": [...]
+  }
+
+  If the template is **HYBRID**:
+  Return JSON with:
+  {
+    "header": {...},
+    "summary": "string",
+    "skillsSummary": [
+      {
+        "category": "Skill Area",
+        "details": ["skill", "skill"]
+      }
+    ],
+    "experience": [
+      {
+        "title": "string",
+        "company": "string",
+        "startDate": "YYYY-MM",
+        "endDate": "YYYY-MM or Present",
+        "bullets": ["metric-based bullet", ...]
+      }
+    ],
+    "projects": [
+      {
+        "name": "string",
+        "description": "string",
+        "tech": ["React", "Node", ...]
+      }
+    ],
+    "education": [...]
+  }
+
+  ==============================
+  INSTRUCTIONS
+  ==============================
+  - RETURN JSON ONLY — NO explanation.
+  - Do NOT create fake experience or fake roles.
+  - Improve clarity, impact, and alignment with job description.
+  - Use strong action verbs and measurable outcomes where possible.
+  - ${projectsInstruction}
+  `;
+
+      const result = await this.callAI(prompt);
+      const elapsed = Date.now() - startTime;
+      console.log(`✅ [Generate AI] Completed in ${(elapsed / 1000).toFixed(2)}s`);
+      
+      return { aiContent: result };
+    }
+
+    // Default prompt (your original enhanced version with NJIT and auto-projects)
     const prompt = `You are a professional resume writer. Generate optimized resume content based on the user's profile and job description.
 
 Job Description:
@@ -337,6 +487,7 @@ Return ONLY valid JSON with optimized content tailored to the job description. F
     return { aiContent: result };
   }
 
+
   async optimizeSkills(dto: GenerateAIDto) {
     const prompt = `Analyze this job description and optimize the skills list to match.
 
@@ -359,6 +510,7 @@ Prioritize skills that match the job description. Return ONLY valid JSON.`;
 
     return { optimization: await this.askAI(prompt) };
   }
+
 
   async tailorExperience(dto: GenerateAIDto) {
     const prompt = `Rewrite the work experience to align with this job description using action verbs and quantifiable achievements.
@@ -389,6 +541,7 @@ Focus on achievements relevant to the target job. Use keywords from the job desc
 
     return { tailored: await this.askAI(prompt) };
   }
+
 
   async validateResume(userProfile: any) {
     const prompt = `Evaluate this resume and provide specific feedback for improvement.
@@ -584,7 +737,7 @@ Provide constructive, actionable feedback. Return ONLY valid JSON.`;
   //----------------------------------------------------
   // FILE UPLOAD + PARSING
   //----------------------------------------------------
-  async uploadResume(file: any, userId: string) {
+  async uploadResume(file: Express.Multer.File, userId: string) {
     if (!file) {
       throw new BadRequestException('Resume file is required');
     }
