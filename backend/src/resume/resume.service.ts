@@ -14,9 +14,14 @@ import mammoth from 'mammoth';
 import type { Multer } from 'multer';
 import { PostgrestError } from '@supabase/supabase-js';
 
+
+
 @Injectable()
 export class ResumeService {
   constructor(private readonly supabase: SupabaseService) {}
+  private readonly ollamaUrl =
+    process.env.OLLAMA_URL || 'http://localhost:11434/api/generate';
+  private readonly model = process.env.OLLAMA_MODEL || 'phi3';
 
   //----------------------------------------------------
   // UTILITIES
@@ -48,29 +53,36 @@ export class ResumeService {
     }
   }
 
-  private async askAI(prompt: string) {
+  //----------------------------------------------------
+// AI ENGINE (Same style as CoverletterAIService)
+//----------------------------------------------------
+  private async callAI(prompt: string) {
     try {
-      const response = await completion({
-        model: 'ollama/phi3',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 512,
-        stream: false,
+      const res = await fetch(this.ollamaUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.model,
+          prompt,
+          stream: false,
+        }),
       });
 
-      const choice = response?.choices?.[0];
+      if (!res.ok) {
+        console.error('Ollama API Error:', await res.text());
+        return { error: 'Failed to generate AI content.' };
+      }
 
-      const raw =
-        choice?.message?.content ??
-        (typeof choice?.message === 'string' ? choice.message : '') ??
-        '';
+      const data: any = await res.json();
+      const raw = (data.response || '').trim();
 
       return this.sanitizeAIResponse(raw);
     } catch (err) {
       console.error('AI Error:', err);
-      return { error: 'AI parsing failed', raw: err.message };
+      return { error: 'AI request failed', raw: err.message };
     }
   }
+
 
 
   //----------------------------------------------------
@@ -174,54 +186,78 @@ export class ResumeService {
   //----------------------------------------------------
   async generateAI(dto: GenerateAIDto) {
     const prompt = `
-Return valid JSON describing optimized resume content.
+  You are an expert resume writer.
 
-Job:
-${dto.jobDescription}
+  Generate optimized resume content in clean JSON only.
 
-User:
-${JSON.stringify(dto.userProfile, null, 2)}
-`;
-    return { aiContent: await this.askAI(prompt) };
+  Job Description:
+  ${dto.jobDescription}
+
+  User Profile:
+  ${JSON.stringify(dto.userProfile, null, 2)}
+
+  Guidelines:
+  - Return valid JSON only.
+  - Improve clarity, action verbs, metrics, and alignment with the job.
+  `;
+
+    return { aiContent: await this.callAI(prompt) };
   }
 
   async optimizeSkills(dto: GenerateAIDto) {
     const prompt = `
-Return JSON optimizing skills.
+  You are an expert resume skill analyst. Return JSON only.
 
-Job:
-${dto.jobDescription}
+  Rewrite the user's skills to better match the job, but without inventing false skills.
 
-Skills:
-${JSON.stringify(dto.userProfile.skills, null, 2)}
-`;
-    return { optimization: await this.askAI(prompt) };
+  Job Description:
+  ${dto.jobDescription}
+
+  User Skills:
+  ${JSON.stringify(dto.userProfile.skills, null, 2)}
+  `;
+
+    return { optimization: await this.callAI(prompt) };
   }
+
 
   async tailorExperience(dto: GenerateAIDto) {
     const prompt = `
-Return JSON rewriting experience.
+  You are an expert resume editor.
 
-Job:
-${dto.jobDescription}
+  Rewrite the user's experience to match the job. Keep it truthful.
 
-Experience:
-${JSON.stringify(dto.userProfile.experience, null, 2)}
-`;
+  Return strictly valid JSON containing improved bullet points.
 
-    return { tailored: await this.askAI(prompt) };
+  Job Description:
+  ${dto.jobDescription}
+
+  User Experience:
+  ${JSON.stringify(dto.userProfile.experience, null, 2)}
+  `;
+
+    return { tailored: await this.callAI(prompt) };
   }
+
 
   async validateResume(userProfile: any) {
     const prompt = `
-Return JSON validating resume quality:
+  You are a professional resume reviewer.
 
-Resume:
-${JSON.stringify(userProfile, null, 2)}
-`;
+  Evaluate the resume and return JSON with:
+  - strengths
+  - weaknesses
+  - missing elements
+  - ATS risks (keywords missing)
+  - overall score (0–100)
 
-    return { validation: await this.askAI(prompt) };
+  Resume:
+  ${JSON.stringify(userProfile, null, 2)}
+  `;
+
+    return { validation: await this.callAI(prompt) };
   }
+
   
   async uploadResume(file: Express.Multer.File, userId: string) {
     if (!file) {
