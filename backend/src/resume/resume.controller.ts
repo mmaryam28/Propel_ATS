@@ -1,4 +1,4 @@
-import {
+/*import {
   Controller,
   Get,
   Post,
@@ -101,3 +101,4 @@ export class ResumeController {
     return this.resumeService.remove(id);
   }
 }
+*/
