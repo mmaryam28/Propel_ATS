@@ -3,6 +3,7 @@ import { listJobs, updateJobStatus, bulkUpdateJobStatus, daysInStage } from '../
 import { DndContext, closestCenter, useDroppable } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useAnalytics } from '../contexts/AnalyticsContext';
 
 const STATUSES = [
   'Interested',
@@ -65,6 +66,7 @@ export default function JobPipeline() {
   const [error, setError] = React.useState('');
   const [selectedIds, setSelectedIds] = React.useState([]);
   const [updating, setUpdating] = React.useState(false);
+  const { triggerRefresh } = useAnalytics();
 
   React.useEffect(() => { load(); }, []);
 
@@ -104,6 +106,8 @@ export default function JobPipeline() {
     setJobs(prev => prev.map(j => j.id === activeId ? { ...j, status: overContainer, statusUpdatedAt: new Date().toISOString() } : j));
     try {
       await updateJobStatus(activeId, overContainer);
+      // Trigger analytics refresh after successful status update
+      triggerRefresh();
     } catch (e) {
       // revert on failure
       setJobs(prev => prev.map(j => j.id === activeId ? sourceJob : j));
@@ -119,6 +123,8 @@ export default function JobPipeline() {
     try {
       await bulkUpdateJobStatus(selectedIds, targetStatus);
       setSelectedIds([]);
+      // Trigger analytics refresh after successful bulk update
+      triggerRefresh();
     } catch (e) {
       setJobs(snapshot); // revert
       console.error(e);

@@ -1,44 +1,110 @@
 import React from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
-import { getJob, updateJob, listJobHistory } from "../lib/api";
+import { Toast } from "../components/Toast";
+import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults } from "../lib/api";
+import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
+import { useAnalytics } from "../contexts/AnalyticsContext";
 
 export default function JobDetails() {
   const { jobId } = useParams();
+  const navigate = useNavigate();
+  const { triggerRefresh } = useAnalytics();
   const [job, setJob] = React.useState(null);
   const [edit, setEdit] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
   const [history, setHistory] = React.useState([]);
+  const [news, setNews] = React.useState({ company: '', articles: [] });
+  const [importUrl, setImportUrl] = React.useState("");
+  const [importing, setImporting] = React.useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = React.useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [archiveReason, setArchiveReason] = React.useState("");
+  const [archiving, setArchiving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [showToast, setShowToast] = React.useState(false);
+  const [archivedJobId, setArchivedJobId] = React.useState(null);
+  const [materialsHistory, setMaterialsHistory] = React.useState([]);
+  const [defaults, setDefaults] = React.useState({ defaultResumeVersionId: null, defaultCoverLetterVersionId: null });
+  const [showScheduleInterview, setShowScheduleInterview] = React.useState(false);
+  const [interviews, setInterviews] = React.useState([]);
 
   React.useEffect(() => { (async () => {
     try {
-      const [j, h] = await Promise.all([
+      const [j, h, n, mh, defs, ints] = await Promise.all([
         getJob(jobId),
         listJobHistory(jobId).catch(() => []),
+        getCompanyNews(jobId).catch(() => ({ company: '', articles: [] })),
+        listJobMaterialsHistory(jobId).catch(() => []),
+        getUserMaterialDefaults().catch(() => ({ defaultResumeVersionId: null, defaultCoverLetterVersionId: null })),
+        (async () => { const { getInterviews } = await import('../lib/api'); return getInterviews(jobId); })().catch(() => []),
       ]);
-      setJob(j); setHistory(h);
+      setJob(j); setHistory(h); setNews(n); setMaterialsHistory(mh); setDefaults(defs); setInterviews(ints);
     } catch { setError("Failed to load job"); }
   })(); }, [jobId]);
 
   function setField(key, value) { setJob(j => ({ ...j, [key]: value })); }
 
+  async function onImport() {
+    if (!importUrl) return;
+    setImporting(true);
+    setError("");
+    try {
+      const res = await enrichCompanyFromUrl(importUrl);
+      if (res?.data) {
+        setJob(j => ({
+          ...j,
+          company: res.data.company || j.company,
+          companyWebsite: res.data.companyWebsite ?? j.companyWebsite,
+          companyDescription: res.data.companyDescription ?? j.companyDescription,
+          companyLogoUrl: res.data.companyLogoUrl ?? j.companyLogoUrl,
+          companyContactEmail: res.data.companyContactEmail ?? j.companyContactEmail,
+          companyContactPhone: res.data.companyContactPhone ?? j.companyContactPhone,
+          companySize: res.data.companySize ?? j.companySize,
+          glassdoorUrl: res.data.glassdoorUrl ?? j.glassdoorUrl,
+        }));
+      }
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || "Import failed";
+      setError(Array.isArray(msg) ? msg.join("; ") : msg);
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function onSave() {
     if (!job) return;
     setSaving(true); setError("");
     try {
+      // Format deadline to avoid timezone issues
+      let deadlineValue = job.deadline ?? null;
+      if (deadlineValue && !deadlineValue.includes('T')) {
+        // If it's just a date (YYYY-MM-DD), add time at noon UTC
+        deadlineValue = deadlineValue + 'T12:00:00.000Z';
+      }
+      
       const payload = {
         title: job.title,
         company: job.company,
         location: job.location ?? null,
         postingUrl: job.postingUrl ?? null,
-        deadline: job.deadline ?? null,
+        deadline: deadlineValue,
         description: job.description ?? null,
         industry: job.industry ?? null,
         jobType: job.jobType ?? null,
         salaryMin: job.salaryMin ?? null,
         salaryMax: job.salaryMax ?? null,
+        // Company profile
+        companySize: job.companySize ?? null,
+        companyWebsite: job.companyWebsite ?? null,
+  companyDescription: job.companyDescription ?? null,
+        companyLogoUrl: job.companyLogoUrl ?? null,
+        companyContactEmail: job.companyContactEmail ?? null,
+        companyContactPhone: job.companyContactPhone ?? null,
+        glassdoorRating: job.glassdoorRating ?? null,
+        glassdoorUrl: job.glassdoorUrl ?? null,
         notes: job.notes ?? null,
         negotiationNotes: job.negotiationNotes ?? null,
         interviewNotes: job.interviewNotes ?? null,
@@ -48,14 +114,81 @@ export default function JobDetails() {
         hiringManagerName: job.hiringManagerName ?? null,
         hiringManagerEmail: job.hiringManagerEmail ?? null,
         hiringManagerPhone: job.hiringManagerPhone ?? null,
+        // UC-042 materials linkage
+        resumeVersionId: job.resumeVersionId ?? null,
+        coverLetterVersionId: job.coverLetterVersionId ?? null,
       };
       const updated = await updateJob(jobId, payload);
       setJob(updated);
       setEdit(false);
+  // refresh materials history after save
+  try { setMaterialsHistory(await listJobMaterialsHistory(jobId)); } catch {}
+      // Trigger analytics refresh if status changed
+      if (payload.status !== job.status) {
+        triggerRefresh();
+      }
     } catch (e) {
       const msg = e?.response?.data?.message || e?.message || "Failed to save";
       setError(Array.isArray(msg) ? msg.join("; ") : msg);
     } finally { setSaving(false); }
+  }
+
+  async function onArchive() {
+    if (!job) return;
+    setArchiving(true);
+    setError("");
+    try {
+      await archiveJob(jobId, archiveReason || undefined);
+      setArchivedJobId(jobId);
+      setShowToast(true);
+      setShowArchiveConfirm(false);
+      // Trigger analytics refresh
+      triggerRefresh();
+      // Delay navigation to allow undo
+      setTimeout(() => {
+        if (archivedJobId) navigate('/jobs');
+      }, 5000);
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || "Failed to archive";
+      setError(Array.isArray(msg) ? msg.join("; ") : msg);
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  async function handleUndo() {
+    if (!archivedJobId) return;
+    try {
+      await restoreJob(archivedJobId);
+      setShowToast(false);
+      setArchivedJobId(null);
+      // Reload the job data
+      const j = await getJob(jobId);
+      setJob(j);
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || "Failed to undo";
+      setError(Array.isArray(msg) ? msg.join("; ") : msg);
+    }
+  }
+
+  async function onDelete() {
+    if (!job) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await deleteJob(jobId);
+      navigate('/jobs');
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || "Failed to delete";
+      setError(Array.isArray(msg) ? msg.join("; ") : msg);
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
+  async function handleInterviewScheduled(interview) {
+    setInterviews(prev => [...prev, interview]);
   }
 
   if (!job) return <div className="text-sm text-gray-600">Loading…</div>;
@@ -70,7 +203,17 @@ export default function JobDetails() {
         </div>
         <div className="flex gap-2">
           {!edit && (
-            <button className="btn btn-secondary" onClick={() => setEdit(true)}>Edit</button>
+            <>
+              <Link to="/jobs/calendar" className="btn btn-secondary">
+                📅 View Calendar
+              </Link>
+              <button className="btn btn-secondary" onClick={() => setShowScheduleInterview(true)}>
+                Schedule Interview
+              </button>
+              <button className="btn btn-secondary" onClick={() => setEdit(true)}>Edit</button>
+              <button className="btn btn-ghost" onClick={() => setShowArchiveConfirm(true)}>Archive</button>
+              <button className="btn btn-ghost text-red-600 hover:bg-red-50" onClick={() => setShowDeleteConfirm(true)}>Delete</button>
+            </>
           )}
           {edit && (
             <>
@@ -87,10 +230,165 @@ export default function JobDetails() {
           </Link>
         </div>
       </div>
+      {/* Application Materials */}
+      <Card variant="default" size="large">
+        <Card.Header>
+          <div className="flex items-center justify-between w-full">
+            <Card.Title>Application Materials</Card.Title>
+            {!edit && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                Defaults: Resume {defaults.defaultResumeVersionId ? <span className="font-mono">{defaults.defaultResumeVersionId}</span> : '—'} • Cover Letter {defaults.defaultCoverLetterVersionId ? <span className="font-mono">{defaults.defaultCoverLetterVersionId}</span> : '—'}
+              </div>
+            )}
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="form-label">Resume Version ID</div>
+              {edit ? (
+                <input className="input font-mono" value={job.resumeVersionId || ""} onChange={e=>setField('resumeVersionId', e.target.value)} placeholder="UUID provided by Materials feature" />
+              ) : (
+                <div className="text-sm font-mono">{job.resumeVersionId || '—'}</div>
+              )}
+              {job.resumeVersionId && /^https?:\/\//i.test(job.resumeVersionId) ? (
+                <a href={job.resumeVersionId} target="_blank" rel="noreferrer" className="text-sm text-[var(--primary-color)] mt-1 inline-block">View Resume</a>
+              ) : (
+                <div className="text-xs text-gray-500 mt-1">Viewing will work when document service provides a URL for this version.</div>
+              )}
+            </div>
+            <div>
+              <div className="form-label">Cover Letter Version ID</div>
+              {edit ? (
+                <input className="input font-mono" value={job.coverLetterVersionId || ""} onChange={e=>setField('coverLetterVersionId', e.target.value)} placeholder="UUID provided by Materials feature" />
+              ) : (
+                <div className="text-sm font-mono">{job.coverLetterVersionId || '—'}</div>
+              )}
+              {job.coverLetterVersionId && /^https?:\/\//i.test(job.coverLetterVersionId) ? (
+                <a href={job.coverLetterVersionId} target="_blank" rel="noreferrer" className="text-sm text-[var(--primary-color)] mt-1 inline-block">View Cover Letter</a>
+              ) : (
+                <div className="text-xs text-gray-500 mt-1">Viewing will work when document service provides a URL for this version.</div>
+              )}
+            </div>
+          </div>
+          {!edit && (
+            <div className="mt-4 flex gap-2">
+              <button
+                className="btn btn-secondary"
+                onClick={async ()=>{
+                  try {
+                    const next = await setUserMaterialDefaults({ defaultResumeVersionId: job.resumeVersionId ?? null, defaultCoverLetterVersionId: job.coverLetterVersionId ?? null });
+                    setDefaults(next);
+                  } catch {}
+                }}
+                disabled={!job.resumeVersionId && !job.coverLetterVersionId}
+              >
+                Set these as my defaults
+              </button>
+            </div>
+          )}
+        </Card.Body>
+      </Card>
+
 
       {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-      {/* Summary card */}
+  {/* Company Profile card */}
+  <Card variant="default" size="large">
+        <Card.Header>
+          <div className="flex items-center justify-between gap-2 w-full">
+            <Card.Title>Company Profile</Card.Title>
+            {edit && (
+              <div className="flex items-center gap-2 max-w-[480px] w-full">
+                <input
+                  className="input flex-1"
+                  placeholder="Paste company or job URL to import"
+                  value={importUrl}
+                  onChange={e=>setImportUrl(e.target.value)}
+                />
+                <button className="btn btn-secondary whitespace-nowrap" onClick={onImport} disabled={importing || !importUrl}>
+                  {importing ? 'Importing…' : 'Import'}
+                </button>
+              </div>
+            )}
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2 flex items-center gap-4">
+              {job.companyLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={job.companyLogoUrl} alt={`${job.company} logo`} className="h-12 w-12 rounded object-contain bg-white border" />
+              ) : (
+                <div className="h-12 w-12 rounded bg-gray-100 flex items-center justify-center text-gray-400 text-xs">Logo</div>
+              )}
+              <div>
+                <div className="form-label">Website</div>
+                {edit ? (
+                  <input className="input" value={job.companyWebsite||""} onChange={e=>setField('companyWebsite', e.target.value)} />
+                ) : job.companyWebsite ? (
+                  <a className="text-sm text-[var(--primary-color)]" href={job.companyWebsite} target="_blank" rel="noreferrer">{job.companyWebsite}</a>
+                ) : (
+                  <div className="text-sm">—</div>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="form-label">Company Size</div>
+              {edit ? (
+                <input className="input" value={job.companySize||""} onChange={e=>setField('companySize', e.target.value)} />
+              ) : (
+                <div className="text-sm">{job.companySize || "—"}</div>
+              )}
+            </div>
+            <div>
+              <div className="form-label">Company Contact Email</div>
+              {edit ? (
+                <input className="input" value={job.companyContactEmail||""} onChange={e=>setField('companyContactEmail', e.target.value)} />
+              ) : (
+                <div className="text-sm">{job.companyContactEmail || "—"}</div>
+              )}
+            </div>
+            <div>
+              <div className="form-label">Company Contact Phone</div>
+              {edit ? (
+                <input className="input" value={job.companyContactPhone||""} onChange={e=>setField('companyContactPhone', e.target.value)} />
+              ) : (
+                <div className="text-sm">{job.companyContactPhone || "—"}</div>
+              )}
+            </div>
+            <div className="sm:col-span-2">
+              <div className="form-label">Company Description</div>
+              {edit ? (
+                <textarea className="input h-24" value={job.companyDescription||""} onChange={e=>setField('companyDescription', e.target.value)} />
+              ) : (
+                <div className="text-sm whitespace-pre-wrap">{job.companyDescription || "—"}</div>
+              )}
+            </div>
+            {/* Mission Statement removed as requested */}
+            <div>
+              <div className="form-label">Glassdoor Rating</div>
+              {edit ? (
+                <input type="number" step="0.1" min="0" max="5" className="input" value={job.glassdoorRating ?? ''} onChange={e=>setField('glassdoorRating', e.target.value)} />
+              ) : (
+                <div className="text-sm">{job.glassdoorRating ?? "—"}</div>
+              )}
+            </div>
+            <div>
+              <div className="form-label">Glassdoor URL</div>
+              {edit ? (
+                <input className="input" value={job.glassdoorUrl||""} onChange={e=>setField('glassdoorUrl', e.target.value)} />
+              ) : job.glassdoorUrl ? (
+                <a className="text-sm text-[var(--primary-color)]" href={job.glassdoorUrl} target="_blank" rel="noreferrer">View on Glassdoor</a>
+              ) : (
+                <div className="text-sm">—</div>
+              )}
+            </div>
+          </div>
+        </Card.Body>
+      </Card>
+
+      {/* Core Job Summary card */}
       <Card variant="default" size="large">
         <Card.Body className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -131,6 +429,14 @@ export default function JobDetails() {
               <input className="input" value={job.postingUrl||""} onChange={e=>setField('postingUrl', e.target.value)} />
             ) : job.postingUrl ? (
               <a className="text-sm text-[var(--primary-color)]" href={job.postingUrl} target="_blank" rel="noreferrer">Open posting</a>
+            ) : (<div className="text-sm">—</div>)}
+          </div>
+          <div>
+            <div className="form-label">Deadline</div>
+            {edit ? (
+              <input type="date" className="input" value={job.deadline?.split('T')[0] || ""} onChange={e=>setField('deadline', e.target.value)} />
+            ) : job.deadline ? (
+              <div className="text-sm">{new Date(job.deadline).toLocaleDateString()}</div>
             ) : (<div className="text-sm">—</div>)}
           </div>
         </Card.Body>
@@ -202,6 +508,49 @@ export default function JobDetails() {
             )}
           </Card.Body>
         </Card>
+
+        {/* Materials History */}
+        <Card variant="default" size="large">
+          <Card.Header><Card.Title>Materials History</Card.Title></Card.Header>
+          <Card.Body>
+            {materialsHistory && materialsHistory.length > 0 ? (
+              <ul className="space-y-2">
+                {materialsHistory.map(item => (
+                  <li key={item.id} className="text-sm flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="text-xs text-gray-600">Resume: <span className="font-mono">{item.resumeVersionId || '—'}</span></div>
+                      <div className="text-xs text-gray-600">Cover Letter: <span className="font-mono">{item.coverLetterVersionId || '—'}</span></div>
+                    </div>
+                    <span className="text-gray-500 text-xs">{item.changedAt ? new Date(item.changedAt).toLocaleString() : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-gray-600">No materials changes recorded.</div>
+            )}
+          </Card.Body>
+        </Card>
+
+        <Card variant="default" size="large">
+          <Card.Header><Card.Title>Recent News</Card.Title></Card.Header>
+          <Card.Body>
+            {news.articles && news.articles.length > 0 ? (
+              <ul className="space-y-3">
+                {news.articles.map((a, idx) => (
+                  <li key={idx} className="text-sm">
+                    <a className="text-[var(--primary-color)] font-medium" href={a.url} target="_blank" rel="noreferrer">{a.title}</a>
+                    <div className="text-xs text-gray-500">
+                      {a.source ? `${a.source} • ` : ''}{a.publishedAt ? new Date(a.publishedAt).toLocaleDateString() : ''}
+                    </div>
+                    {a.description && <div className="text-xs text-gray-600 line-clamp-3">{a.description}</div>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-gray-600">No recent news available.</div>
+            )}
+          </Card.Body>
+        </Card>
         <Card variant="default" size="large">
           <Card.Header><Card.Title>Contacts</Card.Title></Card.Header>
           <Card.Body className="grid gap-3 sm:grid-cols-2">
@@ -244,6 +593,127 @@ export default function JobDetails() {
           </Card.Body>
         </Card>
       </div>
+
+      {/* Scheduled Interviews */}
+      {interviews.length > 0 && (
+        <Card variant="default" size="large">
+          <Card.Header><Card.Title>Scheduled Interviews</Card.Title></Card.Header>
+          <Card.Body>
+            <div className="space-y-3">
+              {interviews.map(interview => (
+                <div key={interview.id} className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{interview.title}</div>
+                    <div className="text-sm text-gray-600">
+                      {new Date(interview.scheduled_at).toLocaleString()}
+                      {interview.location && ` • ${interview.location}`}
+                    </div>
+                    {interview.interviewer_name && (
+                      <div className="text-xs text-gray-500">with {interview.interviewer_name}</div>
+                    )}
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    interview.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    interview.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {interview.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card.Body>
+        </Card>
+      )}
+
+      {/* Archive Confirmation Modal */}
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4">Archive Job</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to archive this job? You can restore it later from the archived jobs page.
+            </p>
+            <div className="mb-4">
+              <label className="form-label">Reason (optional)</label>
+              <input
+                className="input w-full"
+                placeholder="e.g., Position filled, Not interested..."
+                value={archiveReason}
+                onChange={(e) => setArchiveReason(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  setShowArchiveConfirm(false);
+                  setArchiveReason("");
+                }}
+                disabled={archiving}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={onArchive}
+                disabled={archiving}
+              >
+                {archiving ? "Archiving..." : "Archive"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4 text-red-600">Delete Job</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to permanently delete this job? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn bg-red-600 text-white hover:bg-red-700"
+                onClick={onDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete Permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      <Toast
+        message="Job archived successfully"
+        show={showToast}
+        onUndo={handleUndo}
+        onClose={() => {
+          setShowToast(false);
+          if (archivedJobId) navigate('/jobs');
+        }}
+      />
+
+      {/* Schedule Interview Modal */}
+      {showScheduleInterview && (
+        <ScheduleInterviewModal
+          jobId={jobId}  // This is a UUID string from useParams
+          jobTitle={job.title}
+          onClose={() => setShowScheduleInterview(false)}
+          onScheduled={handleInterviewScheduled}
+        />
+      )}
     </div>
   );
 }

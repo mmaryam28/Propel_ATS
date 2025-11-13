@@ -20,6 +20,7 @@ export default function Navbar() {
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <NavLink to="/dashboard">Dashboard</NavLink>
               <NavLink to="/jobs">Jobs</NavLink>
+              <NavLink to="/jobs/calendar">Calendar</NavLink>
               <NavLink to="/education">Education</NavLink>
               <NavLink to="/certifications">Certifications</NavLink>
               <NavLink to="/projects">Projects</NavLink>

@@ -1,9 +1,13 @@
-import { Body, Controller, Get, Post, UseGuards, Req, Query, Patch, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Req, Query, Patch, Param, Delete } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { JobsService } from './jobs.service';
 import { CreateJobDto, JOB_STATUSES } from './dto/create-job.dto';
 import type { JobStatus } from './dto/create-job.dto';
+
 import { UpdateJobDto } from './dto/update-job.dto';
+import { ImportJobDto } from './dto/import-job.dto';
+import { EnrichCompanyDto } from './dto/enrich-company.dto';
+
 
 @Controller('jobs')
 @UseGuards(AuthGuard('jwt'))
@@ -11,10 +15,24 @@ export class JobsController {
   constructor(private jobs: JobsService) {}
 
   @Get()
-  async list(@Req() req: any, @Query('status') status?: string) {
+  async list(
+    @Req() req: any,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('industry') industry?: string,
+    @Query('location') location?: string,
+    @Query('salaryMin') salaryMin?: string,
+    @Query('salaryMax') salaryMax?: string,
+    @Query('deadlineFrom') deadlineFrom?: string,
+    @Query('deadlineTo') deadlineTo?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
+    @Query('archived') archived?: string,
+  ) {
     const userId = req.user.userId;
     const s = status && JOB_STATUSES.includes(status as JobStatus) ? (status as JobStatus) : undefined;
-    return this.jobs.list(userId, s);
+    const showArchived = archived === 'true';
+    return this.jobs.list(userId, s, search, industry, location, salaryMin, salaryMax, deadlineFrom, deadlineTo, sortBy, sortOrder, showArchived);
   }
 
   @Post()
@@ -23,6 +41,118 @@ export class JobsController {
     return this.jobs.create(userId, dto);
   }
 
+  // ✅ Move ALL interview routes BEFORE @Get(':id')
+  // Interview Scheduling
+  @Post('interviews')
+  async scheduleInterview(@Req() req: any, @Body() dto: any) {
+    const userId = req.user.userId;
+    return this.jobs.scheduleInterview(userId, dto);
+  }
+
+  @Get('interviews')
+  async getInterviews(@Req() req: any, @Query('jobId') jobId?: string) {
+    const userId = req.user.userId;
+    return this.jobs.getInterviews(userId, jobId);
+  }
+
+  @Patch('interviews/:id')
+  async updateInterview(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    const userId = req.user.userId;
+    return this.jobs.updateInterview(userId, id, dto);
+  }
+
+  @Delete('interviews/:id')
+  async deleteInterview(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.deleteInterview(userId, id);
+  }
+
+  // ✅ Move analytics routes BEFORE @Get(':id')
+  @Get('analytics')
+  async getAnalytics(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getAnalytics(userId);
+  }
+
+  // ✅ Move automation rules BEFORE @Get(':id')
+  @Post('automation-rules')
+  async createAutomationRule(@Req() req: any, @Body() dto: any) {
+    const userId = req.user.userId;
+    return this.jobs.createAutomationRule(userId, dto);
+  }
+
+  @Get('automation-rules')
+  async getAutomationRules(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getAutomationRules(userId);
+  }
+
+  @Patch('automation-rules/:id')
+  async updateAutomationRule(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    const userId = req.user.userId;
+    return this.jobs.updateAutomationRule(userId, id, dto);
+  }
+
+  @Delete('automation-rules/:id')
+  async deleteAutomationRule(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.deleteAutomationRule(userId, id);
+  }
+
+  // ✅ Move ALL specific routes BEFORE the generic :id route
+  @Post('bulk-status')
+  async bulkStatus(
+    @Req() req: any,
+    @Body('ids') ids: string[],
+    @Body('status') status: JobStatus,
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.bulkUpdateStatus(userId, ids, status);
+  }
+
+  @Post('import-from-url')
+  async importFromUrl(@Body() dto: ImportJobDto) {
+    return this.jobs.importFromUrl(dto.url);
+  }
+
+  @Post('enrich-company')
+  async enrichCompany(@Body() dto: EnrichCompanyDto) {
+    return this.jobs.enrichCompanyFromUrl(dto.url);
+  }
+
+  @Post('bulk-archive')
+  async bulkArchive(
+    @Req() req: any,
+    @Body('ids') ids: string[],
+    @Body('reason') reason?: string,
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.bulkArchive(userId, ids, reason);
+  }
+
+  @Get('materials/usage')
+  async materialsUsage(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getMaterialsUsage(userId);
+  }
+
+  @Get('materials/defaults')
+  async getMaterialDefaults(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getUserMaterialDefaults(userId);
+  }
+
+  @Post('materials/defaults')
+  async setMaterialDefaults(
+    @Req() req: any,
+    @Body('defaultResumeVersionId') defaultResumeVersionId?: string | null,
+    @Body('defaultCoverLetterVersionId') defaultCoverLetterVersionId?: string | null,
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.setUserMaterialDefaults(userId, { defaultResumeVersionId, defaultCoverLetterVersionId });
+  }
+
+  // ⚠️ NOW put the generic :id routes at the END
   @Get(':id')
   async getOne(@Req() req: any, @Param('id') id: string) {
     const userId = req.user.userId;
@@ -45,19 +175,43 @@ export class JobsController {
     return this.jobs.updateStatus(userId, id, status);
   }
 
-  @Post('bulk-status')
-  async bulkStatus(
-    @Req() req: any,
-    @Body('ids') ids: string[],
-    @Body('status') status: JobStatus,
-  ) {
-    const userId = req.user.userId;
-    return this.jobs.bulkUpdateStatus(userId, ids, status);
-  }
-
   @Get(':id/history')
   async history(@Req() req: any, @Param('id') id: string) {
     const userId = req.user.userId;
     return this.jobs.getHistory(userId, id);
+  }
+
+  @Get(':id/materials-history')
+  async materialsHistory(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.getMaterialsHistory(userId, id);
+  }
+
+  @Get(':id/company-news')
+  async companyNews(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.getCompanyNews(userId, id);
+  }
+
+  @Patch(':id/archive')
+  async archive(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body('reason') reason?: string,
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.archive(userId, id, reason);
+  }
+
+  @Patch(':id/restore')
+  async restore(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.restore(userId, id);
+  }
+
+  @Delete(':id')
+  async delete(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.delete(userId, id);
   }
 }
