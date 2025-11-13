@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateResumeDto } from './dto/create-resume.dto';
 import { UpdateResumeDto } from './dto/update-resume.dto';
@@ -8,6 +8,7 @@ import * as fs from 'fs/promises';
 import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import type { File } from 'multer';
+import { PostgrestError } from '@supabase/supabase-js';
 
 @Injectable()
 export class ResumeService {
@@ -30,23 +31,59 @@ export class ResumeService {
   async findAll(userId: string) {
     const { data, error } = await this.supabase
       .getClient()
-      .from('Resume')
-      .select('*')
-      .eq('userId', userId);
-    if (error) throw new Error(error.message);
-    return data;
+      .from("Resume")
+      .select("*")
+      .eq("userid", userId);
+
+    if (error) this.handleError(error);
+
+    return (data ?? []).map(r => ({
+      id: r.id,
+      userId: r.userid,
+      title: r.title,
+      aiContent: r.aicontent,
+      skills: r.skills,
+      experience: r.experience,
+      sections: r.sections,
+      createdAt: r.createdat,
+      updatedAt: r.updatedat,
+    }));
+
   }
 
+
   async findOne(id: string) {
+    if (!id || id === 'undefined')
+      throw new BadRequestException('A valid resume ID is required');
+
     const { data, error } = await this.supabase
       .getClient()
-      .from('Resume')
-      .select('*')
-      .eq('id', id)
+      .from("Resume")
+      .select("*")
+      .eq("id", id)
       .single();
-    if (error) throw new Error(error.message);
-    return data;
+
+    if (error) this.handleError(error);
+
+    // Convert DB snake_case → camelCase
+    return {
+      id: data.id,
+      userId: data.userid,
+      title: data.title,
+      aiContent: data.aicontent,
+      skills: data.skills,
+      experience: data.experience,
+      sections: data.sections,
+      templateId: data.templateid,
+      versionTag: data.versiontag,
+      createdAt: data.createdat,
+      updatedAt: data.updatedat,
+    };
   }
+  handleError(error: PostgrestError) {
+    throw new Error('Method not implemented.');
+  }
+
 
   async update(id: string, dto: UpdateResumeDto) {
     const { data, error } = await this.supabase
@@ -176,8 +213,9 @@ ${JSON.stringify(userProfile.experience || [], null, 2)}
     return { success: true, tailored: await this.askAI(prompt) };
   }
 
-  async validateResume(dto: GenerateAIDto) {
-    const { userProfile } = dto;
+  async validateResume(dto: any) {
+    const userProfile = dto.userProfile;
+
 
     const prompt = `
 You are a professional resume reviewer.
@@ -222,7 +260,7 @@ ${JSON.stringify(userProfile, null, 2)}
       .getClient()
       .from('Resume')
       .insert({
-        userId,
+        userid: userId,
         title: file.originalname.replace(/\.[^/.]+$/, ''),
         aiContent: { extractedText },
         sections: {},

@@ -23,13 +23,36 @@ export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}
 
   @Post()
-  create(@Body() dto: CreateResumeDto) {
-    return this.resumeService.create(dto);
+  create(@Body() createResumeDto: CreateResumeDto) {
+    return this.resumeService.create(createResumeDto);
   }
 
   @Get()
-  findAll(@Query('userid') userId: string) {
+  findAll(@Query('userId') userId: string) {
     return this.resumeService.findAll(userId);
+  }
+
+  // STATIC ROUTES MUST COME FIRST
+
+  @Post('validate')
+  validateResume(@Body('userProfile') profile: any) {
+    return this.resumeService.validateResume(profile);
+  }
+
+  @Post('upload')
+  @UseInterceptors(
+    FileInterceptor('resumeFile', {
+      storage: diskStorage({
+        destination: './uploads/resumes',
+        filename: (req, file, cb) => {
+          const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, unique + extname(file.originalname));
+        },
+      }),
+    }),
+  )
+  upload(@UploadedFile() file: Express.Multer.File, @Body('userId') userId: string) {
+    return this.resumeService.uploadResume(file, userId);
   }
 
   
@@ -77,10 +100,7 @@ export class ResumeController {
     return this.resumeService.tailorExperience(dto);
   }
 
-  @Post('validate')
-  validateResume(@Body() dto: GenerateAIDto) {
-    return this.resumeService.validateResume(dto);
-  }
+
 
   @Post('upload')
   @UseInterceptors(
