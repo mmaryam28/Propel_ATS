@@ -5,10 +5,12 @@ import { Icon } from "../components/ui/Icon";
 import { Toast } from "../components/Toast";
 import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults } from "../lib/api";
 import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
+import { useAnalytics } from "../contexts/AnalyticsContext";
 
 export default function JobDetails() {
   const { jobId } = useParams();
   const navigate = useNavigate();
+  const { triggerRefresh } = useAnalytics();
   const [job, setJob] = React.useState(null);
   const [edit, setEdit] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -121,6 +123,10 @@ export default function JobDetails() {
       setEdit(false);
   // refresh materials history after save
   try { setMaterialsHistory(await listJobMaterialsHistory(jobId)); } catch {}
+      // Trigger analytics refresh if status changed
+      if (payload.status !== job.status) {
+        triggerRefresh();
+      }
     } catch (e) {
       const msg = e?.response?.data?.message || e?.message || "Failed to save";
       setError(Array.isArray(msg) ? msg.join("; ") : msg);
@@ -136,6 +142,8 @@ export default function JobDetails() {
       setArchivedJobId(jobId);
       setShowToast(true);
       setShowArchiveConfirm(false);
+      // Trigger analytics refresh
+      triggerRefresh();
       // Delay navigation to allow undo
       setTimeout(() => {
         if (archivedJobId) navigate('/jobs');

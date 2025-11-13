@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { getAnalytics } from '../lib/api';
+import { useAnalytics } from '../contexts/AnalyticsContext';
 
 export default function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { refreshTrigger } = useAnalytics();
 
   useEffect(() => {
     loadAnalytics();
-  }, []);
+  }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
 
   async function loadAnalytics() {
     try {
@@ -61,32 +63,34 @@ export default function AnalyticsDashboard() {
       </div>
 
       {/* Status Breakdown */}
-      <div className="page-card p-6">
-        <h3 className="text-lg font-semibold mb-4">Applications by Status</h3>
-        <div className="space-y-3">
-          {Object.entries(analytics.byStatus).map(([status, count]) => (
-            <div key={status} className="flex items-center gap-3">
-              <div className="w-32 text-sm font-medium">{status}</div>
-              <div className="flex-1">
-                <div className="h-8 bg-gray-100 rounded-lg overflow-hidden">
-                  <div
-                    className={`h-full ${statusColors[status] || 'bg-gray-500'} flex items-center justify-end px-3`}
-                    style={{ width: `${(count / analytics.totalApplications) * 100}%` }}
-                  >
-                    <span className="text-xs font-medium text-white">{count}</span>
+      {analytics.byStatus && Object.keys(analytics.byStatus).length > 0 && (
+        <div className="page-card p-6">
+          <h3 className="text-lg font-semibold mb-4">Applications by Status</h3>
+          <div className="space-y-3">
+            {Object.entries(analytics.byStatus).map(([status, count]) => (
+              <div key={status} className="flex items-center gap-3">
+                <div className="w-32 text-sm font-medium">{status}</div>
+                <div className="flex-1">
+                  <div className="h-8 bg-gray-100 rounded-lg overflow-hidden">
+                    <div
+                      className={`h-full ${statusColors[status] || 'bg-gray-500'} flex items-center justify-end px-3`}
+                      style={{ width: `${(count / analytics.totalApplications) * 100}%` }}
+                    >
+                      <span className="text-xs font-medium text-white">{count}</span>
+                    </div>
                   </div>
                 </div>
+                <div className="w-16 text-sm text-gray-600 text-right">
+                  {((count / analytics.totalApplications) * 100).toFixed(0)}%
+                </div>
               </div>
-              <div className="w-16 text-sm text-gray-600 text-right">
-                {((count / analytics.totalApplications) * 100).toFixed(0)}%
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Upcoming Interviews */}
-      {analytics.upcomingInterviews.length > 0 && (
+      {analytics.upcomingInterviews && analytics.upcomingInterviews.length > 0 && (
         <div className="page-card p-6">
           <h3 className="text-lg font-semibold mb-4">Upcoming Interviews</h3>
           <div className="space-y-3">
@@ -108,31 +112,49 @@ export default function AnalyticsDashboard() {
       )}
 
       {/* Application Timeline (Last 30 Days) */}
-      <div className="page-card p-6">
-        <h3 className="text-lg font-semibold mb-4">Application Activity (Last 30 Days)</h3>
-        <div className="h-64 flex items-end gap-1">
-          {Object.entries(analytics.applicationsByDay).length > 0 ? (
-            Object.entries(analytics.applicationsByDay).map(([date, count]) => {
-              const maxCount = Math.max(...Object.values(analytics.applicationsByDay));
-              const height = (count / maxCount) * 100;
-              return (
-                <div key={date} className="flex-1 flex flex-col items-center">
-                  <div
-                    className="w-full bg-[var(--primary-color)] rounded-t"
-                    style={{ height: `${height}%` }}
-                    title={`${date}: ${count} applications`}
-                  />
-                  <div className="text-xs text-gray-500 mt-1 transform -rotate-45 origin-top-left whitespace-nowrap">
-                    {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="w-full text-center text-gray-500">No data for the last 30 days</div>
-          )}
+      {analytics.applicationsByDay && Object.keys(analytics.applicationsByDay).length > 0 ? (
+        <div className="page-card p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold">Applications Submitted</h3>
+            <p className="text-sm text-gray-600">Number of applications submitted per day (last 30 days)</p>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="flex items-end gap-1 bg-gray-50 rounded-lg p-4 pb-8 min-w-full relative h-48" style={{ minWidth: '800px' }}>
+              {Object.entries(analytics.applicationsByDay)
+                .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+                .map(([date, count], index) => {
+                  const allCounts = Object.values(analytics.applicationsByDay).filter(c => c > 0);
+                  const maxCount = allCounts.length > 0 ? Math.max(...allCounts) : 1;
+                  // Calculate height: 0 gets tiny bar, others scale proportionally
+                  const height = count === 0 ? 3 : Math.max(15, (count / maxCount) * 85);
+                  const isZero = count === 0;
+                  const dateObj = new Date(date);
+                  const dayOfMonth = dateObj.getDate();
+                  // Show date label on Mondays or first day of month
+                  const showDateLabel = dayOfMonth === 1 || dateObj.getDay() === 1 || index === 0;
+                  
+                  return (
+                    <div key={date} className="flex-1 flex flex-col items-center justify-end relative h-full" style={{ minWidth: '20px' }}>
+                      <div className="flex-1 flex flex-col items-center justify-end w-full">
+                        {!isZero && count > 0 && <div className="text-xs font-semibold text-gray-700 mb-1">{count}</div>}
+                        <div
+                          className={`w-full rounded-t transition-all ${isZero ? 'bg-gray-300 opacity-30' : 'bg-[var(--primary-color)] hover:bg-[var(--primary-color)]/80 cursor-pointer'}`}
+                          style={{ height: `${height}%` }}
+                          title={`${dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}: ${count} application${count !== 1 ? 's' : ''} submitted`}
+                        />
+                      </div>
+                      {showDateLabel && (
+                        <div className="absolute -bottom-6 left-0 text-[10px] text-gray-600 font-medium whitespace-nowrap">
+                          {dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

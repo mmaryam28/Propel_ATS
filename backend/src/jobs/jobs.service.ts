@@ -1344,65 +1344,84 @@ export class JobsService {
   async getAnalytics(userId: string) {
     const client = this.supabase.getClient();
 
-    // Total applications - using your 'job_applications' table
+    // Total applications - using 'jobs' table (active jobs only)
     const { count: totalApps } = await client
-      .from('job_applications')
+      .from('jobs')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
+      .eq('userId', userId)
+      .is('archivedAt', null);
 
     // Applications by status
     const { data: statusData } = await client
-      .from('job_applications')
+      .from('jobs')
       .select('status')
-      .eq('user_id', userId);
+      .eq('userId', userId)
+      .is('archivedAt', null);
 
     const byStatus = (statusData || []).reduce((acc, job) => {
-      const status = job.status || 'APPLIED';
+      const status = job.status || 'Interested';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {});
 
-    // Response rate calculation
-    const applied = byStatus['APPLIED'] || 0;
-    const responded = Object.keys(byStatus)
-      .filter(s => s !== 'APPLIED' && s !== 'REJECTED')
-      .reduce((sum, key) => sum + (byStatus[key] || 0), 0);
+    // Response rate calculation (jobs that moved beyond Applied)
+    const applied = byStatus['Applied'] || 0;
+    const phoneScreen = byStatus['Phone Screen'] || 0;
+    const interview = byStatus['Interview'] || 0;
+    const offer = byStatus['Offer'] || 0;
+    const responded = phoneScreen + interview + offer;
     const responseRate = applied > 0 ? ((responded / applied) * 100).toFixed(1) : '0';
 
-    // Time to offer
+    // Time to offer (calculate from statusUpdatedAt for jobs with Offer status)
     const { data: offers } = await client
-      .from('job_applications')
-      .select('applied_date')
-      .eq('user_id', userId)
-      .eq('status', 'OFFER');
+      .from('jobs')
+      .select('createdAt, statusUpdatedAt')
+      .eq('userId', userId)
+      .eq('status', 'Offer')
+      .is('archivedAt', null);
 
     let avgTimeToOffer = 0;
     if (offers && offers.length > 0) {
       const totalDays = offers.reduce((sum, job) => {
-        if (!job.applied_date) return sum;
-        const start = new Date(job.applied_date).getTime();
-        const end = Date.now();
-        return sum + Math.floor((end - start) / (1000 * 60 * 60 * 24));
+        if (!job.createdAt || !job.statusUpdatedAt) return sum;
+        const start = new Date(job.createdAt).getTime();
+        const end = new Date(job.statusUpdatedAt).getTime();
+        const days = Math.floor((end - start) / (1000 * 60 * 60 * 24));
+        return sum + days;
       }, 0);
       avgTimeToOffer = Math.round(totalDays / offers.length);
     }
 
-    // Applications over time (last 30 days)
+    // Applications submitted over time (last 30 days)
+    // Track when jobs moved to "Applied" status using job_history table
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const { data: recentApps } = await client
-      .from('job_applications')
-      .select('applied_date')
-      .eq('user_id', userId)
-      .gte('applied_date', thirtyDaysAgo.toISOString());
+    const { data: appliedHistory } = await client
+      .from('job_history')
+      .select('createdat')
+      .eq('userid', userId)
+      .eq('status', 'Applied')
+      .gte('createdat', thirtyDaysAgo.toISOString());
 
-    const appsByDay = (recentApps || []).reduce((acc, job) => {
-      if (!job.applied_date) return acc;
-      const day = new Date(job.applied_date).toISOString().split('T')[0];
-      acc[day] = (acc[day] || 0) + 1;
-      return acc;
-    }, {});
+    // Initialize all 30 days with zero counts
+    const appsByDay: Record<string, number> = {};
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      appsByDay[dateStr] = 0;
+    }
+
+    // Fill in actual counts from history
+    (appliedHistory || []).forEach((record) => {
+      if (record.createdat) {
+        const day = new Date(record.createdat).toISOString().split('T')[0];
+        if (appsByDay.hasOwnProperty(day)) {
+          appsByDay[day]++;
+        }
+      }
+    });
 
     // Upcoming interviews
     const { data: upcomingInterviews } = await client

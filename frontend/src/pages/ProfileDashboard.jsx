@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Card, Container, Section } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
 import UpcomingDeadlinesWidget from '../components/UpcomingDeadlinesWidget';
+import AnalyticsDashboard from '../components/AnalyticsDashboard';
 
 const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
 
@@ -80,6 +81,11 @@ export default function ProfileDashboard() {
       {/* Upcoming Deadlines Widget */}
       <Section className="pt-0">
         <UpcomingDeadlinesWidget />
+      </Section>
+
+      {/* Analytics Dashboard */}
+      <Section className="pt-0">
+        <AnalyticsDashboard />
       </Section>
 
       {/* Stats */}

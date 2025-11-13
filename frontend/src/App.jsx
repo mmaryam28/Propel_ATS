@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
+import { AnalyticsProvider } from "./contexts/AnalyticsContext";
 
 // UI & Demo Pages
 import TypographyPreview from "./pages/TypographyPreview";
@@ -33,9 +34,10 @@ const TemplatesPage = React.lazy(() =>
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public Pages */}
+    <AnalyticsProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Pages */}
         <Route path="/" element={<Landing />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
@@ -77,5 +79,6 @@ export default function App() {
         {/* <Route path="*" element={<NotFound />} /> */}
       </Routes>
     </BrowserRouter>
+    </AnalyticsProvider>
   );
 }
