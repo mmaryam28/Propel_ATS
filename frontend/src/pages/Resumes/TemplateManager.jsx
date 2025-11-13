@@ -34,9 +34,25 @@ export default function TemplateManager() {
       .then(res => res.json())
       .then(data => {
         console.log("Fetched templates:", data);
-        setTemplates(data.templates || []);
+
+        // FIX #1 — handle all backend response shapes
+        if (Array.isArray(data)) {
+          setTemplates(data);
+        } else if (Array.isArray(data.templates)) {
+          setTemplates(data.templates);
+        } else {
+          console.warn("Unexpected template format — using fallback sample templates");
+          setTemplates([
+            { id: 1, name: "Chronological", type: "chronological" },
+            { id: 2, name: "Functional", type: "functional" },
+            { id: 3, name: "Hybrid", type: "hybrid" },
+          ]);
+        }
       })
-      .catch(() => {
+      .catch(err => {
+        console.error("Failed to fetch templates:", err);
+
+        // FIX #2 — ensure templates always has data even on fetch error
         setTemplates([
           { id: 1, name: "Chronological", type: "chronological" },
           { id: 2, name: "Functional", type: "functional" },
@@ -44,6 +60,7 @@ export default function TemplateManager() {
         ]);
       });
   }, []);
+
 
   // Create a new resume using selected template
   function handleUseTemplate(template) {
@@ -109,7 +126,7 @@ export default function TemplateManager() {
             >
               {/* Template preview placeholder */}
               <div
-                className="h-40 w-full bg-gray-100 rounded mb-3 cursor-pointer flex items-center justify-center"
+                className="h-40 w-full bg-gray-100 rounded mb-3 cursor-pointer flex items-center justify-center" 
                 onClick={() => {
                   setSelectedTemplate(t);
                   setShowPreview(true);
@@ -118,7 +135,7 @@ export default function TemplateManager() {
                 <span className="text-gray-500 text-sm">Click to Preview</span>
               </div>
 
-              <h3 className="font-semibold mb-2">{t.name}</h3>
+              <h3 className="font-semibold mb-2" style={{ color: "#1e88e5" }} >{t.name}</h3>
               <p className="text-sm text-gray-500 mb-2 capitalize">
                 Type: {t.type || "custom"}
               </p>
