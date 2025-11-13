@@ -7,24 +7,21 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateResumeDto } from './dto/create-resume.dto';
 import { UpdateResumeDto } from './dto/update-resume.dto';
 import { GenerateAIDto } from './dto/generate-ai.dto';
-import { completion } from 'litellm';
+import axios from 'axios';
 import * as fs from 'fs/promises';
 const pdfParse = require('pdf-parse');
-import mammoth from 'mammoth';
-import type { File } from 'multer';
+const mammoth = require('mammoth');
 import { PostgrestError } from '@supabase/supabase-js';
-import { UpdateResumeDto } from './dto/update-resume.dto';
-import { GenerateAIDto } from './dto/generate-ai.dto';
-import { completion } from 'litellm';
-import * as fs from 'fs/promises';
-import pdfParse from 'pdf-parse';
-import mammoth from 'mammoth';
-import type { Express } from 'express';
-import { PostgrestError } from '@supabase/supabase-js';
+import PDFDocument from 'pdfkit';
+import { Readable } from 'stream';
 
 @Injectable()
 export class ResumeService {
-  constructor(private readonly supabase: SupabaseService) {}
+  private ollamaUrl: string;
+
+  constructor(private readonly supabase: SupabaseService) {
+    this.ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+  }
 
   //----------------------------------------------------
   // UTILITIES
@@ -33,6 +30,64 @@ export class ResumeService {
   handleError(error: PostgrestError) {
     console.error('Supabase Error:', error);
     throw new BadRequestException(error.message);
+  }
+
+  async getUserById(userId: string) {
+    console.log(`🔍 [getUserById] Querying users table for ID: ${userId}`);
+    
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('users')
+      .select('firstname, lastname, email, phone')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('❌ [getUserById] Supabase error:', error);
+      throw new NotFoundException(`User not found: ${error.message}`);
+    }
+
+    if (!data) {
+      console.error('❌ [getUserById] No user data returned');
+      throw new NotFoundException('User not found');
+    }
+
+    console.log(`✅ [getUserById] Found user:`, {
+      name: `${data.firstname} ${data.lastname}`,
+      email: data.email,
+      hasPhone: !!data.phone,
+    });
+
+    return data;
+  }
+
+  async checkOllamaConnection() {
+    console.log('\n🔍 [Health Check] Testing Ollama connection...');
+    try {
+      const startTime = Date.now();
+      const response = await axios.get(`${this.ollamaUrl}/api/tags`, {
+        timeout: 5000,
+      });
+      const elapsed = Date.now() - startTime;
+      
+      console.log(`✅ Ollama is running at ${this.ollamaUrl}`);
+      console.log(`📦 Available models:`, response.data?.models?.map(m => m.name) || []);
+      
+      return {
+        status: 'connected',
+        url: this.ollamaUrl,
+        responseTime: `${elapsed}ms`,
+        models: response.data?.models || [],
+      };
+    } catch (err) {
+      console.error(`❌ Cannot connect to Ollama:`, err.message);
+      return {
+        status: 'error',
+        url: this.ollamaUrl,
+        error: err.message,
+        suggestion: 'Make sure Ollama is running with: ollama serve',
+      };
+    }
   }
 
   private sanitizeAIResponse(text: string) {
@@ -57,25 +112,45 @@ export class ResumeService {
   }
 
   private async askAI(prompt: string) {
+    const startTime = Date.now();
+    console.log('\n🤖 [AI Request] Starting Ollama API call...');
+    console.log(`📊 Prompt length: ${prompt.length} characters`);
+    
     try {
-      const response = await completion({
-        model: 'ollama/phi3',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 512,
+      console.log(`🌐 Connecting to: ${this.ollamaUrl}/api/generate`);
+      console.log(`🎯 Model: phi3`);
+      
+      const response = await axios.post(`${this.ollamaUrl}/api/generate`, {
+        model: 'phi3',
+        prompt: prompt,
         stream: false,
+        options: {
+          temperature: 0.7,
+          num_predict: 2048, // Increased from 512 to avoid truncation
+        }
+      }, {
+        timeout: 120000, // 2 minutes timeout for larger responses
       });
 
-      const choice = response?.choices?.[0];
-
-      const raw =
-        choice?.message?.content ??
-        (typeof choice?.message === 'string' ? choice.message : '') ??
-        '';
-
-      return this.sanitizeAIResponse(raw);
+      const elapsed = Date.now() - startTime;
+      console.log(`✅ [AI Response] Received in ${elapsed}ms (${(elapsed / 1000).toFixed(2)}s)`);
+      
+      const raw = response.data?.response ?? '';
+      console.log(`📝 Response length: ${raw.length} characters`);
+      
+      const sanitized = this.sanitizeAIResponse(raw);
+      console.log(`✨ Sanitized response type: ${typeof sanitized}`);
+      
+      return sanitized;
     } catch (err) {
-      console.error('AI Error:', err);
+      const elapsed = Date.now() - startTime;
+      console.error(`❌ [AI Error] Failed after ${elapsed}ms:`, err.message);
+      if (err.code === 'ECONNREFUSED') {
+        console.error('🚨 Cannot connect to Ollama. Is it running on', this.ollamaUrl, '?');
+      }
+      if (err.code === 'ETIMEDOUT') {
+        console.error('⏱️  Request timed out. Ollama may be processing...');
+      }
       return { error: 'AI parsing failed', raw: err.message };
     }
   }
@@ -181,65 +256,335 @@ export class ResumeService {
   // AI FEATURES
   //----------------------------------------------------
   async generateAI(dto: GenerateAIDto) {
-    const prompt = `
-Return valid JSON describing optimized resume content.
+    console.log('\n🎨 [Generate AI] Starting resume generation...');
+    console.log(`📋 Job description length: ${dto.jobDescription?.length || 0} chars`);
+    console.log(`👤 User profile keys:`, Object.keys(dto.userProfile || {}));
+    
+    const startTime = Date.now();
+    
+    // Check if user has projects
+    const hasProjects = dto.userProfile?.projects && Array.isArray(dto.userProfile.projects) && dto.userProfile.projects.length > 0;
+    const projectsInstruction = hasProjects 
+      ? `Use the existing projects from the user profile and enhance them.` 
+      : `IMPORTANT: Since the user has no projects listed, create 2-3 relevant technical projects that would be appropriate for this role. Make them realistic and aligned with the job requirements. Include specific technologies, achievements, and outcomes.`;
+    
+    const prompt = `You are a professional resume writer. Generate optimized resume content based on the user's profile and job description.
 
-Job:
+Job Description:
 ${dto.jobDescription}
 
-User:
+User Profile:
 ${JSON.stringify(dto.userProfile, null, 2)}
-`;
-    return { aiContent: await this.askAI(prompt) };
+
+IMPORTANT INSTRUCTIONS:
+- If education institution is not specified, use "New Jersey Institute of Technology (NJIT)" as the default school
+- ${projectsInstruction}
+- Use the user's actual name from the profile: ${dto.userProfile?.name || 'Professional'}
+
+Generate a JSON object with the following structure:
+{
+  "sections": {
+    "summary": "A compelling professional summary tailored to the job (2-3 sentences)",
+    "education": [
+      {
+        "degree": "Degree name (e.g., Bachelor of Science in Computer Science)",
+        "institution": "New Jersey Institute of Technology (NJIT)",
+        "location": "Newark, NJ",
+        "graduationDate": "Expected May 2026",
+        "gpa": "3.5",
+        "relevantCourses": ["Data Structures", "Algorithms", "Database Systems"]
+      }
+    ],
+    "experience": [
+      {
+        "title": "Job title",
+        "company": "Company name",
+        "location": "Location",
+        "startDate": "Start date",
+        "endDate": "End date or 'Present'",
+        "achievements": [
+          "Quantified achievement with metrics (e.g., Increased efficiency by 30%)",
+          "Another achievement with impact and numbers"
+        ]
+      }
+    ],
+    "projects": [
+      {
+        "name": "Project name (e.g., E-Commerce Platform, Task Management System)",
+        "description": "1-2 sentence description of what the project does",
+        "technologies": ["React", "Node.js", "PostgreSQL", "Docker"],
+        "achievements": [
+          "Specific achievement with metrics (e.g., Handles 1000+ concurrent users)",
+          "Technical accomplishment (e.g., Implemented JWT authentication and role-based access)"
+        ]
+      }
+    ]
+  },
+  "skills": {
+    "technical": ["skill1", "skill2", "skill3"],
+    "languages": ["JavaScript", "Python", "Java"],
+    "frameworks": ["React", "Node.js", "Express"],
+    "tools": ["Git", "Docker", "AWS"]
+  }
+}
+
+Return ONLY valid JSON with optimized content tailored to the job description. Focus on quantifiable achievements and relevant keywords from the job posting. Make sure projects are realistic and demonstrate relevant skills for the role.`;
+
+    const result = await this.askAI(prompt);
+    const elapsed = Date.now() - startTime;
+    console.log(`✅ [Generate AI] Completed in ${(elapsed / 1000).toFixed(2)}s`);
+    
+    return { aiContent: result };
   }
 
   async optimizeSkills(dto: GenerateAIDto) {
-    const prompt = `
-Return JSON optimizing skills.
+    const prompt = `Analyze this job description and optimize the skills list to match.
 
-Job:
+Job Description:
 ${dto.jobDescription}
 
-Skills:
+Current Skills:
 ${JSON.stringify(dto.userProfile.skills, null, 2)}
-`;
+
+Return a JSON object with optimized skills grouped by category:
+{
+  "technical": ["relevant technical skills from job description"],
+  "languages": ["programming languages"],
+  "frameworks": ["frameworks and libraries"],
+  "tools": ["development tools"],
+  "soft": ["soft skills mentioned in job description"]
+}
+
+Prioritize skills that match the job description. Return ONLY valid JSON.`;
+
     return { optimization: await this.askAI(prompt) };
   }
 
   async tailorExperience(dto: GenerateAIDto) {
-    const prompt = `
-Return JSON rewriting experience.
+    const prompt = `Rewrite the work experience to align with this job description using action verbs and quantifiable achievements.
 
-Job:
+Job Description:
 ${dto.jobDescription}
 
-Experience:
+Current Experience:
 ${JSON.stringify(dto.userProfile.experience, null, 2)}
-`;
+
+Return a JSON array of experience entries:
+[
+  {
+    "title": "Job title",
+    "company": "Company name",
+    "location": "Location",
+    "startDate": "Start date",
+    "endDate": "End date or Present",
+    "achievements": [
+      "Achievement with metrics (e.g., Increased performance by 40%)",
+      "Another quantified achievement",
+      "Use action verbs: Led, Developed, Implemented, Optimized"
+    ]
+  }
+]
+
+Focus on achievements relevant to the target job. Use keywords from the job description. Return ONLY valid JSON.`;
 
     return { tailored: await this.askAI(prompt) };
   }
 
   async validateResume(userProfile: any) {
-    const prompt = `
-Return JSON validating resume quality:
+    const prompt = `Evaluate this resume and provide specific feedback for improvement.
 
-Resume:
+Resume Content:
 ${JSON.stringify(userProfile, null, 2)}
-`;
+
+Return a JSON object with validation results:
+{
+  "overallScore": 85,
+  "strengths": [
+    "Specific strength with example",
+    "Another strength"
+  ],
+  "improvements": [
+    "Specific actionable improvement",
+    "Another improvement with example"
+  ],
+  "missing": [
+    "Missing element that should be added",
+    "Another missing element"
+  ],
+  "atsScore": 90,
+  "atsIssues": [
+    "Specific ATS compatibility issue if any"
+  ]
+}
+
+Provide constructive, actionable feedback. Return ONLY valid JSON.`;
 
     return { validation: await this.askAI(prompt) };
   }
 
   //----------------------------------------------------
-  // FILE UPLOAD FIXED (CORRECT LOWERCASE COLUMNS)
+  // PDF GENERATION
   //----------------------------------------------------
-  async uploadResume(file: File, userId: string) {
-    if (!file) throw new BadRequestException('No file uploaded');
+  async generatePDF(resumeData: any): Promise<Buffer> {
+    console.log('📄 [PDF Generator] Starting PDF generation...');
+    console.log('📊 Resume data structure:', {
+      hasName: !!resumeData.name,
+      hasContact: !!resumeData.contact,
+      hasSections: !!resumeData.sections,
+      hasSkills: !!resumeData.skills,
+      hasExperience: !!resumeData.experience,
+      sectionKeys: resumeData.sections ? Object.keys(resumeData.sections) : [],
+      experienceCount: Array.isArray(resumeData.experience) ? resumeData.experience.length : 0,
+    });
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 50 });
+        const chunks: Buffer[] = [];
 
-  // -----------------------------
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => {
+          console.log('✅ [PDF Generator] PDF generation complete');
+          resolve(Buffer.concat(chunks));
+        });
+        doc.on('error', reject);
+
+        // Header - Name and Contact
+        doc.fontSize(24).font('Helvetica-Bold').text(resumeData.name || 'Professional Resume', { align: 'center' });
+        doc.moveDown(0.5);
+        
+        if (resumeData.contact) {
+          doc.fontSize(10).font('Helvetica');
+          const contact = [
+            resumeData.contact.email,
+            resumeData.contact.phone,
+            resumeData.contact.location,
+            resumeData.contact.linkedin,
+          ].filter(Boolean).join(' | ');
+          doc.text(contact, { align: 'center' });
+          doc.moveDown(1);
+        }
+
+        // Professional Summary
+        if (resumeData.sections?.summary) {
+          this.addSection(doc, 'PROFESSIONAL SUMMARY', resumeData.sections.summary);
+        }
+
+        // Skills
+        if (resumeData.skills) {
+          doc.fontSize(14).font('Helvetica-Bold').text('SKILLS');
+          doc.moveDown(0.3);
+          
+          Object.entries(resumeData.skills).forEach(([category, skillList]: [string, any]) => {
+            if (Array.isArray(skillList) && skillList.length > 0) {
+              doc.fontSize(10).font('Helvetica-Bold').text(`${category.charAt(0).toUpperCase() + category.slice(1)}:`, { continued: true });
+              doc.font('Helvetica').text(` ${skillList.join(', ')}`);
+              doc.moveDown(0.2);
+            }
+          });
+          doc.moveDown(0.5);
+        }
+
+        // Education
+        if (resumeData.sections?.education && Array.isArray(resumeData.sections.education)) {
+          doc.fontSize(14).font('Helvetica-Bold').text('EDUCATION');
+          doc.moveDown(0.3);
+          
+          resumeData.sections.education.forEach((edu: any) => {
+            doc.fontSize(11).font('Helvetica-Bold').text(edu.degree || edu.title);
+            doc.fontSize(10).font('Helvetica-Oblique').text(`${edu.institution || edu.school}, ${edu.location || ''}`);
+            if (edu.graduationDate || edu.date) {
+              doc.fontSize(9).text(edu.graduationDate || edu.date);
+            }
+            if (edu.gpa) {
+              doc.text(`GPA: ${edu.gpa}`);
+            }
+            doc.moveDown(0.5);
+          });
+          doc.moveDown(0.5);
+        }
+
+        // Experience
+        if (resumeData.experience && Array.isArray(resumeData.experience)) {
+          doc.fontSize(14).font('Helvetica-Bold').text('PROFESSIONAL EXPERIENCE');
+          doc.moveDown(0.3);
+          
+          resumeData.experience.forEach((exp: any) => {
+            doc.fontSize(11).font('Helvetica-Bold').text(exp.title || exp.position);
+            doc.fontSize(10).font('Helvetica-Oblique').text(`${exp.company}, ${exp.location || ''}`);
+            doc.fontSize(9).font('Helvetica').text(`${exp.startDate || exp.start} - ${exp.endDate || exp.end || 'Present'}`);
+            doc.moveDown(0.3);
+            
+            if (exp.achievements && Array.isArray(exp.achievements)) {
+              exp.achievements.forEach((achievement: string) => {
+                doc.fontSize(10).font('Helvetica').text(`• ${achievement}`, { indent: 10 });
+              });
+            } else if (exp.description) {
+              doc.fontSize(10).font('Helvetica').text(`• ${exp.description}`, { indent: 10 });
+            }
+            doc.moveDown(0.5);
+          });
+          doc.moveDown(0.5);
+        }
+
+        // Projects
+        if (resumeData.sections?.projects && Array.isArray(resumeData.sections.projects)) {
+          doc.fontSize(14).font('Helvetica-Bold').text('PROJECTS');
+          doc.moveDown(0.3);
+          
+          resumeData.sections.projects.forEach((project: any) => {
+            doc.fontSize(11).font('Helvetica-Bold').text(project.name || project.title);
+            if (project.technologies) {
+              doc.fontSize(9).font('Helvetica-Oblique').text(`Technologies: ${Array.isArray(project.technologies) ? project.technologies.join(', ') : project.technologies}`);
+            }
+            if (project.description) {
+              doc.fontSize(10).font('Helvetica').text(project.description, { indent: 10 });
+            }
+            if (project.achievements && Array.isArray(project.achievements)) {
+              project.achievements.forEach((achievement: string) => {
+                doc.fontSize(10).text(`• ${achievement}`, { indent: 10 });
+              });
+            }
+            doc.moveDown(0.5);
+          });
+        }
+
+        // Certifications
+        if (resumeData.sections?.certifications && Array.isArray(resumeData.sections.certifications)) {
+          doc.fontSize(14).font('Helvetica-Bold').text('CERTIFICATIONS');
+          doc.moveDown(0.3);
+          
+          resumeData.sections.certifications.forEach((cert: any) => {
+            doc.fontSize(10).font('Helvetica').text(`• ${cert.name || cert.title} - ${cert.issuer || cert.organization} (${cert.date || cert.year})`);
+          });
+          doc.moveDown(0.5);
+        }
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  private addSection(doc: typeof PDFDocument, title: string, content: string | string[]) {
+    doc.fontSize(14).font('Helvetica-Bold').text(title);
+    doc.moveDown(0.3);
+    
+    if (Array.isArray(content)) {
+      content.forEach((line) => {
+        doc.fontSize(10).font('Helvetica').text(`• ${line}`, { indent: 10 });
+      });
+    } else {
+      doc.fontSize(10).font('Helvetica').text(content, { align: 'justify' });
+    }
+    doc.moveDown(0.5);
+  }
+
+  //----------------------------------------------------
   // FILE UPLOAD + PARSING
-  async uploadResume(file: Express.Multer.File, userId: string) {
+  //----------------------------------------------------
+  async uploadResume(file: any, userId: string) {
     if (!file) {
       throw new BadRequestException('Resume file is required');
     }
