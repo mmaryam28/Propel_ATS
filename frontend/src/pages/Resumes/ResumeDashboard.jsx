@@ -58,7 +58,6 @@ export default function ResumeDashboard() {
   const navItems = [
     { id: "dashboard", label: "My Resumes" },
     { id: "templates", label: "Resume Templates" },
-    {/* id: "sections", label: "Customize Sections" */},
     { id: "versions", label: "Resume Versions" },
     { id: "feedback", label: "Feedback Panel" },
   ];

@@ -12,7 +12,7 @@ export default function ResumeTemplatePreview({ data, templateType }) {
       {/* HEADER */}
       {data.header && (
         <div className="space-y-1">
-          <h3 className="font-bold text-lg">{data.header.name}</h3>
+          <h3 className="font-bold text-gray-600">{data.header.name}</h3>
           <p className="text-gray-600">{data.header.email}</p>
           <p className="text-gray-600">{data.header.location}</p>
         </div>
