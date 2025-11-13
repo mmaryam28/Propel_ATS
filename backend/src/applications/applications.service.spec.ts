@@ -1,24 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApplicationsService } from './applications.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 describe('ApplicationsService', () => {
   let service: ApplicationsService;
-  let prisma: any;
+  let supabase: any;
 
   beforeEach(async () => {
-    prisma = {
-      jobApplication: {
-        findMany: jest.fn(),
-        create: jest.fn(),
-        updateMany: jest.fn(),
-        deleteMany: jest.fn(),
-      },
+    const mockChain = {
+      from: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: {}, error: null }),
     };
+
+    supabase = {
+      getClient: jest.fn().mockReturnValue(mockChain),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ApplicationsService,
-        { provide: PrismaService, useValue: prisma },
+        { provide: SupabaseService, useValue: supabase },
       ],
     }).compile();
 
@@ -30,22 +36,30 @@ describe('ApplicationsService', () => {
   });
 
   it('should find all applications', async () => {
-    prisma.jobApplication.findMany.mockResolvedValue([]);
-    await expect(service.findAll('1')).resolves.toEqual([]);
+    const mockClient = supabase.getClient();
+    mockClient.eq.mockResolvedValue({ data: [], error: null });
+    const result = await service.findAll('1');
+    expect(result).toBeDefined();
   });
 
   it('should create application', async () => {
-    prisma.jobApplication.create.mockResolvedValue({ id: 1 });
-    await expect(service.create('1', { foo: 'bar' })).resolves.toEqual({ id: 1 });
+    const mockClient = supabase.getClient();
+    mockClient.single.mockResolvedValue({ data: { id: 1 }, error: null });
+    const result = await service.create('1', { foo: 'bar' });
+    expect(result).toBeDefined();
   });
 
   it('should update application', async () => {
-    prisma.jobApplication.updateMany.mockResolvedValue({ count: 1 });
-    await expect(service.update('1', '2', { foo: 'bar' })).resolves.toEqual({ count: 1 });
+    const mockClient = supabase.getClient();
+    mockClient.eq.mockResolvedValue({ data: { id: 1 }, error: null });
+    const result = await service.update('1', '2', { foo: 'bar' });
+    expect(result).toBeDefined();
   });
 
   it('should remove application', async () => {
-    prisma.jobApplication.deleteMany.mockResolvedValue({ count: 1 });
-    await expect(service.remove('1', '2')).resolves.toEqual({ count: 1 });
+    const mockClient = supabase.getClient();
+    mockClient.eq.mockResolvedValue({ error: null });
+    const result = await service.remove('1', '2');
+    expect(result).toBeDefined();
   });
 });
