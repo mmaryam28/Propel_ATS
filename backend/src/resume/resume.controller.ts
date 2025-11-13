@@ -11,7 +11,8 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage, File } from 'multer';
+import { diskStorage } from 'multer';
+import type { Express } from 'express';
 import { ResumeService } from './resume.service';
 import { extname } from 'path';
 import { CreateResumeDto } from './dto/create-resume.dto';
@@ -115,7 +116,7 @@ export class ResumeController {
     }),
   )
   async uploadResume(
-    @UploadedFile() file: File,
+    @UploadedFile() file: Express.Multer.File,
     @Body('userId') userId: string,
   ) {
     return this.resumeService.uploadResume(file, userId);

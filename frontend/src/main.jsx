@@ -43,11 +43,11 @@ import VersionManager from './pages/Resumes/VersionManager.jsx';
 import ResumePreview from './pages/Resumes/ResumePreview.jsx';
 import FeedbackPanel from './pages/Resumes/FeedbackPanel.jsx';
 
-// Job Search pages
-import CompanyResearch from './pages/CompanyResearch';
-import JobMatch from './pages/JobMatch';
-import SalaryAnalysis from './pages/SalaryAnalysis';
-import InterviewInsights from './pages/InterviewInsights';
+// Job Search pages (moved under Resumes directory)
+import CompanyResearch from './pages/Resumes/CompanyResearch';
+import JobMatch from './pages/Resumes/JobMatch';
+import SalaryAnalysis from './pages/Resumes/SalaryAnalysis';
+import InterviewInsights from './pages/Resumes/InterviewInsights';
 
 import './index.css';
 import './styles/globals.css';
@@ -108,6 +108,14 @@ const router = createBrowserRouter([
       { path: '/interview-insights', element: <InterviewInsights /> },
 
       // ✅ New Cover Letter Templates route
+      {
+        path: '/coverletters',
+        element: (
+          <Suspense fallback={<div>Loading templates…</div>}>
+            <TemplatesPage />
+          </Suspense>
+        ),
+      },
       {
         path: '/coverletters/templates',
         element: (
