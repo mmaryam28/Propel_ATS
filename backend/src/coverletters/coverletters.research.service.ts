@@ -16,7 +16,7 @@ export class CompanyResearchService {
         )}&sortBy=publishedAt&pageSize=3&apiKey=${newsKey}`;
         const res = await fetch(url);
         if (res.ok) {
-          const data = await res.json();
+          const data: any = await res.json();
           if (data.articles?.length) {
             const summaries = data.articles
               .slice(0, 3)
@@ -38,7 +38,7 @@ export class CompanyResearchService {
       )}`;
       const wres = await fetch(wikiUrl);
       if (wres.ok) {
-        const wdata = await wres.json();
+        const wdata: any = await wres.json();
         const extract = wdata.extract || wdata.title || '';
         if (extract) {
           return `Background: ${extract}`;

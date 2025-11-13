@@ -142,10 +142,6 @@ function Navbar() {
                   <div className="absolute top-full mt-1 left-0 w-48 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
                     <Link to="/resumes" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Dashboard</Link>
                     <Link to="/resumes/ai" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">AI Generator</Link>
-                    <Link to="/resumes/templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Templates</Link>
-                    <Link to="/resumes/customize" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Customize</Link>
-                    <Link to="/resumes/versions" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Versions</Link>
-                    <Link to="/resumes/feedback" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Feedback</Link>
                   </div>
                 )}
               </div>

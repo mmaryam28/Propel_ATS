@@ -58,7 +58,7 @@ export class CoverletterAIService {
         return 'Error: Failed to generate AI content.';
       }
 
-      const data = await res.json();
+      const data: any = await res.json();
       return (data.response || '').trim() || 'Error: No content returned.';
     } catch (err) {
       console.error('Ollama API Error:', err);

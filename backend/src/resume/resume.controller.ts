@@ -52,7 +52,7 @@ export class ResumeController {
       }),
     }),
   )
-  upload(@UploadedFile() file: Express.Multer.File, @Body('userId') userId: string) {
+  upload(@UploadedFile() file: any, @Body('userId') userId: string) {
     return this.resumeService.uploadResume(file, userId);
   }
 
@@ -116,7 +116,7 @@ export class ResumeController {
     }),
   )
   async uploadResume(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: any,
     @Body('userId') userId: string,
   ) {
     return this.resumeService.uploadResume(file, userId);

@@ -53,13 +53,13 @@ export default function ResumePreview() {
       </h1>
 
       {/* TITLE */}
-      <p className="text-lg font-medium">
+      <p className="text-lg font-medium ">
         {resume.title || "Untitled Resume"}
       </p>
 
       {/* EXTRACTED TEXT */}
       <div>
-        <h2 className="text-lg font-semibold mt-4">Extracted Text</h2>
+        <h2 className="text-lg font-semibold mt-4 text-[#1e88e5]">Extracted Text</h2>
         <div className="border rounded-lg bg-gray-50 p-4 whitespace-pre-wrap">
           {extractedText.length > 0 ? extractedText : "No text extracted."}
         </div>
