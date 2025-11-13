@@ -11,15 +11,7 @@ import { completion } from 'litellm';
 import * as fs from 'fs/promises';
 const pdfParse = require('pdf-parse');
 import mammoth from 'mammoth';
-import type { File } from 'multer';
-import { PostgrestError } from '@supabase/supabase-js';
-import { UpdateResumeDto } from './dto/update-resume.dto';
-import { GenerateAIDto } from './dto/generate-ai.dto';
-import { completion } from 'litellm';
-import * as fs from 'fs/promises';
-import pdfParse from 'pdf-parse';
-import mammoth from 'mammoth';
-import type { Express } from 'express';
+import type { Multer } from 'multer';
 import { PostgrestError } from '@supabase/supabase-js';
 
 @Injectable()
@@ -230,15 +222,7 @@ ${JSON.stringify(userProfile, null, 2)}
 
     return { validation: await this.askAI(prompt) };
   }
-
-  //----------------------------------------------------
-  // FILE UPLOAD FIXED (CORRECT LOWERCASE COLUMNS)
-  //----------------------------------------------------
-  async uploadResume(file: File, userId: string) {
-    if (!file) throw new BadRequestException('No file uploaded');
-
-  // -----------------------------
-  // FILE UPLOAD + PARSING
+  
   async uploadResume(file: Express.Multer.File, userId: string) {
     if (!file) {
       throw new BadRequestException('Resume file is required');

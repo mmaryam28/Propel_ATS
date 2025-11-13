@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 const API = "http://localhost:3000/resume";
 
 export default function AIResumeGenerator() {
