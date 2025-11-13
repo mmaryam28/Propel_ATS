@@ -41,6 +41,118 @@ export class JobsController {
     return this.jobs.create(userId, dto);
   }
 
+  // ✅ Move ALL interview routes BEFORE @Get(':id')
+  // Interview Scheduling
+  @Post('interviews')
+  async scheduleInterview(@Req() req: any, @Body() dto: any) {
+    const userId = req.user.userId;
+    return this.jobs.scheduleInterview(userId, dto);
+  }
+
+  @Get('interviews')
+  async getInterviews(@Req() req: any, @Query('jobId') jobId?: string) {
+    const userId = req.user.userId;
+    return this.jobs.getInterviews(userId, jobId);
+  }
+
+  @Patch('interviews/:id')
+  async updateInterview(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    const userId = req.user.userId;
+    return this.jobs.updateInterview(userId, id, dto);
+  }
+
+  @Delete('interviews/:id')
+  async deleteInterview(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.deleteInterview(userId, id);
+  }
+
+  // ✅ Move analytics routes BEFORE @Get(':id')
+  @Get('analytics')
+  async getAnalytics(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getAnalytics(userId);
+  }
+
+  // ✅ Move automation rules BEFORE @Get(':id')
+  @Post('automation-rules')
+  async createAutomationRule(@Req() req: any, @Body() dto: any) {
+    const userId = req.user.userId;
+    return this.jobs.createAutomationRule(userId, dto);
+  }
+
+  @Get('automation-rules')
+  async getAutomationRules(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getAutomationRules(userId);
+  }
+
+  @Patch('automation-rules/:id')
+  async updateAutomationRule(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    const userId = req.user.userId;
+    return this.jobs.updateAutomationRule(userId, id, dto);
+  }
+
+  @Delete('automation-rules/:id')
+  async deleteAutomationRule(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.jobs.deleteAutomationRule(userId, id);
+  }
+
+  // ✅ Move ALL specific routes BEFORE the generic :id route
+  @Post('bulk-status')
+  async bulkStatus(
+    @Req() req: any,
+    @Body('ids') ids: string[],
+    @Body('status') status: JobStatus,
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.bulkUpdateStatus(userId, ids, status);
+  }
+
+  @Post('import-from-url')
+  async importFromUrl(@Body() dto: ImportJobDto) {
+    return this.jobs.importFromUrl(dto.url);
+  }
+
+  @Post('enrich-company')
+  async enrichCompany(@Body() dto: EnrichCompanyDto) {
+    return this.jobs.enrichCompanyFromUrl(dto.url);
+  }
+
+  @Post('bulk-archive')
+  async bulkArchive(
+    @Req() req: any,
+    @Body('ids') ids: string[],
+    @Body('reason') reason?: string,
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.bulkArchive(userId, ids, reason);
+  }
+
+  @Get('materials/usage')
+  async materialsUsage(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getMaterialsUsage(userId);
+  }
+
+  @Get('materials/defaults')
+  async getMaterialDefaults(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.jobs.getUserMaterialDefaults(userId);
+  }
+
+  @Post('materials/defaults')
+  async setMaterialDefaults(
+    @Req() req: any,
+    @Body('defaultResumeVersionId') defaultResumeVersionId?: string | null,
+    @Body('defaultCoverLetterVersionId') defaultCoverLetterVersionId?: string | null,
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.setUserMaterialDefaults(userId, { defaultResumeVersionId, defaultCoverLetterVersionId });
+  }
+
+  // ⚠️ NOW put the generic :id routes at the END
   @Get(':id')
   async getOne(@Req() req: any, @Param('id') id: string) {
     const userId = req.user.userId;
@@ -63,38 +175,16 @@ export class JobsController {
     return this.jobs.updateStatus(userId, id, status);
   }
 
-  @Post('bulk-status')
-  async bulkStatus(
-    @Req() req: any,
-    @Body('ids') ids: string[],
-    @Body('status') status: JobStatus,
-  ) {
-    const userId = req.user.userId;
-    return this.jobs.bulkUpdateStatus(userId, ids, status);
-  }
-
-
   @Get(':id/history')
   async history(@Req() req: any, @Param('id') id: string) {
     const userId = req.user.userId;
     return this.jobs.getHistory(userId, id);
   }
 
-  // UC-042: Materials history
   @Get(':id/materials-history')
   async materialsHistory(@Req() req: any, @Param('id') id: string) {
     const userId = req.user.userId;
     return this.jobs.getMaterialsHistory(userId, id);
-  }
-
-  @Post('import-from-url')
-  async importFromUrl(@Body() dto: ImportJobDto) {
-    return this.jobs.importFromUrl(dto.url);
-  }
-
-  @Post('enrich-company')
-  async enrichCompany(@Body() dto: EnrichCompanyDto) {
-    return this.jobs.enrichCompanyFromUrl(dto.url);
   }
 
   @Get(':id/company-news')
@@ -124,39 +214,4 @@ export class JobsController {
     const userId = req.user.userId;
     return this.jobs.delete(userId, id);
   }
-
-  @Post('bulk-archive')
-  async bulkArchive(
-    @Req() req: any,
-    @Body('ids') ids: string[],
-    @Body('reason') reason?: string,
-  ) {
-    const userId = req.user.userId;
-    return this.jobs.bulkArchive(userId, ids, reason);
-  }
-
-  // UC-042: Materials usage analytics
-  @Get('materials/usage')
-  async materialsUsage(@Req() req: any) {
-    const userId = req.user.userId;
-    return this.jobs.getMaterialsUsage(userId);
-  }
-
-  // UC-042: User material defaults
-  @Get('materials/defaults')
-  async getMaterialDefaults(@Req() req: any) {
-    const userId = req.user.userId;
-    return this.jobs.getUserMaterialDefaults(userId);
-  }
-
-  @Post('materials/defaults')
-  async setMaterialDefaults(
-    @Req() req: any,
-    @Body('defaultResumeVersionId') defaultResumeVersionId?: string | null,
-    @Body('defaultCoverLetterVersionId') defaultCoverLetterVersionId?: string | null,
-  ) {
-    const userId = req.user.userId;
-    return this.jobs.setUserMaterialDefaults(userId, { defaultResumeVersionId, defaultCoverLetterVersionId });
-  }
 }
-

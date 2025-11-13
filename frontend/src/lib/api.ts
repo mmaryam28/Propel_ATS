@@ -341,3 +341,93 @@ export async function exportStatisticsCSV(): Promise<void> {
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
 }
+
+// Interview Scheduling
+export type Interview = {
+  id: string;
+  job_id?: string; // ✅ Now references jobs table (UUID)
+  job_application_id?: number; // ✅ Legacy field (integer)
+  user_id: string;
+  interview_type?: string;
+  title?: string;
+  scheduled_at: string;
+  duration?: string;
+  location?: string;
+  interviewer_name?: string;
+  interviewer_email?: string;
+  notes?: string;
+  details?: string;
+  status?: 'scheduled' | 'completed' | 'cancelled';
+  created_at?: string;
+  updated_at?: string;
+  // Joined job data (if using .select('*, job:jobs(...)'))
+  job?: {
+    title: string;
+    company: string;
+  };
+};
+
+export async function scheduleInterview(data: {
+  jobId: string; // ✅ This is a UUID, not an integer
+  title: string;
+  scheduledAt: string;
+  duration?: string;
+  location?: string;
+  interviewerName?: string;
+  interviewerEmail?: string;
+  notes?: string;
+  setReminder?: boolean;
+  reminderBefore?: string;
+}): Promise<Interview> {
+  const { data: interview } = await api.post('/jobs/interviews', data, { withCredentials: true });
+  return interview;
+}
+
+export async function getInterviews(jobId?: string) {
+  const params = jobId ? { jobId } : {};
+  console.log('📅 [API] Fetching interviews with params:', params);
+  
+  const { data } = await api.get('/jobs/interviews', { withCredentials: true, params });
+  
+  console.log('✅ [API] Interviews response:', data);
+  console.log('📊 [API] Interview count:', data?.length || 0);
+  
+  return data;
+}
+
+export async function updateInterview(id: string, data: Partial<Interview>): Promise<Interview> {
+  const { data: interview } = await api.patch(`/jobs/interviews/${id}`, data, { withCredentials: true });
+  return interview;
+}
+
+export async function deleteInterview(id: string) {
+  const { data } = await api.delete(`/jobs/interviews/${id}`, { withCredentials: true });
+  return data;
+}
+
+// Analytics
+export async function getAnalytics() {
+  const { data } = await api.get('/jobs/analytics', { withCredentials: true });
+  return data;
+}
+
+// Automation Rules
+export async function createAutomationRule(data: any) {
+  const { data: rule } = await api.post('/jobs/automation-rules', data, { withCredentials: true });
+  return rule;
+}
+
+export async function getAutomationRules() {
+  const { data } = await api.get('/jobs/automation-rules', { withCredentials: true });
+  return data;
+}
+
+export async function updateAutomationRule(id: string, data: any) {
+  const { data: rule } = await api.patch(`/jobs/automation-rules/${id}`, data, { withCredentials: true });
+  return rule;
+}
+
+export async function deleteAutomationRule(id: string) {
+  const { data } = await api.delete(`/jobs/automation-rules/${id}`, { withCredentials: true });
+  return data;
+}
