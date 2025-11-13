@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import ResumeTemplatePreview from "./ResumeTemplatePreview";
 const API = "http://localhost:3000/resume";
 
 export default function AIResumeGenerator() {
@@ -83,6 +84,13 @@ export default function AIResumeGenerator() {
       {result && (
         <div className="p-4 bg-gray-100 rounded-lg space-y-4">
           {/* Tailored Resume Bullets */}
+          {result.aiContent && (
+            <ResumeTemplatePreview
+              data={result.aiContent}
+              templateType={templateType}
+            />
+          )}
+
           {result.experience && (
             <div>
               <h2 className="text-lg font-semibold text-blue-700">Tailored Experience Bullets</h2>

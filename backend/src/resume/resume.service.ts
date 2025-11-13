@@ -186,9 +186,10 @@ export class ResumeService {
   //----------------------------------------------------
   async generateAI(dto: GenerateAIDto) {
     const prompt = `
-  You are an expert resume writer.
+  You are a professional resume writer.  
+  Generate resume content in clean JSON ONLY, using this template type:
 
-  Generate optimized resume content in clean JSON only.
+  TEMPLATE TYPE: ${dto.templateType.toUpperCase()}
 
   Job Description:
   ${dto.jobDescription}
@@ -196,13 +197,97 @@ export class ResumeService {
   User Profile:
   ${JSON.stringify(dto.userProfile, null, 2)}
 
-  Guidelines:
-  - Return valid JSON only.
-  - Improve clarity, action verbs, metrics, and alignment with the job.
+  ==============================
+  TEMPLATE RULES
+  ==============================
+
+  If the template is **CHRONOLOGICAL**:
+  Return JSON with:
+  {
+    "header": {...},
+    "summary": "string",
+    "experience": [
+      {
+        "title": "string",
+        "company": "string",
+        "location": "string",
+        "startDate": "YYYY-MM",
+        "endDate": "YYYY-MM or Present",
+        "bullets": ["action bullet", ...]
+      }
+    ],
+    "skills": {
+      "technical": [...],
+      "soft": [...],
+      "tools": [...]
+    },
+    "education": [...]
+  }
+
+  If the template is **FUNCTIONAL**:
+  Return JSON with:
+  {
+    "header": {...},
+    "summary": "string",
+    "skillsSummary": [
+      {
+        "category": "Skill Area",
+        "details": ["skill", "skill", ...]
+      }
+    ],
+    "achievements": ["bullet", "bullet"],
+    "experience": [
+      {
+        "company": "string",
+        "role": "string",
+        "notes": ["short, factual notes without full bullets"]
+      }
+    ],
+    "education": [...]
+  }
+
+  If the template is **HYBRID**:
+  Return JSON with:
+  {
+    "header": {...},
+    "summary": "string",
+    "skillsSummary": [
+      {
+        "category": "Skill Area",
+        "details": ["skill", "skill"]
+      }
+    ],
+    "experience": [
+      {
+        "title": "string",
+        "company": "string",
+        "startDate": "YYYY-MM",
+        "endDate": "YYYY-MM or Present",
+        "bullets": ["metric-based bullet", ...]
+      }
+    ],
+    "projects": [
+      {
+        "name": "string",
+        "description": "string",
+        "tech": ["React", "Node", ...]
+      }
+    ],
+    "education": [...]
+  }
+
+  ==============================
+  INSTRUCTIONS
+  ==============================
+  - RETURN JSON ONLY — NO explanation.
+  - Do NOT create fake experience or fake roles.
+  - Improve clarity, impact, and alignment with job description.
+  - Use strong action verbs and measurable outcomes where possible.
   `;
 
     return { aiContent: await this.callAI(prompt) };
   }
+
 
   async optimizeSkills(dto: GenerateAIDto) {
     const prompt = `
