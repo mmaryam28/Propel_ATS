@@ -13,6 +13,7 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { ProfileModule } from './profile/profile.module';
 import { EmploymentModule } from './employment/employment.module';
 import { JobsModule } from './jobs/jobs.module';
+import { ResumeModule } from './resume/resume.module';
 import { CoverlettersModule } from './coverletters/coverletters.module';
 import { StatisticsModule } from './statistics/statistics.module';
 
@@ -33,6 +34,7 @@ import { StatisticsModule } from './statistics/statistics.module';
   ProfileModule,
   EmploymentModule,
   JobsModule,
+  ResumeModule,
   CoverlettersModule,
   StatisticsModule,
   ],
