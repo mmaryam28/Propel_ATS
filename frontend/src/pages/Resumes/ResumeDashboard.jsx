@@ -6,10 +6,9 @@ import { Link } from "react-router-dom";
 
 // Imported sub-tools
 import TemplateManager from "./TemplateManager";
-import SectionCustomizer from "./SectionCustomizer";
+import ResumeTemplatePreview from "./ResumeTemplatePreview";
 import VersionManager from "./VersionManager";
 import FeedbackPanel from "./FeedbackPanel";
-import ResumePreview from "./ResumePreview"; // optional if you want inline preview
 
 export default function ResumeDashboard() {
   const [resumes, setResumes] = useState([]);
@@ -59,7 +58,7 @@ export default function ResumeDashboard() {
   const navItems = [
     { id: "dashboard", label: "My Resumes" },
     { id: "templates", label: "Resume Templates" },
-    { id: "sections", label: "Customize Sections" },
+    {/* id: "sections", label: "Customize Sections" */},
     { id: "versions", label: "Resume Versions" },
     { id: "feedback", label: "Feedback Panel" },
   ];
@@ -166,19 +165,121 @@ export default function ResumeDashboard() {
           TAB: TEMPLATE MANAGER
       ============================ */}
       {activeTab === "templates" && (
-        <div className="border rounded-lg p-4">
-          <TemplateManager />
+        <div className="grid grid-cols-3 gap-4">
+
+          {/* ============================
+                CHRONOLOGICAL PREVIEW
+          ============================== */}
+          <div className="border rounded-lg p-4 bg-gray-50 shadow overflow-auto">
+            <h2 className="text-lg font-bold text-[#1e88e5] mb-2">Chronological Template</h2>
+            <ResumeTemplatePreview
+              templateType="chronological"
+              data={{
+                header: { name: "John Doe", email: "john@example.com", location: "NYC" },
+                summary: "A driven software developer with 3+ years of experience building scalable web applications.",
+                experience: [
+                  {
+                    title: "Frontend Developer",
+                    company: "Example Inc.",
+                    startDate: "2022-01",
+                    endDate: "Present",
+                    bullets: [
+                      "Implemented new UI features using React and TypeScript",
+                      "Reduced load time by 30% through performance optimizations"
+                    ]
+                  }
+                ]
+              }}
+            />
+          </div>
+
+          {/* ============================
+                FUNCTIONAL PREVIEW
+          ============================== */}
+          <div className="border rounded-lg p-4 bg-gray-50 shadow overflow-auto">
+            <h2 className="text-lg font-bold text-[#1e88e5] mb-2">Functional Template</h2>
+            <ResumeTemplatePreview
+              templateType="functional"
+              data={{
+                header: { name: "John Doe", email: "john@example.com", location: "NYC" },
+                summary: "Skill-driven technologist specializing in front-end development and UI/UX engineering.",
+                skillsSummary: [
+                  {
+                    category: "Frontend Engineering",
+                    details: ["React", "Next.js", "Tailwind CSS", "Responsive Layouts"]
+                  },
+                  {
+                    category: "Backend & DevOps",
+                    details: ["Node.js", "Docker", "REST APIs"]
+                  }
+                ],
+                achievements: [
+                  "Optimized UI workflows increasing user engagement by 22%",
+                  "Built internal tooling that saved the company 10+ hours per week"
+                ],
+                experience: [
+                  {
+                    company: "Tech Solutions LLC",
+                    role: "Developer",
+                    notes: ["Contributed to UI tasks", "Supported API maintenance"]
+                  }
+                ],
+                education: [
+                  { school: "NJIT", degree: "B.S. Computer Science", gradYear: "2026" }
+                ]
+              }}
+            />
+          </div>
+
+          {/* ============================
+                HYBRID PREVIEW
+          ============================== */}
+          <div className="border rounded-lg p-4 bg-gray-50 shadow overflow-auto">
+            <h2 className="text-lg font-bold text-[#1e88e5] mb-2">Hybrid Template</h2>
+            <ResumeTemplatePreview
+              templateType="hybrid"
+              data={{
+                header: { name: "John Doe", email: "john@example.com", location: "NYC" },
+                summary: "Full-stack developer blending technical skills with proven project execution.",
+                skillsSummary: [
+                  {
+                    category: "Languages",
+                    details: ["JavaScript", "Python", "SQL"]
+                  },
+                  {
+                    category: "Frameworks",
+                    details: ["React", "Node.js", "Express"]
+                  }
+                ],
+                experience: [
+                  {
+                    title: "Full-Stack Developer",
+                    company: "InnovateX",
+                    startDate: "2021-02",
+                    endDate: "2023-10",
+                    bullets: [
+                      "Built end-to-end features with React + Node.js",
+                      "Designed REST APIs serving 50K+ monthly users"
+                    ]
+                  }
+                ],
+                projects: [
+                  {
+                    name: "Portfolio Builder",
+                    description: "A no-code portfolio generator for students.",
+                    tech: ["React", "Firebase", "Tailwind"]
+                  }
+                ],
+                education: [
+                  { school: "NJIT", degree: "B.S. Computer Science", gradYear: "2026" }
+                ]
+              }}
+            />
+          </div>
+
         </div>
       )}
 
-      {/* ===========================
-          TAB: SECTION CUSTOMIZER
-      ============================ */}
-      {activeTab === "sections" && (
-        <div className="border rounded-lg p-4">
-          <SectionCustomizer />
-        </div>
-      )}
 
       {/* ===========================
           TAB: VERSION MANAGER

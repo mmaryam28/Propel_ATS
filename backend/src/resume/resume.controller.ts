@@ -12,9 +12,9 @@
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import type { Express } from 'express';
-import { ResumeService } from './resume.service';
 import { extname } from 'path';
+
+import { ResumeService } from './resume.service';
 import { CreateResumeDto } from './dto/create-resume.dto';
 import { UpdateResumeDto } from './dto/update-resume.dto';
 import { GenerateAIDto } from './dto/generate-ai.dto';
@@ -23,9 +23,13 @@ import { GenerateAIDto } from './dto/generate-ai.dto';
 export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}
 
+  // ============================================
+  // STATIC ROUTES (must come before dynamic ones)
+  // ============================================
+
   @Post()
-  create(@Body() createResumeDto: CreateResumeDto) {
-    return this.resumeService.create(createResumeDto);
+  create(@Body() dto: CreateResumeDto) {
+    return this.resumeService.create(dto);
   }
 
   @Get()
@@ -33,59 +37,13 @@ export class ResumeController {
     return this.resumeService.findAll(userId);
   }
 
-  // STATIC ROUTES MUST COME FIRST
-
+  // --- Validation ---
   @Post('validate')
   validateResume(@Body('userProfile') profile: any) {
     return this.resumeService.validateResume(profile);
   }
 
-  @Post('upload')
-  @UseInterceptors(
-    FileInterceptor('resumeFile', {
-      storage: diskStorage({
-        destination: './uploads/resumes',
-        filename: (req, file, cb) => {
-          const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, unique + extname(file.originalname));
-        },
-      }),
-    }),
-  )
-  upload(@UploadedFile() file: any, @Body('userId') userId: string) {
-    return this.resumeService.uploadResume(file, userId);
-  }
-
-  
-  // Resume Template Management (UC-046)
-  @Get('templates')
-  getTemplates() {
-    // Simple default data for now (you can later pull from Supabase)
-    return {
-      templates: [
-        {
-          id: 'chronological',
-          name: 'Chronological',
-          type: 'chronological',
-          preview: null,
-        },
-        {
-          id: 'functional',
-          name: 'Functional',
-          type: 'functional',
-          preview: null,
-        },
-        {
-          id: 'hybrid',
-          name: 'Hybrid',
-          type: 'hybrid',
-          preview: null,
-        },
-      ],
-    };
-  }
-
-  // AI Resume Generation
+  // --- AI Resume Generator ---
   @Post('generate-ai')
   generateAI(@Body() dto: GenerateAIDto) {
     return this.resumeService.generateAI(dto);
@@ -101,26 +59,32 @@ export class ResumeController {
     return this.resumeService.tailorExperience(dto);
   }
 
+  // --- Resume Template Management ---
+  @Get('templates')
+  getTemplates() {
+    return this.resumeService.getTemplates();
+  }
 
-
+  // --- SINGLE Upload Route (fixed) ---
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('resumeFile', {
       storage: diskStorage({
         destination: './uploads/resumes',
-        filename: (req, file, callback) => {
+        filename: (req, file, cb) => {
           const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          callback(null, unique + extname(file.originalname));
+          cb(null, unique + extname(file.originalname));
         },
       }),
     }),
   )
-  async uploadResume(
-    @UploadedFile() file: any,
-    @Body('userId') userId: string,
-  ) {
+  uploadResume(@UploadedFile() file: any, @Body('userId') userId: string) {
     return this.resumeService.uploadResume(file, userId);
   }
+
+  // =====================================================
+  // DYNAMIC ROUTES (must come last so they don't override)
+  // =====================================================
 
   @Get(':id')
   findOne(@Param('id') id: string) {
@@ -136,6 +100,5 @@ export class ResumeController {
   remove(@Param('id') id: string) {
     return this.resumeService.remove(id);
   }
-
 }
 */
