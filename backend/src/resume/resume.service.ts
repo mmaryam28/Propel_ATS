@@ -5,14 +5,22 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateResumeDto } from './dto/create-resume.dto';
-  import { UpdateResumeDto } from './dto/update-resume.dto';
-  import { GenerateAIDto } from './dto/generate-ai.dto';
-  import { completion } from 'litellm';
-  import * as fs from 'fs/promises';
-  const pdfParse = require('pdf-parse');
-  import mammoth from 'mammoth';
-  import type { File } from 'multer';
-  import { PostgrestError } from '@supabase/supabase-js';
+import { UpdateResumeDto } from './dto/update-resume.dto';
+import { GenerateAIDto } from './dto/generate-ai.dto';
+import { completion } from 'litellm';
+import * as fs from 'fs/promises';
+const pdfParse = require('pdf-parse');
+import mammoth from 'mammoth';
+import type { File } from 'multer';
+import { PostgrestError } from '@supabase/supabase-js';
+import { UpdateResumeDto } from './dto/update-resume.dto';
+import { GenerateAIDto } from './dto/generate-ai.dto';
+import { completion } from 'litellm';
+import * as fs from 'fs/promises';
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
+import type { Express } from 'express';
+import { PostgrestError } from '@supabase/supabase-js';
 
 @Injectable()
 export class ResumeService {
@@ -229,8 +237,14 @@ ${JSON.stringify(userProfile, null, 2)}
   async uploadResume(file: File, userId: string) {
     if (!file) throw new BadRequestException('No file uploaded');
 
+  // -----------------------------
+  // FILE UPLOAD + PARSING
+  async uploadResume(file: Express.Multer.File, userId: string) {
+    if (!file) {
+      throw new BadRequestException('Resume file is required');
+    }
     const filePath = file.path;
-    const ext = file.originalname.split('.').pop().toLowerCase();
+    const ext = (file.originalname.split('.').pop() || '').toLowerCase();
 
     let extractedText = '';
 

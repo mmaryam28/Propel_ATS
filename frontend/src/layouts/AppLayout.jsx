@@ -60,6 +60,7 @@ function Breadcrumbs() {
 function Navbar() {
   const [open, setOpen] = useState(false);
   const [resumeOpen, setResumeOpen] = useState(false); // ⚡ for dropdown state
+  const [coverOpen, setCoverOpen] = useState(false); // ⚡ cover letters dropdown
   const location = useLocation();
 
   useEffect(() => setOpen(false), [location.pathname]);
@@ -76,7 +77,7 @@ function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-full px-2 sm:px-4 lg:px-6">
         <div className="flex h-14 items-center justify-between">
           {/* Left side: Logo + Nav */}
           <div className="flex items-center gap-4">
@@ -86,13 +87,13 @@ function Navbar() {
                 alt="Propel logo"
                 className="h-7 w-7 object-contain rounded-md hover:scale-105 transition-transform duration-200"
               />
-              <span className="font-semibold whitespace-nowrap truncate max-w-[12ch] sm:max-w-none">
+              <span className="font-semibold whitespace-nowrap">
                 PROPEL
               </span>
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden md:flex gap-1 ml-2" aria-label="Primary">
+            <nav className="hidden md:flex gap-1 ml-1" aria-label="Primary">
               {NAV_ITEMS.map((item) => (
                 <NavLink
                   key={item.to}
@@ -121,7 +122,7 @@ function Navbar() {
                     resumeOpen ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
                   )}
                 >
-                  <Icon name="file-text" size="sm" />
+                  <Icon name="resume" size="sm" />
                   <span>Resumes</span>
                   <svg
                     className={classNames(
@@ -141,6 +142,38 @@ function Navbar() {
                   <div className="absolute top-full mt-1 left-0 w-48 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
                     <Link to="/resumes" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Dashboard</Link>
                     <Link to="/resumes/ai" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">AI Generator</Link>
+                  </div>
+                )}
+              </div>
+
+              {/* ⚡ Cover Letters Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setCoverOpen((v) => !v)}
+                  className={classNames(
+                    "px-3 py-2 rounded-xl text-sm flex items-center gap-2 transition",
+                    coverOpen ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                >
+                  <Icon name="mail" size="sm" />
+                  <span>Cover Letters</span>
+                  <svg
+                    className={classNames(
+                      "h-3 w-3 transition-transform",
+                      coverOpen ? "rotate-180" : ""
+                    )}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {coverOpen && (
+                  <div className="absolute top-full mt-1 left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
+                    <Link to="/coverletters/templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Templates</Link>
                   </div>
                 )}
               </div>
@@ -209,7 +242,7 @@ function Navbar() {
               {/* ⚡ Collapsible Resume menu */}
               <details>
                 <summary className="px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
-                  <Icon name="file-text" size="sm" />
+                  <Icon name="resume" size="sm" />
                   <span>Resumes</span>
                 </summary>
                 <div className="pl-6 flex flex-col">
@@ -219,6 +252,17 @@ function Navbar() {
                   <Link to="/resumes/customize" className="py-1 text-sm text-gray-700 hover:underline">Customize</Link>
                   <Link to="/resumes/versions" className="py-1 text-sm text-gray-700 hover:underline">Versions</Link>
                   <Link to="/resumes/feedback" className="py-1 text-sm text-gray-700 hover:underline">Feedback</Link>
+                </div>
+              </details>
+
+              {/* ⚡ Collapsible Cover Letters menu */}
+              <details>
+                <summary className="px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
+                  <Icon name="mail" size="sm" />
+                  <span>Cover Letters</span>
+                </summary>
+                <div className="pl-6 flex flex-col">
+                  <Link to="/coverletters/templates" className="py-1 text-sm text-gray-700 hover:underline">Templates</Link>
                 </div>
               </details>
             </nav>

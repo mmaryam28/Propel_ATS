@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import type { Express } from 'express';
 import { ResumeService } from './resume.service';
 import { extname } from 'path';
 import { CreateResumeDto } from './dto/create-resume.dto';

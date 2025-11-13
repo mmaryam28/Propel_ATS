@@ -13,6 +13,8 @@ export const listTemplates = (q?: string, category?: string) =>
 export const getTemplate = (slug: string) =>
   api<any>(`/templates/${slug}`);
 
+// generateCoverLetter API removed until feature is ready
+
 function toQS(obj: Record<string, any>) {
   const s = new URLSearchParams();
   Object.entries(obj).forEach(([k, v]) => {
