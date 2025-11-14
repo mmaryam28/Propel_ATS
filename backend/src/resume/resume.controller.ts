@@ -1,4 +1,4 @@
-/*import {
+import {
   Controller,
   Get,
   Post,
@@ -129,7 +129,10 @@ export class ResumeController {
           location: dto.userProfile?.location || '',
           linkedin: dto.userProfile?.linkedin || '',
         },
-        sections: aiData?.sections || {},
+        sections: {
+          ...aiData?.sections,
+          experience: aiData?.sections?.experience || aiData?.experience || [],
+        },
         skills: aiData?.skills || {},
         experience: aiData?.sections?.experience || aiData?.experience || [],
       };
@@ -141,6 +144,8 @@ export class ResumeController {
         hasSections: !!resumeDataForPDF.sections,
         hasSkills: !!resumeDataForPDF.skills,
         experienceCount: Array.isArray(resumeDataForPDF.experience) ? resumeDataForPDF.experience.length : 0,
+        sectionsExperienceCount: Array.isArray(resumeDataForPDF.sections?.experience) ? resumeDataForPDF.sections.experience.length : 0,
+        sectionsKeys: Object.keys(resumeDataForPDF.sections || {}),
       });
       
       const pdfBuffer = await this.resumeService.generatePDF(resumeDataForPDF);
@@ -268,4 +273,3 @@ export class ResumeController {
     return this.resumeService.remove(id);
   }
 }
-*/
