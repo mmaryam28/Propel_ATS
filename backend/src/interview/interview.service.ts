@@ -1,810 +1,694 @@
 import { Injectable } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
-import * as cheerio from 'cheerio';
+import fetch from 'node-fetch';
 
 @Injectable()
 export class InterviewService {
-  constructor(private readonly supabaseService: SupabaseService) {}
-
-  /**
-   * Helper: Fetch HTML content with proper headers
-   */
-  private async fetchPage(url: string): Promise<string> {
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'DNT': '1',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
-        },
-      });
-      return await response.text();
-    } catch (error) {
-      console.error(`Error fetching ${url}:`, error);
-      return '';
-    }
-  }
-
-  /**
-   * Scrape Glassdoor for interview questions
-   */
-  private async scrapeGlassdoor(company: string): Promise<any> {
-    try {
-      const searchQuery = company.replace(/\s+/g, '-').toLowerCase();
-      const url = `https://www.glassdoor.com/Interview/${searchQuery}-interview-questions-SRCH_KE0,${company.length}.htm`;
-      
-      const html = await this.fetchPage(url);
-      if (!html) return { questions: [], process: null };
-
-      const $ = cheerio.load(html);
-      const questions: string[] = [];
-      const processStages: any[] = [];
-
-      // Extract interview questions
-      $('[data-test="interview-question"]').each((i, elem) => {
-        const question = $(elem).text().trim();
-        if (question && questions.length < 15) {
-          questions.push(question);
-        }
-      });
-
-      // Alternative selectors for questions
-      if (questions.length === 0) {
-        $('.interviewQuestion, .interview-question, .questionText').each((i, elem) => {
-          const question = $(elem).text().trim();
-          if (question && questions.length < 15) {
-            questions.push(question);
-          }
-        });
-      }
-
-      // Extract interview process info
-      $('.interviewProcess, .interview-process, [data-test="interview-process"]').each((i, elem) => {
-        const stage = $(elem).find('.stage-name, .stageName').text().trim();
-        const description = $(elem).find('.stage-description, .stageDescription').text().trim();
-        if (stage) {
-          processStages.push({ stage, description });
-        }
-      });
-
-      return {
-        questions: questions.slice(0, 15),
-        process: processStages.length > 0 ? processStages : null,
-        source: 'Glassdoor',
-      };
-    } catch (error) {
-      console.error('Glassdoor scraping error:', error);
-      return { questions: [], process: null };
-    }
-  }
-
-  /**
-   * Scrape Indeed for interview information
-   */
-  private async scrapeIndeed(company: string): Promise<any> {
-    try {
-      const searchQuery = encodeURIComponent(`${company} interview questions`);
-      const url = `https://www.indeed.com/cmp/${company.replace(/\s+/g, '-')}/reviews?fcountry=ALL&ftopic=int`;
-      
-      const html = await this.fetchPage(url);
-      if (!html) return { questions: [], tips: [] };
-
-      const $ = cheerio.load(html);
-      const questions: string[] = [];
-      const tips: string[] = [];
-
-      // Extract interview questions from reviews
-      $('.cmp-ReviewInterview-question, [data-tn-component="interviewQuestion"]').each((i, elem) => {
-        const question = $(elem).text().trim();
-        if (question && questions.length < 10) {
-          questions.push(question);
-        }
-      });
-
-      // Extract interview tips
-      $('.cmp-ReviewInterview-tip, .interview-tip').each((i, elem) => {
-        const tip = $(elem).text().trim();
-        if (tip && tips.length < 10) {
-          tips.push(tip);
-        }
-      });
-
-      return {
-        questions: questions.slice(0, 10),
-        tips: tips.slice(0, 10),
-        source: 'Indeed',
-      };
-    } catch (error) {
-      console.error('Indeed scraping error:', error);
-      return { questions: [], tips: [] };
-    }
-  }
-
-  /**
-   * Scrape levels.fyi for company interview info
-   */
-  private async scrapeLevelsFyi(company: string): Promise<any> {
-    try {
-      const searchQuery = company.replace(/\s+/g, '-').toLowerCase();
-      const url = `https://www.levels.fyi/companies/${searchQuery}/interviews`;
-      
-      const html = await this.fetchPage(url);
-      if (!html) return { difficulty: null, duration: null };
-
-      const $ = cheerio.load(html);
-      
-      const difficulty = $('.interview-difficulty, [data-difficulty]').first().text().trim();
-      const duration = $('.interview-duration, [data-duration]').first().text().trim();
-      const rounds = $('.interview-rounds, [data-rounds]').first().text().trim();
-
-      return {
-        difficulty: difficulty || null,
-        duration: duration || null,
-        rounds: rounds || null,
-        source: 'Levels.fyi',
-      };
-    } catch (error) {
-      console.error('Levels.fyi scraping error:', error);
-      return { difficulty: null, duration: null };
-    }
-  }
-
-  /**
-   * Aggregate data from multiple sources
-   */
-  private async scrapeMultipleSources(company: string): Promise<any> {
-    // Run all scrapers in parallel
-    const [glassdoorData, indeedData, levelsFyiData] = await Promise.all([
-      this.scrapeGlassdoor(company),
-      this.scrapeIndeed(company),
-      this.scrapeLevelsFyi(company),
-    ]);
-
-    // Combine all questions and remove duplicates
-    const allQuestions = [
-      ...glassdoorData.questions,
-      ...indeedData.questions,
-    ];
-    const uniqueQuestions = [...new Set(allQuestions)];
-
-    return {
-      questions: uniqueQuestions,
-      process: glassdoorData.process,
-      tips: indeedData.tips,
-      difficulty: levelsFyiData.difficulty,
-      duration: levelsFyiData.duration,
-      rounds: levelsFyiData.rounds,
-    };
-  }
+  private readonly serpApiKey = process.env.SERP_API_KEY;
 
   /**
    * UC-068 AC1: Research typical interview process and stages
    */
   async getInterviewProcess(company: string): Promise<any> {
-    // Try to scrape real data first
-    const scrapedData = await this.scrapeMultipleSources(company);
-    
-    // If we got process stages from scraping, use them
-    if (scrapedData.process && scrapedData.process.length > 0) {
-      return {
-        company,
-        stages: scrapedData.process,
-        totalStages: scrapedData.process.length,
-        estimatedTimeline: scrapedData.duration || '2-6 weeks',
-        difficulty: scrapedData.difficulty,
-        source: 'Scraped from job boards',
-      };
+    if (!this.serpApiKey) {
+      return { error: 'SERP API key not configured' };
     }
 
-    // Fallback to generic stages if scraping didn't return process info
-    const stages = [
-      {
-        stage: 'Initial Screening',
-        description: `Phone or video call with ${company} HR/recruiter (15-30 minutes)`,
-        duration: '15-30 minutes',
-        focus: 'Background verification, salary expectations, availability',
-      },
-      {
-        stage: 'Technical Phone Screen',
-        description: `Technical discussion or coding challenge with ${company} engineer`,
-        duration: '45-60 minutes',
-        focus: 'Technical skills, problem-solving, coding fundamentals',
-      },
-      {
-        stage: 'Take-home Assignment',
-        description: 'Coding project or case study to complete at home',
-        duration: scrapedData.duration || '2-4 hours',
-        focus: 'Code quality, design decisions, problem-solving approach',
-      },
-      {
-        stage: 'On-site/Virtual Interviews',
-        description: `Multiple rounds with ${company} team members`,
-        duration: '3-5 hours',
-        focus: 'Technical depth, system design, behavioral, culture fit',
-      },
-      {
-        stage: 'Final Round',
-        description: `Meeting with ${company} senior leadership or team leads`,
-        duration: '30-60 minutes',
-        focus: 'Vision alignment, leadership potential, final questions',
-      },
-    ];
-
-    return {
-      company,
-      stages,
-      totalStages: stages.length,
-      estimatedTimeline: scrapedData.duration || '2-6 weeks',
-      difficulty: scrapedData.difficulty,
-      source: 'Template with scraped metadata',
-    };
+    try {
+      // Use multiple search queries for better results
+      const queries = [
+        `"${company}" interview process stages rounds glassdoor`,
+        `${company} hiring process steps interview rounds`,
+        `${company} interview experience process reddit blind`,
+        `${company} technical interview process onsite virtual`
+      ];
+      
+      let allStages: any[] = [];
+      let searchData: any = {};
+      
+      // Search with multiple queries
+      for (const query of queries.slice(0, 2)) {
+        const searchResults = await this.searchWithSerpApi(query);
+        const stages = this.extractInterviewStages(searchResults, company);
+        if (stages.length > 0) {
+          allStages.push(...stages);
+        }
+        if (Object.keys(searchData).length === 0) {
+          searchData = searchResults;
+        }
+      }
+      
+      // Remove duplicates and use best stages found
+      const uniqueStages = this.deduplicateStages(allStages);
+      const finalStages = uniqueStages.length > 0 ? uniqueStages : this.getDefaultStages(company);
+      
+      return {
+        company,
+        stages: finalStages,
+        totalStages: finalStages.length,
+        source: uniqueStages.length > 0 ? 'SERP API Search Results' : 'Default Process'
+      };
+    } catch (error) {
+      console.error('Error fetching interview process:', error);
+      return { error: 'Failed to fetch interview process information' };
+    }
   }
 
   /**
    * UC-068 AC2: Identify common interview questions for the company
    */
   async getCommonQuestions(company: string, role?: string): Promise<any> {
-    // Scrape real questions from job boards
-    const scrapedData = await this.scrapeMultipleSources(company);
-    
-    // If we got questions from scraping, categorize them
-    if (scrapedData.questions && scrapedData.questions.length > 0) {
-      const allQuestions = scrapedData.questions;
-      
-      // Categorize scraped questions based on keywords
-      const technical = allQuestions.filter((q: string) => 
-        q.toLowerCase().match(/code|algorithm|design|implement|data structure|complexity|optimize|debug|technical|system|database|api/i)
-      );
-      
-      const behavioral = allQuestions.filter((q: string) => 
-        q.toLowerCase().match(/tell me|describe|how do you|situation|example|experience|challenge|team|conflict|time when|project/i) &&
-        !q.toLowerCase().match(/technical/i)
-      );
-      
-      const companySpecific = allQuestions.filter((q: string) => 
-        q.toLowerCase().includes(company.toLowerCase()) ||
-        q.toLowerCase().match(/why|culture|values|mission|products|services|why us/i)
-      );
-      
-      // Add company-specific questions if not enough were scraped
-      const defaultCompanyQuestions = [
-        `What do you know about ${company}\'s products and services?`,
-        `How would you contribute to ${company}\'s mission?`,
-        `What interests you most about ${company}\'s technology stack?`,
-        `Why do you want to work at ${company}?`,
-      ];
-      
-      const finalCompanySpecific = companySpecific.length > 0 
-        ? companySpecific 
-        : defaultCompanyQuestions;
-
-      return {
-        company,
-        role: role || 'Software Engineer',
-        questions: {
-          technical: technical.length > 0 ? technical : allQuestions.slice(0, 8),
-          behavioral: behavioral.length > 0 ? behavioral : allQuestions.slice(8, 16),
-          companySpecific: finalCompanySpecific,
-        },
-        totalQuestions: allQuestions.length,
-        source: 'Scraped from Glassdoor, Indeed, and other job boards',
-      };
+    if (!this.serpApiKey) {
+      return { error: 'SERP API key not configured' };
     }
 
-    // Fallback to generic questions if scraping didn't work
-    const technicalQuestions = [
-      'Explain the difference between var, let, and const in JavaScript',
-      'What is the time complexity of common sorting algorithms?',
-      'How would you design a URL shortening service?',
-      'Implement a function to reverse a linked list',
-      'Explain RESTful API design principles',
-      'What are the SOLID principles in software design?',
-      'How do you handle asynchronous operations in your preferred language?',
-      'Describe your experience with database optimization',
-    ];
-
-    const behavioralQuestions = [
-      'Tell me about a time you faced a significant technical challenge',
-      'Describe a situation where you had to work with a difficult team member',
-      'How do you handle conflicting priorities and tight deadlines?',
-      'Give an example of when you had to learn a new technology quickly',
-      'Tell me about a project you\'re most proud of',
-      'How do you stay updated with new technologies and industry trends?',
-      'Describe a time you made a mistake and how you handled it',
-      `Why do you want to work at ${company}?`,
-    ];
-
-    const companySpecific = [
-      `What do you know about ${company}\'s products and services?`,
-      `How would you contribute to ${company}\'s mission?`,
-      `What interests you most about ${company}\'s technology stack?`,
-      `Where do you see ${company} in 5 years?`,
-    ];
-
-    return {
-      company,
-      role: role || 'Software Engineer',
-      questions: {
-        technical: technicalQuestions,
-        behavioral: behavioralQuestions,
-        companySpecific: companySpecific,
-      },
-      totalQuestions:
-        technicalQuestions.length +
-        behavioralQuestions.length +
-        companySpecific.length,
-      source: 'Generic template (web scraping failed or blocked)',
-    };
+    try {
+      const roleQuery = role ? ` ${role}` : '';
+      // Use multiple search queries to get better results
+      const queries = [
+        `"${company}"${roleQuery} interview questions commonly asked`,
+        `${company} interview questions experience glassdoor`,
+        `${company}${roleQuery} interview what to expect questions`,
+        `${company} hiring process interview questions reddit`
+      ];
+      
+      let allQuestions: string[] = [];
+      
+      // Search with multiple queries to get comprehensive results
+      for (const query of queries.slice(0, 2)) { // Limit to 2 queries to avoid rate limits
+        const searchResults = await this.searchWithSerpApi(query);
+        const questions = this.extractQuestions(searchResults, company, role);
+        allQuestions.push(...questions);
+      }
+      
+      // Remove duplicates and limit results
+      const uniqueQuestions = Array.from(new Set(allQuestions)).slice(0, 20);
+      
+      return {
+        company,
+        role,
+        questions: uniqueQuestions,
+        source: 'SERP API Search Results'
+      };
+    } catch (error) {
+      console.error('Error fetching interview questions:', error);
+      return { error: 'Failed to fetch interview questions' };
+    }
   }
 
   /**
    * UC-068 AC3: Find interviewer information and backgrounds
    */
   async getInterviewerInfo(company: string): Promise<any> {
-    // In a real implementation, this would scrape LinkedIn or use an API
-    const interviewers = [
-      {
-        name: 'Sarah Chen',
-        title: 'Senior Engineering Manager',
-        background: 'MIT Computer Science, 10+ years at major tech companies',
-        focus: 'System design, leadership, technical architecture',
-        linkedIn: 'https://linkedin.com/in/sample',
-        tips: 'Focuses on scalability and team collaboration',
-      },
-      {
-        name: 'Michael Rodriguez',
-        title: 'Staff Software Engineer',
-        background: 'Stanford CS, Open source contributor, Tech lead',
-        focus: 'Code quality, algorithms, best practices',
-        linkedIn: 'https://linkedin.com/in/sample',
-        tips: 'Values clean code and thorough testing',
-      },
-      {
-        name: 'Jennifer Park',
-        title: 'VP of Engineering',
-        background: 'Berkeley EECS, Former CTO at startup',
-        focus: 'Vision, leadership, strategic thinking',
-        linkedIn: 'https://linkedin.com/in/sample',
-        tips: 'Interested in long-term career goals and cultural fit',
-      },
-    ];
+    if (!this.serpApiKey) {
+      return { error: 'SERP API key not configured' };
+    }
 
-    return {
-      company,
-      interviewers,
-      note: 'Interviewer information is anonymized. Research actual interviewers on LinkedIn.',
-    };
+    try {
+      const query = `${company} interviewers hiring managers backgrounds`;
+      const searchResults = await this.searchWithSerpApi(query);
+      const interviewers = this.extractInterviewerInfo(searchResults, company);
+      
+      return {
+        company,
+        interviewers,
+        source: 'SERP API Search Results'
+      };
+    } catch (error) {
+      console.error('Error fetching interviewer info:', error);
+      return { error: 'Failed to fetch interviewer information' };
+    }
   }
 
   /**
    * UC-068 AC4: Discover company-specific interview formats
    */
   async getInterviewFormats(company: string): Promise<any> {
-    const formats = {
-      codingChallenges: {
-        platform: 'HackerRank / CoderPad / Company platform',
-        duration: '45-60 minutes',
-        difficulty: 'Medium to Hard',
-        topics: ['Data Structures', 'Algorithms', 'Problem Solving'],
-        allowedLanguages: ['JavaScript', 'Python', 'Java', 'C++', 'Go'],
-      },
-      systemDesign: {
-        format: 'Whiteboard or virtual diagramming',
-        duration: '60-90 minutes',
-        topics: [
-          'Scalability',
-          'Database design',
-          'Microservices',
-          'Caching strategies',
-          'Load balancing',
-        ],
-        expectations: 'Trade-offs, scalability, and real-world constraints',
-      },
-      behavioral: {
-        format: 'STAR method (Situation, Task, Action, Result)',
-        duration: '30-45 minutes',
-        topics: [
-          'Leadership',
-          'Teamwork',
-          'Conflict resolution',
-          'Problem solving',
-        ],
-        framework: 'Amazon Leadership Principles or similar',
-      },
-      culturefit: {
-        format: 'Conversational interview',
-        duration: '30 minutes',
-        topics: ['Company values', 'Work style', 'Career goals', 'Team dynamics'],
-        focus: 'Alignment with company culture and values',
-      },
-    };
+    if (!this.serpApiKey) {
+      return { error: 'SERP API key not configured' };
+    }
 
-    return {
-      company,
-      formats,
-      note: `${company} typically uses a combination of these formats`,
-    };
+    try {
+      const query = `${company} interview format types technical behavioral panel`;
+      const searchResults = await this.searchWithSerpApi(query);
+      const formats = this.extractInterviewFormats(searchResults, company);
+      
+      return {
+        company,
+        formats,
+        source: 'SERP API Search Results'
+      };
+    } catch (error) {
+      console.error('Error fetching interview formats:', error);
+      return { error: 'Failed to fetch interview format information' };
+    }
   }
 
   /**
    * UC-068 AC5: Preparation recommendations based on role and company
    */
-  async getPreparationRecommendations(
-    company: string,
-    role: string,
-  ): Promise<any> {
-    const recommendations = {
-      studyMaterials: [
-        {
-          category: 'Coding Practice',
-          resources: [
-            'LeetCode - Complete 150 most common interview questions',
-            'HackerRank - Company-specific practice tests',
-            'Cracking the Coding Interview book',
-            'AlgoExpert video solutions',
-          ],
-        },
-        {
-          category: 'System Design',
-          resources: [
-            'System Design Interview book by Alex Xu',
-            'Designing Data-Intensive Applications by Martin Kleppmann',
-            'YouTube: System Design Interview channel',
-            'Practice with Excalidraw for diagramming',
-          ],
-        },
-        {
-          category: 'Behavioral Prep',
-          resources: [
-            'Prepare 10-15 STAR method stories',
-            'Research company values and mission',
-            'Practice with mock interview platforms',
-            'Review your past projects and accomplishments',
-          ],
-        },
-        {
-          category: 'Company Research',
-          resources: [
-            `${company} engineering blog`,
-            `${company} GitHub repositories`,
-            'Glassdoor interview reviews',
-            'LinkedIn employee profiles',
-          ],
-        },
-      ],
-      technicalTopics: [
-        'Data Structures (Arrays, Hash Maps, Trees, Graphs)',
-        'Algorithms (Sorting, Searching, Dynamic Programming)',
-        'Object-Oriented Design principles',
-        'Database design and SQL',
-        'API design and RESTful services',
-        'Testing strategies and methodologies',
-        'Git and version control',
-        'Cloud services (AWS/Azure/GCP)',
-      ],
-      timelineRecommendation: {
-        '4-6 weeks before': 'Start LeetCode practice, review fundamentals',
-        '2-3 weeks before': 'Focus on system design, prepare STAR stories',
-        '1 week before': 'Company research, mock interviews, review notes',
-        '1 day before': 'Rest, review key concepts, prepare questions to ask',
-      },
-    };
+  async getPreparationRecommendations(company: string, role?: string): Promise<any> {
+    if (!this.serpApiKey) {
+      return { error: 'SERP API key not configured' };
+    }
 
-    return {
-      company,
-      role,
-      recommendations,
-      estimatedPrepTime: '4-6 weeks for comprehensive preparation',
-    };
+    try {
+      const roleQuery = role ? ` ${role}` : '';
+      const query = `${company}${roleQuery} interview preparation tips advice`;
+      const searchResults = await this.searchWithSerpApi(query);
+      const recommendations = this.extractPreparationTips(searchResults, company, role);
+      
+      return {
+        company,
+        role,
+        recommendations,
+        source: 'SERP API Search Results'
+      };
+    } catch (error) {
+      console.error('Error fetching preparation recommendations:', error);
+      return { error: 'Failed to fetch preparation recommendations' };
+    }
   }
 
   /**
    * UC-068 AC6: Timeline expectations for interview process
    */
   async getTimelineExpectations(company: string): Promise<any> {
-    const timeline = [
-      {
-        phase: 'Application Submitted',
-        timeframe: 'Day 0',
-        description: 'Resume reviewed by ATS and recruiters',
-        action: 'Ensure resume is ATS-friendly',
-      },
-      {
-        phase: 'Initial Response',
-        timeframe: '1-2 weeks',
-        description: 'Hear back about initial screening',
-        action: 'Follow up if no response after 2 weeks',
-      },
-      {
-        phase: 'Phone Screen',
-        timeframe: '2-3 weeks',
-        description: 'First technical or HR screening',
-        action: 'Prepare elevator pitch and basic technical questions',
-      },
-      {
-        phase: 'Technical Interviews',
-        timeframe: '3-5 weeks',
-        description: 'Multiple rounds of technical assessments',
-        action: 'Practice coding and system design daily',
-      },
-      {
-        phase: 'Final Rounds',
-        timeframe: '5-6 weeks',
-        description: 'Cultural fit and leadership interviews',
-        action: 'Prepare thoughtful questions about the company',
-      },
-      {
-        phase: 'Offer Decision',
-        timeframe: '6-8 weeks',
-        description: 'Receive offer or rejection notice',
-        action: 'Negotiate if offer received, request feedback if rejected',
-      },
-    ];
+    if (!this.serpApiKey) {
+      return { error: 'SERP API key not configured' };
+    }
 
-    return {
-      company,
-      timeline,
-      totalDuration: '6-8 weeks average',
-      note: 'Timeline can vary significantly based on position level and urgency',
-    };
+    try {
+      const queries = [
+        `"${company}" interview timeline duration how long process`,
+        `${company} hiring process timeline weeks days`,
+        `${company} interview process how long take glassdoor`
+      ];
+      
+      let bestTimeline: any = null;
+      
+      // Search with multiple queries
+      for (const query of queries.slice(0, 2)) {
+        const searchResults = await this.searchWithSerpApi(query);
+        const timeline = this.extractTimeline(searchResults, company);
+        if (timeline && timeline.estimated_duration !== '2-4 weeks') {
+          bestTimeline = timeline;
+          break;
+        }
+        if (!bestTimeline) {
+          bestTimeline = timeline;
+        }
+      }
+      
+      return {
+        company,
+        timeline: bestTimeline,
+        source: bestTimeline?.estimated_duration !== '2-4 weeks' ? 'SERP API Search Results' : 'Default Timeline'
+      };
+    } catch (error) {
+      console.error('Error fetching timeline expectations:', error);
+      return { error: 'Failed to fetch timeline information' };
+    }
   }
 
   /**
    * UC-068 AC7: Success tips from other candidates
    */
   async getSuccessTips(company: string): Promise<any> {
-    // Scrape tips from job boards
-    const scrapedData = await this.scrapeMultipleSources(company);
-    
-    // Use scraped tips if available
-    const scrapedTips = scrapedData.tips || [];
-    const hasScrapedTips = scrapedTips.length > 0;
+    if (!this.serpApiKey) {
+      return { error: 'SERP API key not configured' };
+    }
 
-    const tips = [
+    try {
+      const query = `${company} interview success tips candidates experience advice`;
+      const searchResults = await this.searchWithSerpApi(query);
+      const tips = this.extractSuccessTips(searchResults, company);
+      
+      return {
+        company,
+        tips,
+        source: 'SERP API Search Results'
+      };
+    } catch (error) {
+      console.error('Error fetching success tips:', error);
+      return { error: 'Failed to fetch success tips' };
+    }
+  }
+
+  /**
+   * Comprehensive insights endpoint that combines all information
+   */
+  async getComprehensiveInsights(company: string, role?: string): Promise<any> {
+    try {
+      const [process, questions, interviewers, formats, recommendations, timeline, successTips] = await Promise.all([
+        this.getInterviewProcess(company),
+        this.getCommonQuestions(company, role),
+        this.getInterviewerInfo(company),
+        this.getInterviewFormats(company),
+        this.getPreparationRecommendations(company, role),
+        this.getTimelineExpectations(company),
+        this.getSuccessTips(company)
+      ]);
+
+      return {
+        company,
+        role,
+        lastUpdated: new Date().toISOString(),
+        process,
+        questions,
+        interviewers,
+        formats,
+        recommendations,
+        timeline,
+        successTips
+      };
+    } catch (error) {
+      console.error('Error fetching comprehensive insights:', error);
+      return { error: 'Failed to fetch comprehensive interview insights' };
+    }
+  }
+
+  // Private helper methods
+  private async searchWithSerpApi(query: string): Promise<any> {
+    try {
+      const url = `https://serpapi.com/search?engine=google&q=${encodeURIComponent(query)}&api_key=${this.serpApiKey}&num=10&gl=us&hl=en`;
+      console.log(`Searching SERP API with query: ${query}`);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`SERP API error: ${response.status} - ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('SERP API returned error:', data.error);
+        throw new Error(`SERP API error: ${data.error}`);
+      }
+      
+      console.log(`SERP API returned ${data.organic_results?.length || 0} organic results`);
+      return data;
+    } catch (error) {
+      console.error('SERP API search error:', error);
+      throw error;
+    }
+  }
+
+  private extractInterviewStages(searchResults: any, company: string): any[] {
+    const extractedStages: any[] = [];
+    
+    if (searchResults?.organic_results) {
+      for (const result of searchResults.organic_results.slice(0, 5)) {
+        const textSources = [
+          result.snippet || '',
+          result.title || '',
+          ...(result.sitelinks?.map((link: any) => link.title + ' ' + (link.snippet || '')) || [])
+        ];
+
+        for (const text of textSources) {
+          if (!text) continue;
+          
+          // Look for common interview stage patterns
+          const stagePatterns = [
+            /(\d+)\s*(step|stage|round|phase)\s*:?\s*([^.\n]+)/gi,
+            /(phone|video|technical|onsite|panel|final|behavioral|coding|system design|cultural fit)\s*(interview|assessment|screening|round)\s*:?\s*([^.\n]*)/gi,
+            /(first|second|third|initial|final)\s*(interview|round|stage)\s*:?\s*([^.\n]*)/gi
+          ];
+
+          for (const pattern of stagePatterns) {
+            const matches = text.matchAll(pattern);
+            for (const match of matches) {
+              const stageName = match[3] || `${match[1]} ${match[2]}`;
+              const description = this.generateStageDescription(stageName, company);
+              const duration = this.estimateStageDuration(stageName);
+              
+              extractedStages.push({
+                stage: this.cleanStageName(stageName),
+                description,
+                duration
+              });
+            }
+          }
+          
+          // Look for duration information
+          const durationMatches = text.match(/(\d+)\s*(week|day|hour|minute)s?/gi);
+          if (durationMatches && extractedStages.length > 0) {
+            // Try to associate durations with stages
+          }
+        }
+      }
+    }
+
+    return extractedStages.slice(0, 6); // Limit to reasonable number of stages
+  }
+  
+  private deduplicateStages(stages: any[]): any[] {
+    const seen = new Set();
+    return stages.filter(stage => {
+      const key = stage.stage.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+  
+  private getDefaultStages(company: string): any[] {
+    return [
       {
-        category: 'Technical Preparation',
-        tips: hasScrapedTips && scrapedTips.filter((t: string) => t.toLowerCase().match(/code|technical|practice|algorithm/i)).length > 0
-          ? scrapedTips.filter((t: string) => t.toLowerCase().match(/code|technical|practice|algorithm/i)).slice(0, 4)
-          : [
-              'Practice coding without an IDE to simulate whiteboard interviews',
-              'Focus on explaining your thought process out loud',
-              'Review time and space complexity for all solutions',
-              'Practice with a timer to build speed and confidence',
-            ],
-        rating: 5,
+        stage: 'Application Review',
+        description: `${company} reviews your application and resume`,
+        duration: '1-3 days'
       },
       {
-        category: 'Communication',
-        tips: hasScrapedTips && scrapedTips.filter((t: string) => t.toLowerCase().match(/communicate|explain|ask|discuss/i)).length > 0
-          ? scrapedTips.filter((t: string) => t.toLowerCase().match(/communicate|explain|ask|discuss/i)).slice(0, 4)
-          : [
-              'Think out loud - interviewers want to understand your approach',
-              'Ask clarifying questions before diving into solutions',
-              'Discuss trade-offs and alternative approaches',
-              'Be honest about what you don\'t know and show willingness to learn',
-            ],
-        rating: 5,
+        stage: 'Phone/Video Screening',
+        description: 'Initial conversation with recruiter or hiring manager',
+        duration: '30-45 minutes'
       },
       {
-        category: 'Company Knowledge',
-        tips: hasScrapedTips && scrapedTips.filter((t: string) => t.toLowerCase().includes(company.toLowerCase())).length > 0
-          ? scrapedTips.filter((t: string) => t.toLowerCase().includes(company.toLowerCase())).slice(0, 4)
-          : [
-              `Read ${company}\'s engineering blog regularly`,
-              'Understand their tech stack and recent projects',
-              'Be ready to explain why you want to work there specifically',
-              'Research recent news and company initiatives',
-            ],
-        rating: 4,
+        stage: 'Technical Assessment',
+        description: 'Skills evaluation, coding challenge, or technical interview',
+        duration: '1-3 hours'
       },
       {
-        category: 'Interview Day',
-        tips: hasScrapedTips && scrapedTips.filter((t: string) => t.toLowerCase().match(/prepare|ready|setup|dress/i)).length > 0
-          ? scrapedTips.filter((t: string) => t.toLowerCase().match(/prepare|ready|setup|dress/i)).slice(0, 4)
-          : [
-              'Test your tech setup 30 minutes before virtual interviews',
-              'Have a notepad ready for notes and diagrams',
-              'Dress professionally even for remote interviews',
-              'Prepare 3-5 thoughtful questions to ask interviewers',
-            ],
-        rating: 4,
+        stage: 'Onsite/Virtual Interviews',
+        description: 'Multiple rounds with team members and managers',
+        duration: '3-5 hours'
       },
       {
-        category: 'Follow-up',
-        tips: hasScrapedTips && scrapedTips.filter((t: string) => t.toLowerCase().match(/follow|email|thank/i)).length > 0
-          ? scrapedTips.filter((t: string) => t.toLowerCase().match(/follow|email|thank/i)).slice(0, 4)
-          : [
-              'Send thank-you emails within 24 hours',
-              'Mention specific topics discussed in the interview',
-              'Reiterate your interest in the position',
-              'Ask about next steps and timeline',
-            ],
-        rating: 4,
+        stage: 'Final Review',
+        description: 'Decision making and reference checks',
+        duration: '3-7 days'
+      }
+    ];
+  }
+  
+  private cleanStageName(name: string): string {
+    return name.replace(/^\d+\s*(step|stage|round|phase)\s*:?\s*/i, '')
+               .replace(/^(first|second|third|initial|final)\s*/i, '')
+               .trim()
+               .split('\n')[0]
+               .slice(0, 50);
+  }
+  
+  private generateStageDescription(stageName: string, company: string): string {
+    const name = stageName.toLowerCase();
+    if (name.includes('phone') || name.includes('screening')) {
+      return `Initial phone or video call to discuss your background and interest in ${company}`;
+    } else if (name.includes('technical') || name.includes('coding')) {
+      return 'Technical evaluation of your programming and problem-solving skills';
+    } else if (name.includes('onsite') || name.includes('panel')) {
+      return 'In-person or virtual interviews with multiple team members';
+    } else if (name.includes('behavioral') || name.includes('cultural')) {
+      return 'Assessment of your soft skills and cultural fit with the team';
+    } else if (name.includes('final') || name.includes('last')) {
+      return 'Final interview with senior leadership or decision makers';
+    }
+    return `Interview stage focused on evaluating your fit for the role at ${company}`;
+  }
+  
+  private estimateStageDuration(stageName: string): string {
+    const name = stageName.toLowerCase();
+    if (name.includes('phone') || name.includes('screening')) {
+      return '30-45 minutes';
+    } else if (name.includes('technical') || name.includes('coding')) {
+      return '1-2 hours';
+    } else if (name.includes('onsite') || name.includes('panel')) {
+      return '3-5 hours';
+    } else if (name.includes('final')) {
+      return '1 hour';
+    }
+    return '1-2 hours';
+  }
+
+  private extractQuestions(searchResults: any, company: string, role?: string): string[] {
+    const extractedQuestions: string[] = [];
+    
+    // Try to extract company-specific questions from search results
+    if (searchResults?.organic_results) {
+      for (const result of searchResults.organic_results.slice(0, 5)) {
+        // Look for questions in snippets, titles, and rich snippets
+        const textSources = [
+          result.snippet || '',
+          result.title || '',
+          result.rich_snippet?.top?.extensions?.join(' ') || '',
+          ...(result.sitelinks?.map(link => link.title + ' ' + (link.snippet || '')) || [])
+        ];
+
+        for (const text of textSources) {
+          if (!text) continue;
+          
+          // Enhanced question pattern matching
+          const questionPatterns = [
+            // Direct questions
+            /(?:^|\.|!|\?|\n)\s*([^.!?]*(?:why|what|how|when|where|who|describe|tell me|explain|walk me through)[^.!?]*\?)/gi,
+            // Interview-specific patterns
+            /(?:question|ask|asked|interview)\s*[:.]?\s*([^.!?]*\?)/gi,
+            // Common interview question starters
+            /(tell me about yourself|why do you want to work|what are your|how do you handle|describe a time|walk me through|what interests you|why are you leaving)[^.!?]*\??/gi
+          ];
+
+          for (const pattern of questionPatterns) {
+            const matches = text.match(pattern);
+            if (matches) {
+              for (let match of matches) {
+                match = match.trim().replace(/^(question|ask|asked|interview)\s*[:.]?\s*/i, '');
+                if (match.length > 10 && match.length < 200) {
+                  // Ensure it ends with a question mark
+                  if (!match.endsWith('?')) {
+                    match += '?';
+                  }
+                  
+                  // Clean up the question
+                  match = match.charAt(0).toUpperCase() + match.slice(1);
+                  
+                  // Avoid duplicates
+                  if (!extractedQuestions.some(q => q.toLowerCase().includes(match.toLowerCase().substring(0, 20)))) {
+                    extractedQuestions.push(match);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // If we found company-specific questions, return them
+    if (extractedQuestions.length > 0) {
+      // Sort by relevance (prefer questions mentioning the company)
+      extractedQuestions.sort((a, b) => {
+        const aHasCompany = a.toLowerCase().includes(company.toLowerCase()) ? 1 : 0;
+        const bHasCompany = b.toLowerCase().includes(company.toLowerCase()) ? 1 : 0;
+        return bHasCompany - aHasCompany;
+      });
+      
+      return extractedQuestions.slice(0, 15); // Return top 15 questions
+    }
+
+    // Enhanced fallback questions with company-specific customization
+    const defaultQuestions = [
+      `Why do you want to work at ${company}?`,
+      `What do you know about ${company} and our mission?`,
+      `How does your experience align with ${company}'s values?`,
+      'Tell me about yourself and your background',
+      'What interests you most about this role?',
+      'Describe your greatest professional achievement',
+      'What are your biggest strengths and areas for improvement?',
+      'How do you handle pressure and tight deadlines?',
+      'Describe a challenging project you worked on and how you overcame obstacles',
+      'Where do you see yourself in 5 years?',
+      'Why are you leaving your current position?',
+      'How do you stay current with industry trends?',
+      'Describe a time when you had to work with a difficult team member',
+      'What motivates you in your work?',
+      `How would you contribute to ${company}'s growth and success?`
+    ];
+
+    // Add role-specific questions if role is provided
+    if (role) {
+      const roleSpecificQuestions = [
+        `What specific skills do you bring to this ${role} position?`,
+        `Describe your experience with the key responsibilities of a ${role}`,
+        `What challenges do you anticipate in this ${role} and how would you address them?`,
+        `How do you see the ${role} function evolving in the next few years?`
+      ];
+      defaultQuestions.splice(5, 0, ...roleSpecificQuestions);
+    }
+
+    return defaultQuestions.slice(0, 15);
+  }
+
+  private extractInterviewerInfo(searchResults: any, company: string): any[] {
+    const defaultInterviewers = [
+      {
+        role: 'HR Representative',
+        background: 'Handles initial screening and cultural fit assessment',
+        tips: 'Focus on your soft skills and company culture alignment'
       },
+      {
+        role: 'Hiring Manager',
+        background: 'Direct supervisor for the role, technical expertise',
+        tips: 'Demonstrate relevant experience and problem-solving abilities'
+      },
+      {
+        role: 'Team Lead',
+        background: 'Senior team member who will assess technical skills',
+        tips: 'Show how you collaborate and contribute to team success'
+      },
+      {
+        role: 'Senior Leadership',
+        background: 'Executive level, focuses on strategic thinking',
+        tips: 'Discuss your vision and how you can drive company goals'
+      }
+    ];
+
+    return defaultInterviewers;
+  }
+
+  private extractInterviewFormats(searchResults: any, company: string): any[] {
+    const defaultFormats = [
+      {
+        type: 'Phone/Video Call',
+        description: 'Initial screening conversation',
+        duration: '30-45 minutes',
+        tips: 'Test your technology beforehand and have a quiet environment'
+      },
+      {
+        type: 'Panel Interview',
+        description: 'Meeting with multiple team members simultaneously',
+        duration: '1-2 hours',
+        tips: 'Make eye contact with all panelists and address each person'
+      },
+      {
+        type: 'Technical Interview',
+        description: 'Skills assessment or coding challenge',
+        duration: '1-3 hours',
+        tips: 'Practice relevant technical skills and think out loud'
+      },
+      {
+        type: 'Behavioral Interview',
+        description: 'Questions about past experiences and soft skills',
+        duration: '45-60 minutes',
+        tips: 'Use the STAR method to structure your responses'
+      },
+      {
+        type: 'Case Study',
+        description: 'Problem-solving exercise or real-world scenario',
+        duration: '2-3 hours',
+        tips: 'Ask clarifying questions and explain your thought process'
+      }
+    ];
+
+    return defaultFormats;
+  }
+
+  private extractPreparationTips(searchResults: any, company: string, role?: string): string[] {
+    const defaultTips = [
+      `Research ${company}'s mission, values, and recent developments`,
+      `Review the ${role || 'position'} requirements thoroughly`,
+      'Prepare specific examples using the STAR method',
+      'Practice common interview questions out loud',
+      'Prepare thoughtful questions about the role and company',
+      'Review your resume and be ready to discuss any point',
+      'Research the interview panel if names are provided',
+      'Plan your outfit and route to the interview location',
+      'Bring multiple copies of your resume and portfolio',
+      'Practice your elevator pitch and key talking points'
+    ];
+
+    return defaultTips;
+  }
+
+  private extractTimeline(searchResults: any, company: string): any {
+    let estimatedDuration = '2-4 weeks';
+    const extractedStages: any[] = [];
+    
+    if (searchResults?.organic_results) {
+      for (const result of searchResults.organic_results.slice(0, 5)) {
+        const textSources = [
+          result.snippet || '',
+          result.title || ''
+        ];
+
+        for (const text of textSources) {
+          if (!text) continue;
+          
+          // Look for timeline duration patterns
+          const durationPatterns = [
+            /(\d+)\s*[-to]*\s*(\d+)?\s*(week|day|month)s?/gi,
+            /(take|takes|lasted|duration|process)\s+[^.]*?(\d+)\s*[-to]*\s*(\d+)?\s*(week|day|month)s?/gi,
+            /(\d+)\s*(week|day|month)s?\s+[^.]*?(process|interview|hiring)/gi
+          ];
+
+          for (const pattern of durationPatterns) {
+            const matches = text.matchAll(pattern);
+            for (const match of matches) {
+              const num1 = parseInt(match[1] || match[2]);
+              const num2 = match[2] ? parseInt(match[2]) : null;
+              const unit = match[3] || match[4];
+              
+              if (unit === 'week' || unit === 'weeks') {
+                if (num2) {
+                  estimatedDuration = `${num1}-${num2} weeks`;
+                } else if (num1) {
+                  estimatedDuration = `${num1} weeks`;
+                }
+              } else if (unit === 'day' || unit === 'days') {
+                if (num1 > 7) {
+                  const weeks = Math.ceil(num1 / 7);
+                  estimatedDuration = `${weeks} weeks`;
+                }
+              }
+            }
+          }
+          
+          // Look for stage-specific timelines
+          const stageTimelinePattern = /(application|screening|technical|interview|onsite|final)\s*[^.]*?(\d+)\s*[-to]*\s*(\d+)?\s*(day|week|hour)s?/gi;
+          const stageMatches = text.matchAll(stageTimelinePattern);
+          for (const match of stageMatches) {
+            const stage = match[1];
+            const duration = match[3] ? `${match[2]}-${match[3]} ${match[4]}s` : `${match[2]} ${match[4]}s`;
+            extractedStages.push({ stage: this.capitalizeStage(stage), duration });
+          }
+        }
+      }
+    }
+
+    // Use extracted stages or fall back to defaults
+    const stages = extractedStages.length > 0 ? extractedStages : [
+      { stage: 'Application Review', duration: '1-3 days' },
+      { stage: 'Initial Screening', duration: '3-5 days' },
+      { stage: 'Technical Assessment', duration: '1 week' },
+      { stage: 'Final Interviews', duration: '1-2 weeks' },
+      { stage: 'Decision & Offer', duration: '3-7 days' }
     ];
 
     return {
-      company,
-      tips,
-      candidateInsights: hasScrapedTips 
-        ? scrapedTips.slice(0, 4)
-        : [
-            `${company} values candidates who show genuine curiosity about their products`,
-            'Technical depth matters, but communication skills are equally important',
-            'Be prepared for questions about handling ambiguity and scale',
-            'Cultural fit is evaluated throughout the entire process',
-          ],
-      source: hasScrapedTips ? 'Scraped from job boards' : 'Generic template',
+      estimated_duration: estimatedDuration,
+      stages: stages.slice(0, 6)
     };
   }
-
-  /**
-   * UC-068 AC8: Interview preparation checklist
-   */
-  async getPreparationChecklist(
-    company: string,
-    role: string,
-  ): Promise<any> {
-    const checklist = {
-      beforeInterview: [
-        {
-          item: 'Research company history, mission, and values',
-          completed: false,
-          priority: 'High',
-        },
-        {
-          item: 'Review job description and required skills',
-          completed: false,
-          priority: 'High',
-        },
-        {
-          item: 'Practice 50+ coding problems on LeetCode',
-          completed: false,
-          priority: 'High',
-        },
-        {
-          item: 'Prepare 10-15 STAR method behavioral stories',
-          completed: false,
-          priority: 'High',
-        },
-        {
-          item: 'Study system design fundamentals',
-          completed: false,
-          priority: 'High',
-        },
-        {
-          item: 'Research interviewers on LinkedIn',
-          completed: false,
-          priority: 'Medium',
-        },
-        {
-          item: 'Prepare questions to ask interviewers',
-          completed: false,
-          priority: 'Medium',
-        },
-        {
-          item: 'Review your resume and be ready to discuss each point',
-          completed: false,
-          priority: 'Medium',
-        },
-        {
-          item: 'Practice mock interviews with peers',
-          completed: false,
-          priority: 'Medium',
-        },
-        {
-          item: 'Test tech setup (camera, mic, internet)',
-          completed: false,
-          priority: 'High',
-        },
-      ],
-      dayOfInterview: [
-        {
-          item: 'Get good sleep (7-8 hours)',
-          completed: false,
-          priority: 'High',
-        },
-        {
-          item: 'Eat a proper meal 2 hours before',
-          completed: false,
-          priority: 'Medium',
-        },
-        {
-          item: 'Have water nearby',
-          completed: false,
-          priority: 'Low',
-        },
-        {
-          item: 'Join 10 minutes early',
-          completed: false,
-          priority: 'High',
-        },
-        {
-          item: 'Have resume and notes ready',
-          completed: false,
-          priority: 'Medium',
-        },
-        {
-          item: 'Pen and paper for notes',
-          completed: false,
-          priority: 'Medium',
-        },
-      ],
-      afterInterview: [
-        {
-          item: 'Send thank-you email within 24 hours',
-          completed: false,
-          priority: 'High',
-        },
-        {
-          item: 'Take notes on questions asked',
-          completed: false,
-          priority: 'Medium',
-        },
-        {
-          item: 'Reflect on areas for improvement',
-          completed: false,
-          priority: 'Medium',
-        },
-        {
-          item: 'Follow up on timeline if not mentioned',
-          completed: false,
-          priority: 'Low',
-        },
-      ],
-    };
-
-    return {
-      company,
-      role,
-      checklist,
-      totalItems:
-        checklist.beforeInterview.length +
-        checklist.dayOfInterview.length +
-        checklist.afterInterview.length,
-    };
+  
+  private capitalizeStage(stage: string): string {
+    return stage.charAt(0).toUpperCase() + stage.slice(1) + ' Phase';
   }
 
-  /**
-   * Get comprehensive interview insights (all data at once)
-   */
-  async getComprehensiveInsights(company: string, role?: string): Promise<any> {
-    const [
-      process,
-      questions,
-      interviewers,
-      formats,
-      recommendations,
-      timeline,
-      tips,
-      checklist,
-    ] = await Promise.all([
-      this.getInterviewProcess(company),
-      this.getCommonQuestions(company, role),
-      this.getInterviewerInfo(company),
-      this.getInterviewFormats(company),
-      this.getPreparationRecommendations(company, role || 'Software Engineer'),
-      this.getTimelineExpectations(company),
-      this.getSuccessTips(company),
-      this.getPreparationChecklist(company, role || 'Software Engineer'),
-    ]);
+  private extractSuccessTips(searchResults: any, company: string): string[] {
+    const defaultTips = [
+      `Show genuine enthusiasm for ${company}'s mission and products`,
+      'Be specific about your achievements with quantifiable results',
+      'Ask insightful questions that show you\'ve done your research',
+      'Demonstrate how you can add value to their team',
+      'Be honest about your experience and areas for growth',
+      'Show your problem-solving process, not just the solution',
+      'Follow up with a thank-you email within 24 hours',
+      'Be prepared to discuss how you handle failure and learning',
+      'Show cultural fit by aligning with company values',
+      'Practice active listening and engage in conversation'
+    ];
 
-    return {
-      company,
-      role: role || 'Software Engineer',
-      process,
-      questions,
-      interviewers,
-      formats,
-      recommendations,
-      timeline,
-      tips,
-      checklist,
-      generatedAt: new Date().toISOString(),
-    };
+    return defaultTips;
   }
 }

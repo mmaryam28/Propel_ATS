@@ -7,8 +7,10 @@ export class InterviewController {
 
   @Get('process')
   async getInterviewProcess(@Query('company') company: string) {
-    if (!company) return { error: 'Company name is required' };
-    return await this.interviewService.getInterviewProcess(company);
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+    return this.interviewService.getInterviewProcess(company);
   }
 
   @Get('questions')
@@ -16,65 +18,63 @@ export class InterviewController {
     @Query('company') company: string,
     @Query('role') role?: string,
   ) {
-    if (!company) return { error: 'Company name is required' };
-    return await this.interviewService.getCommonQuestions(company, role);
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+    return this.interviewService.getCommonQuestions(company, role);
   }
 
   @Get('interviewers')
   async getInterviewerInfo(@Query('company') company: string) {
-    if (!company) return { error: 'Company name is required' };
-    return await this.interviewService.getInterviewerInfo(company);
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+    return this.interviewService.getInterviewerInfo(company);
   }
 
   @Get('formats')
   async getInterviewFormats(@Query('company') company: string) {
-    if (!company) return { error: 'Company name is required' };
-    return await this.interviewService.getInterviewFormats(company);
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+    return this.interviewService.getInterviewFormats(company);
   }
 
   @Get('recommendations')
   async getPreparationRecommendations(
     @Query('company') company: string,
-    @Query('role') role: string,
+    @Query('role') role?: string,
   ) {
-    if (!company || !role) {
-      return { error: 'Company name and role are required' };
+    if (!company) {
+      return { error: 'Company parameter is required' };
     }
-    return await this.interviewService.getPreparationRecommendations(
-      company,
-      role,
-    );
+    return this.interviewService.getPreparationRecommendations(company, role);
   }
 
   @Get('timeline')
   async getTimelineExpectations(@Query('company') company: string) {
-    if (!company) return { error: 'Company name is required' };
-    return await this.interviewService.getTimelineExpectations(company);
-  }
-
-  @Get('tips')
-  async getSuccessTips(@Query('company') company: string) {
-    if (!company) return { error: 'Company name is required' };
-    return await this.interviewService.getSuccessTips(company);
-  }
-
-  @Get('checklist')
-  async getPreparationChecklist(
-    @Query('company') company: string,
-    @Query('role') role: string,
-  ) {
-    if (!company || !role) {
-      return { error: 'Company name and role are required' };
+    if (!company) {
+      return { error: 'Company parameter is required' };
     }
-    return await this.interviewService.getPreparationChecklist(company, role);
+    return this.interviewService.getTimelineExpectations(company);
   }
 
-  @Get('comprehensive')
+  @Get('success-tips')
+  async getSuccessTips(@Query('company') company: string) {
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+    return this.interviewService.getSuccessTips(company);
+  }
+
+  @Get('insights')
   async getComprehensiveInsights(
     @Query('company') company: string,
     @Query('role') role?: string,
   ) {
-    if (!company) return { error: 'Company name is required' };
-    return await this.interviewService.getComprehensiveInsights(company, role);
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+    return this.interviewService.getComprehensiveInsights(company, role);
   }
 }

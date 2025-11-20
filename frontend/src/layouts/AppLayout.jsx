@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { to: "/projects", label: "Projects", icon: "projects" },
   { to: "/skills", label: "Skills", icon: "brain" },
   { to: "/employment", label: "Employment", icon: "employment" },
-  // ⚡ Removed direct "Resumes" link — we’ll handle it as dropdown below
+  // ⚡ Removed direct "Resumes" link — we'll handle it as dropdown below
 ];
 
 function Breadcrumbs() {
@@ -61,6 +61,7 @@ function Navbar() {
   const [open, setOpen] = useState(false);
   const [resumeOpen, setResumeOpen] = useState(false); // ⚡ for dropdown state
   const [coverOpen, setCoverOpen] = useState(false); // ⚡ cover letters dropdown
+  const [prepareOpen, setPrepareOpen] = useState(false); // ⚡ prepare dropdown
   const location = useLocation();
 
   useEffect(() => setOpen(false), [location.pathname]);
@@ -177,6 +178,41 @@ function Navbar() {
                   </div>
                 )}
               </div>
+
+              {/* ⚡ Prepare Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setPrepareOpen((v) => !v)}
+                  className={classNames(
+                    "px-3 py-2 rounded-xl text-sm flex items-center gap-2 transition",
+                    prepareOpen ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                >
+                  <Icon name="search" size="sm" />
+                  <span>Prepare</span>
+                  <svg
+                    className={classNames(
+                      "h-3 w-3 transition-transform",
+                      prepareOpen ? "rotate-180" : ""
+                    )}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {prepareOpen && (
+                  <div className="absolute top-full mt-1 left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
+                    <Link to="/research" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Company Research</Link>
+                    <Link to="/salary-analysis" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Salary Analysis</Link>
+                    <Link to="/resumes/interview-insights" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Interview Insights</Link>
+                    <Link to="/job-match" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Match</Link>
+                  </div>
+                )}
+              </div>
             </nav>
           </div>
 
@@ -263,6 +299,19 @@ function Navbar() {
                 </summary>
                 <div className="pl-6 flex flex-col">
                   <Link to="/coverletters/templates" className="py-1 text-sm text-gray-700 hover:underline">Templates</Link>
+                </div>
+              </details>
+
+              {/* ⚡ Collapsible Prepare menu */}
+              <details>
+                <summary className="px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
+                  <Icon name="search" size="sm" />
+                  <span>Prepare</span>
+                </summary>
+                <div className="pl-6 flex flex-col">
+                  <Link to="/research" className="py-1 text-sm text-gray-700 hover:underline">Company Research</Link>
+                  <Link to="/salary-analysis" className="py-1 text-sm text-gray-700 hover:underline">Salary Analysis</Link>
+                  <Link to="/resumes/interview-insights" className="py-1 text-sm text-gray-700 hover:underline">Interview Insights</Link>
                 </div>
               </details>
             </nav>

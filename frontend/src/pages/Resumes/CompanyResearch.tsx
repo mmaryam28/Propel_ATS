@@ -153,7 +153,6 @@ const CompanyResearch: React.FC = () => {
     <div style={{ padding: "2rem", maxWidth: "900px", margin: "auto" }}>
       <h2 style={{ marginBottom: "1rem", textAlign: "center", color: "black" }}>Company Research</h2>
 
-      {/* Search Input */}
       <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
         <input
           type="text"
@@ -185,7 +184,6 @@ const CompanyResearch: React.FC = () => {
 
       {loading && <p style={{ textAlign: "center" }}>Loading...</p>}
 
-      {/* Results */}
       {result && (
         <div
           style={{
@@ -201,7 +199,6 @@ const CompanyResearch: React.FC = () => {
             <>
               <h3 style={{ color: "#007bff", marginBottom: "1rem" }}>{result.name}</h3>
 
-              {/* 1️⃣ Basic Company Information */}
               <section style={{ marginBottom: "1rem" }}>
                 <h4 style={{ color: "black" }}>Basic Company Information</h4>
                 <p><strong>Industry:</strong> {result.industry || "N/A"}</p>
@@ -209,13 +206,11 @@ const CompanyResearch: React.FC = () => {
                 <p><strong>Headquarters:</strong> {result.headquarters || "N/A"}</p>
               </section>
 
-              {/* 2️⃣ Description */}
               <section style={{ marginBottom: "1rem" }}>
                 <h4 style={{ color: "black" }}>Description</h4>
                 <p>{result.mission || result.description || "No description available."}</p>
               </section>
 
-              {/* 3️⃣ Recent News (UC-064 features) */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem", flexWrap: "wrap", gap: 8 }}>
                 <h4 style={{ color: "black", margin: 0 }}>Recent News</h4>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -351,13 +346,11 @@ const CompanyResearch: React.FC = () => {
                 <p style={{ color: "#555", marginBottom: "1rem" }}>No recent news found.</p>
               )}
 
-              {/* 4️⃣ Key Executives */}
               <section style={{ marginBottom: "1rem" }}>
                 <h4 style={{ color: "black" }}>Leadership</h4>
                 <p>{result.keyPeople || "No key executives listed."}</p>
               </section>
 
-              {/* 5️⃣ Products and Services */}
               {result.products && result.products.length > 0 && (
                 <section style={{ marginBottom: "1rem" }}>
                   <h4 style={{ color: "black" }}>Products/Services</h4>
@@ -369,7 +362,6 @@ const CompanyResearch: React.FC = () => {
                 </section>
               )}
 
-              {/* 6️⃣ Competitive Landscape */}
               {result.competitors && result.competitors.length > 0 && (
                 <section style={{ marginBottom: "1rem" }}>
                   <h4>⚔️ Competitive Landscape</h4>
@@ -381,7 +373,6 @@ const CompanyResearch: React.FC = () => {
                 </section>
               )}
 
-              {/* 7️⃣ Social Media */}
               <section style={{ marginBottom: "1rem" }}>
                 <h4 style={{ color: "black" }}>Social Media</h4>
                 {result.socialMedia ? (
@@ -402,13 +393,11 @@ const CompanyResearch: React.FC = () => {
                 )}
               </section>
 
-              {/* 8️⃣ Summary */}
               <section>
                 <h4 style={{ color: "black" }}>Summary</h4>
                 <p>{result.summary || "No summary available."}</p>
               </section>
 
-              {/* Wikipedia Source removed */}
             </>
           )}
         </div>

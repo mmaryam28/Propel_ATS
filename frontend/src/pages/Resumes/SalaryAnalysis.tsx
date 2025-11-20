@@ -125,7 +125,6 @@ const SalaryAnalysis: React.FC = () => {
     setError(null);
     
     try {
-      // Fetch all data in parallel
       const params = {
         title,
         location: location || undefined,
@@ -149,7 +148,6 @@ const SalaryAnalysis: React.FC = () => {
       setCompanyComparison(companiesRes.data);
       setSalaryTrends(trendsRes.data);
 
-      // If current salary is provided, get negotiation advice and comparison
       if (currentSalary !== "") {
         try {
           const [negotiationRes, comparisonRes] = await Promise.all([
@@ -170,7 +168,6 @@ const SalaryAnalysis: React.FC = () => {
           setSalaryComparison(comparisonRes.data);
         } catch (err) {
           console.error("Error fetching salary comparison data:", err);
-          // Don't set error, just skip these optional sections
         }
       }
     } catch (err) {
@@ -372,7 +369,6 @@ const SalaryAnalysis: React.FC = () => {
   const renderCompanyComparison = (data: any) => {
     if (!data || !data.companies || data.companies.length === 0) return null;
     
-    // Calculate min and max across all companies for progress bar scaling
     const allSalaries = data.companies.map((c: any) => c.avgSalary).filter((s: number) => s !== undefined);
     const minOverall = Math.min(...allSalaries);
     const maxOverall = Math.max(...allSalaries);
@@ -430,7 +426,6 @@ const SalaryAnalysis: React.FC = () => {
         </div>
       )}
 
-      {/* Input Section */}
       <div style={{ background: "white", padding: "1.5rem", borderRadius: "8px", marginBottom: "2rem", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
         <h3 style={{ color: "black", marginBottom: "1rem" }}>Search Parameters</h3>
         <div style={{ display: "grid", gap: "12px", marginBottom: "1.5rem" }}>
@@ -555,7 +550,6 @@ const SalaryAnalysis: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
           <button
             onClick={handleGenerateReport}
@@ -595,10 +589,8 @@ const SalaryAnalysis: React.FC = () => {
         </div>
       </div>
 
-      {/* Loading */}
       {loading && <div style={{ textAlign: "center", color: "#666" }}>Loading...</div>}
 
-      {/* Results */}
       <div style={{ display: "grid", gap: "1.5rem" }}>
         {salaryRanges && renderSalaryRange(salaryRanges)}
         {totalCompensation && renderCompensationBreakdown(totalCompensation)}
@@ -732,7 +724,6 @@ const SalaryAnalysis: React.FC = () => {
                 </div>
               )}
 
-              {/* Your Compensation */}
               {salaryComparison.userCompensation && (
                 <div>
                   <h4 style={{ color: "#333", marginBottom: "0.75rem", fontSize: "16px" }}>Your Compensation</h4>
@@ -773,7 +764,6 @@ const SalaryAnalysis: React.FC = () => {
                 </div>
               )}
 
-              {/* Market Comparison */}
               {salaryComparison.marketComparison && (
                 <div>
                   <h4 style={{ color: "#333", marginBottom: "0.75rem", fontSize: "16px" }}>Market Comparison</h4>
@@ -806,7 +796,6 @@ const SalaryAnalysis: React.FC = () => {
                 </div>
               )}
 
-              {/* Differences */}
               {salaryComparison.differences && (
                 <div>
                   <h4 style={{ color: "#333", marginBottom: "0.75rem", fontSize: "16px" }}>Salary Differences</h4>
@@ -842,7 +831,6 @@ const SalaryAnalysis: React.FC = () => {
                 </div>
               )}
 
-              {/* Percentage Difference */}
               {salaryComparison.percentageDifference !== undefined && salaryComparison.percentageDifference !== null && (
                 <div style={{ padding: "12px", background: "#fff", borderRadius: "6px", borderLeft: "4px solid #007bff" }}>
                   <div style={{ fontWeight: "600", marginBottom: "4px", color: "#333" }}>Overall Percentage Difference</div>

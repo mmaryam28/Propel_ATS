@@ -45,7 +45,7 @@ import FeedbackPanel from './pages/Resumes/FeedbackPanel.jsx';
 
 // Job Search pages (moved under Resumes directory)
 import CompanyResearch from './pages/Resumes/CompanyResearch';
-import JobMatch from './pages/Resumes/JobMatch';
+import JobMatch from './pages/Resumes/JobMatch.jsx';
 import SalaryAnalysis from './pages/Resumes/SalaryAnalysis';
 import InterviewInsights from './pages/Resumes/InterviewInsights';
 
@@ -105,7 +105,7 @@ const router = createBrowserRouter([
       { path: '/research', element: <CompanyResearch /> },
       { path: '/job-match', element: <JobMatch /> },
       { path: '/salary-analysis', element: <SalaryAnalysis /> },
-      { path: '/interview-insights', element: <InterviewInsights /> },
+      { path: '/resumes/interview-insights', element: <InterviewInsights /> },
 
       // ✅ New Cover Letter Templates route
       {

@@ -41,6 +41,7 @@ import { InterviewModule } from './interview/interview.module';
   ResumeModule,
   CoverlettersModule,
   StatisticsModule,
+  ResearchModule,
   MatchModule,
   SalaryModule,
   InterviewModule
