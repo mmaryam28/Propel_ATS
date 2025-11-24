@@ -6,13 +6,6 @@ const classNames = (...xs) => xs.filter(Boolean).join(" ");
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: "home" },
-  { to: "/jobs", label: "Jobs", icon: "job" },
-  { to: "/education", label: "Education", icon: "education" },
-  { to: "/certifications", label: "Certifications", icon: "certifications" },
-  { to: "/projects", label: "Projects", icon: "projects" },
-  { to: "/skills", label: "Skills", icon: "brain" },
-  { to: "/employment", label: "Employment", icon: "employment" },
-  // ⚡ Removed direct "Resumes" link — we'll handle it as dropdown below
 ];
 
 function Breadcrumbs() {
@@ -59,9 +52,9 @@ function Breadcrumbs() {
 
 function Navbar() {
   const [open, setOpen] = useState(false);
-  const [resumeOpen, setResumeOpen] = useState(false); // ⚡ for dropdown state
-  const [coverOpen, setCoverOpen] = useState(false); // ⚡ cover letters dropdown
-  const [prepareOpen, setPrepareOpen] = useState(false); // ⚡ prepare dropdown
+  const [profileOpen, setProfileOpen] = useState(false); // Profile dropdown
+  const [jobsOpen, setJobsOpen] = useState(false); // Jobs dropdown
+  const [prepareOpen, setPrepareOpen] = useState(false); // Prepare dropdown
   const location = useLocation();
 
   useEffect(() => setOpen(false), [location.pathname]);
@@ -114,21 +107,21 @@ function Navbar() {
                 </NavLink>
               ))}
 
-              {/* ⚡ Resume Dropdown */}
+              {/* Profile Dropdown */}
               <div className="relative">
                 <button
-                  onClick={() => setResumeOpen((v) => !v)}
+                  onClick={() => setProfileOpen((v) => !v)}
                   className={classNames(
                     "px-3 py-2 rounded-xl text-sm flex items-center gap-2 transition",
-                    resumeOpen ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+                    profileOpen ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
                   )}
                 >
-                  <Icon name="resume" size="sm" />
-                  <span>Resumes</span>
+                  <Icon name="profile" size="sm" />
+                  <span>Profile</span>
                   <svg
                     className={classNames(
                       "h-3 w-3 transition-transform",
-                      resumeOpen ? "rotate-180" : ""
+                      profileOpen ? "rotate-180" : ""
                     )}
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -139,29 +132,33 @@ function Navbar() {
                   </svg>
                 </button>
 
-                {resumeOpen && (
+                {profileOpen && (
                   <div className="absolute top-full mt-1 left-0 w-48 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
-                    <Link to="/resumes" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Dashboard</Link>
-                    <Link to="/resumes/ai" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">AI Generator</Link>
+                    <Link to="/profile" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Profile Overview</Link>
+                    <Link to="/education" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Education</Link>
+                    <Link to="/certifications" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Certifications</Link>
+                    <Link to="/projects" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Projects</Link>
+                    <Link to="/skills" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Skills</Link>
+                    <Link to="/employment" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Employment</Link>
                   </div>
                 )}
               </div>
 
-              {/* ⚡ Cover Letters Dropdown */}
+              {/* Jobs Dropdown */}
               <div className="relative">
                 <button
-                  onClick={() => setCoverOpen((v) => !v)}
+                  onClick={() => setJobsOpen((v) => !v)}
                   className={classNames(
                     "px-3 py-2 rounded-xl text-sm flex items-center gap-2 transition",
-                    coverOpen ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+                    jobsOpen ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
                   )}
                 >
-                  <Icon name="mail" size="sm" />
-                  <span>Cover Letters</span>
+                  <Icon name="job" size="sm" />
+                  <span>Jobs</span>
                   <svg
                     className={classNames(
                       "h-3 w-3 transition-transform",
-                      coverOpen ? "rotate-180" : ""
+                      jobsOpen ? "rotate-180" : ""
                     )}
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -172,9 +169,12 @@ function Navbar() {
                   </svg>
                 </button>
 
-                {coverOpen && (
-                  <div className="absolute top-full mt-1 left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
-                    <Link to="/coverletters/templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Templates</Link>
+                {jobsOpen && (
+                  <div className="absolute top-full mt-1 left-0 w-48 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
+                    <Link to="/jobs" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Tracker</Link>
+                    <Link to="/jobs/calendar" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Calendar</Link>
+                    <Link to="/resumes" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Resumes</Link>
+                    <Link to="/coverletters/templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Cover Letters</Link>
                   </div>
                 )}
               </div>
@@ -218,13 +218,6 @@ function Navbar() {
 
           {/* Right side */}
           <div className="hidden md:flex items-center gap-2">
-            <Link
-              to="/profile"
-              className="px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-            >
-              <Icon name="profile" size="sm" />
-              <span>Profile</span>
-            </Link>
             <button
               onClick={() => {
                 fetch("/api/auth/logout", { method: "POST", credentials: "include" })
@@ -275,30 +268,33 @@ function Navbar() {
                 </NavLink>
               ))}
 
-              {/* ⚡ Collapsible Resume menu */}
+              {/* Profile Collapsible menu */}
               <details>
                 <summary className="px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
-                  <Icon name="resume" size="sm" />
-                  <span>Resumes</span>
+                  <Icon name="profile" size="sm" />
+                  <span>Profile</span>
                 </summary>
                 <div className="pl-6 flex flex-col">
-                  <Link to="/resumes" className="py-1 text-sm text-gray-700 hover:underline">Dashboard</Link>
-                  <Link to="/resumes/ai" className="py-1 text-sm text-gray-700 hover:underline">AI Generator</Link>
-                  <Link to="/resumes/templates" className="py-1 text-sm text-gray-700 hover:underline">Templates</Link>
-                  <Link to="/resumes/customize" className="py-1 text-sm text-gray-700 hover:underline">Customize</Link>
-                  <Link to="/resumes/versions" className="py-1 text-sm text-gray-700 hover:underline">Versions</Link>
-                  <Link to="/resumes/feedback" className="py-1 text-sm text-gray-700 hover:underline">Feedback</Link>
+                  <Link to="/profile" className="py-1 text-sm text-gray-700 hover:underline">Profile Overview</Link>
+                  <Link to="/education" className="py-1 text-sm text-gray-700 hover:underline">Education</Link>
+                  <Link to="/certifications" className="py-1 text-sm text-gray-700 hover:underline">Certifications</Link>
+                  <Link to="/projects" className="py-1 text-sm text-gray-700 hover:underline">Projects</Link>
+                  <Link to="/skills" className="py-1 text-sm text-gray-700 hover:underline">Skills</Link>
+                  <Link to="/employment" className="py-1 text-sm text-gray-700 hover:underline">Employment</Link>
                 </div>
               </details>
 
-              {/* ⚡ Collapsible Cover Letters menu */}
+              {/* Jobs Collapsible menu */}
               <details>
                 <summary className="px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
-                  <Icon name="mail" size="sm" />
-                  <span>Cover Letters</span>
+                  <Icon name="job" size="sm" />
+                  <span>Jobs</span>
                 </summary>
                 <div className="pl-6 flex flex-col">
-                  <Link to="/coverletters/templates" className="py-1 text-sm text-gray-700 hover:underline">Templates</Link>
+                  <Link to="/jobs" className="py-1 text-sm text-gray-700 hover:underline">Job Tracker</Link>
+                  <Link to="/jobs/calendar" className="py-1 text-sm text-gray-700 hover:underline">Calendar</Link>
+                  <Link to="/resumes" className="py-1 text-sm text-gray-700 hover:underline">Resumes</Link>
+                  <Link to="/coverletters/templates" className="py-1 text-sm text-gray-700 hover:underline">Cover Letters</Link>
                 </div>
               </details>
 
@@ -316,14 +312,7 @@ function Navbar() {
               </details>
             </nav>
 
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <Link
-                to="/profile"
-                className="px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-              >
-                <Icon name="profile" size="sm" />
-                <span>Profile</span>
-              </Link>
+            <div className="mt-2">
               <button
                 onClick={() => {
                   fetch("/api/auth/logout", { method: "POST", credentials: "include" })
