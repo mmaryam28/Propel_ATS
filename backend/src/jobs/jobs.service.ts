@@ -329,6 +329,38 @@ export class JobsService {
     } catch (e: any) {
       // Ignore missing table (PGRST205) or permission errors to avoid breaking primary update
     }
+    
+    // UC-080: Sync interview records when job status changes to 'Offer' or 'Rejected'
+    try {
+      if (status === 'Offer') {
+        // Update all interviews for this job to mark offer_received = true
+        await client
+          .from('interviews')
+          .update({ 
+            offer_received: true, 
+            status: 'completed',
+            updated_at: new Date().toISOString() 
+          })
+          .eq('job_id', id)
+          .eq('user_id', userId);
+      } else if (status === 'Rejected') {
+        // Mark interviews as completed without offer
+        await client
+          .from('interviews')
+          .update({ 
+            offer_received: false,
+            status: 'completed',
+            outcome: 'Rejected',
+            updated_at: new Date().toISOString()
+          })
+          .eq('job_id', id)
+          .eq('user_id', userId);
+      }
+    } catch (e: any) {
+      // Don't break status update if interview sync fails
+      console.error('Failed to sync interview records:', e);
+    }
+    
     return toApi(data);
   }
 
