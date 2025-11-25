@@ -49,6 +49,7 @@ import JobMatch from './pages/Resumes/JobMatch.jsx';
 import SalaryAnalysis from './pages/Resumes/SalaryAnalysis';
 import InterviewInsights from './pages/Resumes/InterviewInsights';
 import InterviewPerformanceAnalytics from './pages/Prepare/InterviewPerformanceAnalytics';
+import ApplicationSuccessAnalytics from './pages/Jobs/ApplicationSuccessAnalytics';
 
 import './index.css';
 import './styles/globals.css';
@@ -108,6 +109,7 @@ const router = createBrowserRouter([
       { path: '/salary-analysis', element: <SalaryAnalysis /> },
       { path: '/resumes/interview-insights', element: <InterviewInsights /> },
       { path: '/interview-performance', element: <InterviewPerformanceAnalytics /> },
+      { path: '/application-success', element: <ApplicationSuccessAnalytics /> },
 
       // ✅ New Cover Letter Templates route
       {
