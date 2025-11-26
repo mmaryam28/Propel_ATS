@@ -107,6 +107,22 @@ function Navbar() {
                 </NavLink>
               ))}
 
+              {/* Goals Link */}
+              <NavLink
+                to="/goals"
+                className={({ isActive }) =>
+                  classNames(
+                    "px-3 py-2 rounded-xl text-sm transition hover:bg-gray-100 flex items-center gap-2",
+                    isActive
+                      ? "bg-gray-900 text-white hover:bg-gray-900"
+                      : "text-gray-700"
+                  )
+                }
+              >
+                <Icon name="target" size="sm" />
+                <span>Goals</span>
+              </NavLink>
+
               {/* Profile Dropdown */}
               <div className="relative">
                 <button
@@ -269,6 +285,20 @@ function Navbar() {
                   <span>{item.label}</span>
                 </NavLink>
               ))}
+
+              {/* Goals Link - Mobile */}
+              <NavLink
+                to="/goals"
+                className={({ isActive }) =>
+                  classNames(
+                    "px-3 py-2 rounded-xl text-sm flex items-center gap-2",
+                    isActive ? "bg-gray-200 text-gray-900" : "text-gray-700 hover:bg-gray-100"
+                  )
+                }
+              >
+                <Icon name="target" size="sm" />
+                <span>Goals</span>
+              </NavLink>
 
               {/* Profile Collapsible menu */}
               <details>
