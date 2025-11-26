@@ -78,6 +78,7 @@ const iconMap = {
   certifications: HiIcons.HiBadgeCheck,// used for Certifications
   projects: HiIcons.HiCollection,      // used for Projects
   brain: FaIcons.FaBrain,
+  target: HiIcons.HiFlag,              // used for Goals (flag represents target/goal)
 };
 
 

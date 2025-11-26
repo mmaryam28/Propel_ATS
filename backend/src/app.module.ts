@@ -20,6 +20,7 @@ import { ResearchModule } from './research/research.module';
 import { MatchModule } from "./match/match.module";
 import { SalaryModule } from './salary/salary.module';
 import { InterviewModule } from './interview/interview.module';
+import { GoalsModule } from './goals/goals.module';
 
 @Module({
   imports: [
@@ -44,7 +45,8 @@ import { InterviewModule } from './interview/interview.module';
   ResearchModule,
   MatchModule,
   SalaryModule,
-  InterviewModule
+  InterviewModule,
+  GoalsModule
   ],
   controllers: [AppController],
   providers: [AppService],
