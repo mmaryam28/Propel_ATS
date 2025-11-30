@@ -9,16 +9,25 @@ export class StatisticsController {
   constructor(private readonly statisticsService: StatisticsService) {}
 
   @Get('overview')
-  async getOverview(@Req() req: any) {
+  async getOverview(
+    @Req() req: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     const userId = req.user.userId;
-    return this.statisticsService.getOverview(userId);
+    return this.statisticsService.getOverview(userId, startDate, endDate);
   }
 
   @Get('monthly-volume')
-  async getMonthlyVolume(@Req() req: any, @Query('months') months?: string) {
+  async getMonthlyVolume(
+    @Req() req: any,
+    @Query('months') months?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     const userId = req.user.userId;
     const monthsNum = months ? parseInt(months, 10) : 12;
-    return this.statisticsService.getMonthlyVolume(userId, monthsNum);
+    return this.statisticsService.getMonthlyVolume(userId, monthsNum, startDate, endDate);
   }
 
   @Get('export-csv')

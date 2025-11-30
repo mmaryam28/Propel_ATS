@@ -311,14 +311,25 @@ export interface MonthlyVolume {
   count: number;
 }
 
-export async function getStatisticsOverview(): Promise<JobStatistics> {
-  const { data } = await api.get('/statistics/overview', { withCredentials: true });
+export async function getStatisticsOverview(startDate?: string, endDate?: string): Promise<JobStatistics> {
+  const params: any = {};
+  if (startDate) params.startDate = startDate;
+  if (endDate) params.endDate = endDate;
+  
+  const { data } = await api.get('/statistics/overview', { 
+    params,
+    withCredentials: true 
+  });
   return data;
 }
 
-export async function getMonthlyVolume(months: number = 12): Promise<MonthlyVolume[]> {
+export async function getMonthlyVolume(months: number = 12, startDate?: string, endDate?: string): Promise<MonthlyVolume[]> {
+  const params: any = { months };
+  if (startDate) params.startDate = startDate;
+  if (endDate) params.endDate = endDate;
+  
   const { data } = await api.get('/statistics/monthly-volume', {
-    params: { months },
+    params,
     withCredentials: true,
   });
   return data;

@@ -25,6 +25,8 @@ export interface JobStatistics {
     adherenceRate: number; // % of deadlines met
   };
   timeToOffer: number | null; // average days from application to offer
+  timeToResponse: number | null; // average days from application to first response
+  timeToInterview: number | null; // average days from application to interview
 }
 
 export interface MonthlyVolume {
@@ -36,15 +38,25 @@ export interface MonthlyVolume {
 export class StatisticsService {
   constructor(private supabase: SupabaseService) {}
 
-  async getOverview(userId: string): Promise<JobStatistics> {
+  async getOverview(userId: string, startDate?: string, endDate?: string): Promise<JobStatistics> {
     const client = this.supabase.getClient();
 
-    // Get all non-archived jobs for this user
-    const { data: jobs, error } = await client
+    // Build query for non-archived jobs with optional date filtering
+    let query = client
       .from('jobs')
       .select('*')
       .eq('userId', userId)
       .is('archivedAt', null);
+
+    // Apply date filters if provided
+    if (startDate) {
+      query = query.gte('createdAt', startDate);
+    }
+    if (endDate) {
+      query = query.lte('createdAt', endDate);
+    }
+
+    const { data: jobs, error } = await query;
 
     if (error) {
       throw new Error(`Failed to fetch jobs: ${error.message}`);
@@ -90,6 +102,8 @@ export class StatisticsService {
 
     // Time to offer: average days from creation to reaching Offer status
     const timeToOffer = await this.calculateAverageTimeToOffer(userId);
+    const timeToResponse = await this.calculateAverageTimeToResponse(userId);
+    const timeToInterview = await this.calculateAverageTimeToInterview(userId);
 
     return {
       totalJobs,
@@ -103,21 +117,34 @@ export class StatisticsService {
         adherenceRate: Math.round(adherenceRate * 10) / 10,
       },
       timeToOffer,
+      timeToResponse,
+      timeToInterview,
     };
   }
 
-  async getMonthlyVolume(userId: string, months: number = 12): Promise<MonthlyVolume[]> {
+  async getMonthlyVolume(userId: string, months: number = 12, startDateParam?: string, endDateParam?: string): Promise<MonthlyVolume[]> {
     const client = this.supabase.getClient();
 
-    // Get all jobs created in the last N months
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - months);
-
-    const { data: jobs, error } = await client
+    // Use custom date range if provided, otherwise use months parameter
+    let query = client
       .from('jobs')
       .select('createdAt')
-      .eq('userId', userId)
-      .gte('createdAt', startDate.toISOString());
+      .eq('userId', userId);
+
+    if (startDateParam) {
+      query = query.gte('createdAt', startDateParam);
+    } else {
+      // Default: Get all jobs created in the last N months
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - months);
+      query = query.gte('createdAt', startDate.toISOString());
+    }
+
+    if (endDateParam) {
+      query = query.lte('createdAt', endDateParam);
+    }
+
+    const { data: jobs, error } = await query;
 
     if (error) {
       throw new Error(`Failed to fetch jobs: ${error.message}`);
@@ -266,7 +293,7 @@ export class StatisticsService {
   private async calculateAverageTimeToOffer(userId: string): Promise<number | null> {
     const client = this.supabase.getClient();
 
-    // Get all jobs that reached Offer status - use wildcard to get all columns
+    // Get all jobs that reached Offer status
     const { data: jobs, error } = await client
       .from('jobs')
       .select('*')
@@ -277,7 +304,7 @@ export class StatisticsService {
       return null;
     }
 
-    // Try to get the timestamp when each job reached Offer status from history
+    // Get the timestamp when each job reached Offer status from history
     const { data: history } = await client
       .from('job_history')
       .select('*')
@@ -288,13 +315,12 @@ export class StatisticsService {
     // Calculate time differences
     const times: number[] = [];
     jobs.forEach((job) => {
-      // Get created date - try both column name formats
       const jobCreated = job.createdAt || job.createdat || job.created_at;
       if (!jobCreated) return;
 
-      // Try to use history first
       const offerHistory = history?.find((h) => h.jobid === job.id);
-      if (offerHistory) {
+      if (offerHistory && offerHistory.createdat) {
+        // Use history record if available
         const createdDate = new Date(jobCreated);
         const offerDate = new Date(offerHistory.createdat);
         const days = (offerDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -302,8 +328,120 @@ export class StatisticsService {
           times.push(days);
         }
       } else {
-        // Fallback: use statusUpdatedAt if history not available
-        const statusUpdated = job.statusUpdatedAt || job.statusupdatedat || job.status_updated_at;
+        // Fallback: use statusUpdatedAt if no history record
+        const statusUpdated = job.statusUpdatedAt || job.statusupdatedat || job.status_updated_at || job.updatedAt || job.updatedat || job.updated_at;
+        if (statusUpdated) {
+          const createdDate = new Date(jobCreated);
+          const updatedDate = new Date(statusUpdated);
+          const days = (updatedDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+          if (days >= 0) {
+            times.push(days);
+          }
+        }
+      }
+    });
+
+    if (times.length === 0) return null;
+    const avg = times.reduce((a, b) => a + b, 0) / times.length;
+    return Math.round(avg * 10) / 10;
+  }
+
+  private async calculateAverageTimeToResponse(userId: string): Promise<number | null> {
+    const client = this.supabase.getClient();
+
+    // Get all jobs that moved past Applied status (indicating a response)
+    const { data: jobs, error } = await client
+      .from('jobs')
+      .select('*')
+      .eq('userId', userId)
+      .in('status', ['Phone Screen', 'Interview', 'Offer', 'Rejected']);
+
+    if (error || !jobs || jobs.length === 0) {
+      return null;
+    }
+
+    // Get the first status change from Applied for each job
+    const { data: history } = await client
+      .from('job_history')
+      .select('*')
+      .eq('userid', userId)
+      .in('status', ['Phone Screen', 'Interview', 'Offer', 'Rejected'])
+      .in('jobid', jobs.map((j) => j.id))
+      .order('createdat', { ascending: true });
+
+    // Calculate time differences
+    const times: number[] = [];
+    jobs.forEach((job) => {
+      const jobCreated = job.createdAt || job.createdat || job.created_at;
+      if (!jobCreated) return;
+
+      // Find first response for this job
+      const firstResponse = history?.find((h) => h.jobid === job.id);
+      if (firstResponse && firstResponse.createdat) {
+        const createdDate = new Date(jobCreated);
+        const responseDate = new Date(firstResponse.createdat);
+        const days = (responseDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (days >= 0) {
+          times.push(days);
+        }
+      } else {
+        // Fallback: use statusUpdatedAt if no history record
+        const statusUpdated = job.statusUpdatedAt || job.statusupdatedat || job.status_updated_at || job.updatedAt || job.updatedat || job.updated_at;
+        if (statusUpdated) {
+          const createdDate = new Date(jobCreated);
+          const updatedDate = new Date(statusUpdated);
+          const days = (updatedDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+          if (days >= 0) {
+            times.push(days);
+          }
+        }
+      }
+    });
+
+    if (times.length === 0) return null;
+    const avg = times.reduce((a, b) => a + b, 0) / times.length;
+    return Math.round(avg * 10) / 10;
+  }
+
+  private async calculateAverageTimeToInterview(userId: string): Promise<number | null> {
+    const client = this.supabase.getClient();
+
+    // Get all jobs that reached Interview status
+    const { data: jobs, error } = await client
+      .from('jobs')
+      .select('*')
+      .eq('userId', userId)
+      .eq('status', 'Interview');
+
+    if (error || !jobs || jobs.length === 0) {
+      return null;
+    }
+
+    // Get the timestamp when each job reached Interview status from history
+    const { data: history } = await client
+      .from('job_history')
+      .select('*')
+      .eq('userid', userId)
+      .eq('status', 'Interview')
+      .in('jobid', jobs.map((j) => j.id));
+
+    // Calculate time differences
+    const times: number[] = [];
+    jobs.forEach((job) => {
+      const jobCreated = job.createdAt || job.createdat || job.created_at;
+      if (!jobCreated) return;
+
+      const interviewHistory = history?.find((h) => h.jobid === job.id);
+      if (interviewHistory && interviewHistory.createdat) {
+        const createdDate = new Date(jobCreated);
+        const interviewDate = new Date(interviewHistory.createdat);
+        const days = (interviewDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (days >= 0) {
+          times.push(days);
+        }
+      } else {
+        // Fallback: use statusUpdatedAt if no history record
+        const statusUpdated = job.statusUpdatedAt || job.statusupdatedat || job.status_updated_at || job.updatedAt || job.updatedat || job.updated_at;
         if (statusUpdated) {
           const createdDate = new Date(jobCreated);
           const updatedDate = new Date(statusUpdated);
@@ -345,6 +483,8 @@ export class StatisticsService {
         adherenceRate: 100,
       },
       timeToOffer: null,
+      timeToResponse: null,
+      timeToInterview: null,
     };
   }
 }

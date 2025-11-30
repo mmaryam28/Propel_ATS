@@ -1396,13 +1396,18 @@ export class JobsService {
       return acc;
     }, {});
 
-    // Response rate calculation (jobs that moved beyond Applied)
+    // Response rate calculation (percentage of total jobs that got a response)
+    const totalJobs = totalApps || 0;
+    const interested = byStatus['Interested'] || 0;
     const applied = byStatus['Applied'] || 0;
     const phoneScreen = byStatus['Phone Screen'] || 0;
     const interview = byStatus['Interview'] || 0;
     const offer = byStatus['Offer'] || 0;
-    const responded = phoneScreen + interview + offer;
-    const responseRate = applied > 0 ? ((responded / applied) * 100).toFixed(1) : '0';
+    const rejected = byStatus['Rejected'] || 0;
+    
+    // Jobs that got a response (moved beyond Interested/Applied)
+    const responded = phoneScreen + interview + offer + rejected;
+    const responseRate = totalJobs > 0 ? ((responded / totalJobs) * 100).toFixed(1) : '0';
 
     // Time to offer (calculate from statusUpdatedAt for jobs with Offer status)
     const { data: offers } = await client

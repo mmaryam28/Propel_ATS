@@ -38,6 +38,7 @@ export default function Jobs() {
   const [bulkArchiveReason, setBulkArchiveReason] = React.useState("");
   const [showToast, setShowToast] = React.useState(false);
   const [archivedJobIds, setArchivedJobIds] = React.useState([]);
+  const [showFilterPanel, setShowFilterPanel] = React.useState(false);
 
   async function load() {
     setLoading(true);
@@ -214,7 +215,30 @@ export default function Jobs() {
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Jobs</h1>
           <p className="text-sm text-gray-600">Add job opportunities to track them in your pipeline.</p>
-          <div className="flex flex-col gap-2 pt-1">
+          <div className="pt-2">
+            <button
+              className="btn btn-secondary text-sm py-2 px-4"
+              onClick={() => setShowFilterPanel(!showFilterPanel)}
+            >
+              🔍 Search & Filter
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Link className="btn btn-secondary" to="/jobs/pipeline">Pipeline View</Link>
+            <Link className="btn btn-secondary" to="/jobs/calendar">📅 Calendar</Link>
+            <Link className="btn btn-secondary" to="/jobs/archived">📦 Archived</Link>
+            <Link className="btn btn-secondary" to="/jobs/statistics">📊 Statistics</Link>
+          </div>
+          <button className="btn btn-primary w-full" onClick={() => setOpen(true)}>+ Add Job</button>
+        </div>
+      </div>
+
+      {/* Filter Panel */}
+      {showFilterPanel && (
+        <div className="page-card py-4 pl-4 pr-3 space-y-3">
+          <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-gray-700">Search:</label>
@@ -290,6 +314,8 @@ export default function Jobs() {
                   onChange={(e) => setSalaryMaxFilter(e.target.value)}
                 />
               </div>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-gray-700">Deadline:</label>
                 <input
@@ -306,46 +332,48 @@ export default function Jobs() {
                   onChange={(e) => setDeadlineToFilter(e.target.value)}
                 />
               </div>
-            </div>
-            <div className="flex items-center gap-2 pt-1">
-              <label className="text-xs font-medium text-gray-700">Sort by:</label>
-              <select
-                className="input max-w-xs text-sm py-1"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="createdAt">Date Added</option>
-                <option value="deadline">Deadline</option>
-                <option value="salary">Salary</option>
-                <option value="company">Company Name</option>
-              </select>
-              <select
-                className="input w-24 text-sm py-1"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-              >
-                <option value="desc">↓</option>
-                <option value="asc">↑</option>
-              </select>
-              <button
-                className="btn btn-secondary text-sm py-1 px-3"
-                onClick={clearAllFilters}
-              >
-                Clear Filters
-              </button>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-700 whitespace-nowrap">Sort by:</label>
+                <select
+                  className="input max-w-xs text-sm py-1"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="createdAt">Date Added</option>
+                  <option value="deadline">Deadline</option>
+                  <option value="salary">Salary</option>
+                  <option value="company">Company Name</option>
+                </select>
+                <select
+                  className="input w-24 text-sm py-1"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                >
+                  <option value="desc">↓</option>
+                  <option value="asc">↑</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <Link className="btn btn-secondary" to="/jobs/pipeline">Pipeline View</Link>
-            <Link className="btn btn-secondary" to="/jobs/calendar">📅 Calendar</Link>
-            <Link className="btn btn-secondary" to="/jobs/archived">📦 Archived</Link>
-            <Link className="btn btn-secondary" to="/jobs/statistics">📊 Statistics</Link>
+          
+          {/* Action buttons at the bottom */}
+          <div className="flex items-center justify-between pt-3 border-t">
+            <button
+              className="btn btn-secondary text-sm py-2 px-4"
+              onClick={clearAllFilters}
+            >
+              Clear Filters
+            </button>
+            <button
+              className="btn btn-primary text-sm py-2 px-4"
+              onClick={() => setShowFilterPanel(false)}
+            >
+              Apply
+            </button>
           </div>
-          <button className="btn btn-primary w-full" onClick={() => setOpen(true)}>+ Add Job</button>
         </div>
-      </div>
+      )}
+      
 
       {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       
