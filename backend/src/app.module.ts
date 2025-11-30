@@ -21,6 +21,7 @@ import { MatchModule } from "./match/match.module";
 import { SalaryModule } from './salary/salary.module';
 import { InterviewModule } from './interview/interview.module';
 import { GoalsModule } from './goals/goals.module';
+import { MarketModule } from './market/market.module';
 
 @Module({
   imports: [
@@ -46,7 +47,8 @@ import { GoalsModule } from './goals/goals.module';
   MatchModule,
   SalaryModule,
   InterviewModule,
-  GoalsModule
+  GoalsModule,
+  MarketModule
   ],
   controllers: [AppController],
   providers: [AppService],
