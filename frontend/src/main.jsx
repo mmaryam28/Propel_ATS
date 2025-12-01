@@ -52,10 +52,6 @@ import InterviewPerformanceAnalytics from './pages/Prepare/InterviewPerformanceA
 import ApplicationSuccessAnalytics from './pages/Jobs/ApplicationSuccessAnalytics';
 import GoalsDashboard from './pages/Goals/GoalsDashboard';
 
-import InterviewList from './pages/Interviews/InterviewList.jsx';
-import ScheduleInterview from './pages/Interviews/ScheduleInterview.jsx';
-import InterviewDetails from './pages/Interviews/InterviewDetails.jsx';
-
 import './index.css';
 import './styles/globals.css';
 import './styles/theme.css';
@@ -116,9 +112,6 @@ const router = createBrowserRouter([
       { path: '/interview-performance', element: <InterviewPerformanceAnalytics /> },
       { path: '/application-success', element: <ApplicationSuccessAnalytics /> },
       { path: '/goals', element: <GoalsDashboard /> },
-      { path: '/interviews', element: <InterviewList /> },
-      { path: '/interviews/schedule', element: <ScheduleInterview /> },
-      { path: '/interviews/:id', element: <InterviewDetails /> },
 
 
       //New Cover Letter Templates route

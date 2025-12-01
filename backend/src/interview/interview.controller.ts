@@ -25,50 +25,15 @@ export class InterviewController {
   async scheduleInterview(@Req() req, @Body() dto: ScheduleInterviewDto) {
     console.log("🔥 JWT Payload = ", req.user);
 
-    const userId = req.user.userId; // ✔ correct key from JWT payload
+    const userId = req.user.userId;
 
     if (!userId) {
       throw new Error("Invalid token: missing user ID");
     }
 
-    return this.interviewService.scheduleInterview(userId, dto);
+    return (this.interviewService as any).scheduleInterview(userId, dto);
   }
 
-  // ------------------------------------------------
-  // UC-079 — Get all interviews for user
-  // ------------------------------------------------
-  @Get()
-  async getUserInterviews(@Req() req) {
-    return this.interviewService.getInterviews(req.user.userId);
-  }
-
-  // ------------------------------------------------
-  // UC-079 — Get single interview
-  // ------------------------------------------------
-  @Get(':id')
-  async getInterviewById(@Req() req, @Param('id') id: string) {
-    return this.interviewService.getInterviewById(req.user.userId, id);
-  }
-
-  // ------------------------------------------------
-  // UC-079 — Update interview
-  // ------------------------------------------------
-  @Put(':id')
-  async updateInterview(
-    @Req() req,
-    @Param('id') id: string,
-    @Body() dto: Partial<ScheduleInterviewDto>,
-  ) {
-    return this.interviewService.updateInterview(id, req.user.userId, dto);
-  }
-
-  // ------------------------------------------------
-  // UC-079 — Delete interview
-  // ------------------------------------------------
-  @Delete(':id')
-  async deleteInterview(@Req() req, @Param('id') id: string) {
-    return this.interviewService.deleteInterview(id, req.user.userId);
-  }
 
   // ------------------------------------------------
   // UC-074+ Research Endpoints (unchanged)
