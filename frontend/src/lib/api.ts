@@ -448,3 +448,15 @@ export async function getMarketIntelligence() {
   const { data } = await api.get('/market/intelligence', { withCredentials: true });
   return data;
 }
+
+// UC-100: Salary Analytics
+export async function generateSalaryAnalytics(payload: {
+  userId?: string;
+  title?: string;
+  location?: string;
+  experienceLevel?: string;
+  currentSalary?: number;
+}) {
+  const { data } = await api.post('/salary/analysis', payload, { withCredentials: true });
+  return data;
+}
