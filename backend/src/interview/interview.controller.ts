@@ -12,31 +12,19 @@ import {
 import { InterviewService } from './interview.service';
 import { ScheduleInterviewDto } from './dto/schedule-interview.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { InterviewPrepService } from './interview-prep.service';
+
 
 @Controller('interview')
 @UseGuards(JwtAuthGuard)
 export class InterviewController {
-  constructor(private readonly interviewService: InterviewService) {}
+  constructor(
+    private readonly interviewService: InterviewService,
+    private readonly interviewPrepService: InterviewPrepService,
+  ) {}
 
   // ------------------------------------------------
-  // UC-079 — Schedule Interview
-  // ------------------------------------------------
-  @Post('schedule')
-  async scheduleInterview(@Req() req, @Body() dto: ScheduleInterviewDto) {
-    console.log("🔥 JWT Payload = ", req.user);
-
-    const userId = req.user.userId;
-
-    if (!userId) {
-      throw new Error("Invalid token: missing user ID");
-    }
-
-    return (this.interviewService as any).scheduleInterview(userId, dto);
-  }
-
-
-  // ------------------------------------------------
-  // UC-074+ Research Endpoints (unchanged)
+  // UC-074+ Research Endpoints (fixed routes FIRST)
   // ------------------------------------------------
   @Get('process')
   async getInterviewProcess(@Req() req) {
@@ -77,4 +65,13 @@ export class InterviewController {
   async getComprehensiveInsights(@Req() req) {
     return this.interviewService.getComprehensiveInsights(req.query.company, req.query.role);
   }
+
+  // ------------------------------------------------
+  // UC-079 — Get/Update/Delete Interview
+  // ------------------------------------------------
+  @Get(':id/prep')
+  async getInterviewPrep(@Req() req, @Param('id') id: string) {
+    return this.interviewPrepService.getOrCreatePrep(req.user.userId, id);
+  }
+
 }

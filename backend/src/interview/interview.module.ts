@@ -4,6 +4,7 @@ import { InterviewService } from './interview.service';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { InterviewPrepService } from './interview-prep.service';
 
 @Module({
   imports: [SupabaseModule],
@@ -13,11 +14,13 @@ import { SupabaseModule } from '../supabase/supabase.module';
   ],
   providers: [
     InterviewService,
-    AnalyticsService
+    AnalyticsService,
+    InterviewPrepService
   ],
   exports: [
     InterviewService,
-    AnalyticsService
+    AnalyticsService,
+    InterviewPrepService
   ],
 })
 export class InterviewModule {}
