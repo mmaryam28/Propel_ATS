@@ -23,6 +23,7 @@ import { InterviewModule } from './interview/interview.module';
 import { GoalsModule } from './goals/goals.module';
 import { MarketModule } from './market/market.module';
 import { CompetitiveModule } from './competitive/competitive.module';
+import { ProductivityModule } from './productivity/productivity.module';
 
 @Module({
   imports: [
@@ -50,7 +51,8 @@ import { CompetitiveModule } from './competitive/competitive.module';
   InterviewModule,
   GoalsModule,
   MarketModule,
-  CompetitiveModule
+  CompetitiveModule,
+  ProductivityModule
   ],
   controllers: [AppController],
   providers: [AppService],
