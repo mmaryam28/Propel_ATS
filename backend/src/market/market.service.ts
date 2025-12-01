@@ -5,7 +5,7 @@ export interface IndustryTrend {
   industry: string;
   trend: 'up' | 'flat' | 'down';
   jobCount: number;
-  growth: number; // percentage
+  growth: number;
   monthlyData: { month: string; count: number }[];
 }
 
@@ -69,7 +69,6 @@ export class MarketService {
   constructor(private supabase: SupabaseService) {}
 
   async getIndustryTrends(industry?: string, location?: string): Promise<IndustryTrend[]> {
-    // Mock data - in production, this would come from external APIs
     const allTrends: IndustryTrend[] = [
       {
         industry: 'Technology',
@@ -152,7 +151,6 @@ export class MarketService {
   }
 
   async getSkillDemand(): Promise<SkillDemand[]> {
-    // Mock data based on current tech trends
     return [
       {
         skill: 'React',
@@ -248,13 +246,11 @@ export class MarketService {
   async getSalaryTrends(role?: string): Promise<SalaryTrend[]> {
     const client = this.supabase.getClient();
 
-    // Try to get real salary data from database
     const { data: salaryData } = await client
       .from('salary_data')
       .select('*')
       .limit(100);
 
-    // Combine real data with mock trends
     const mockTrends: SalaryTrend[] = [
       {
         role: 'Software Engineer',
@@ -326,7 +322,6 @@ export class MarketService {
   }
 
   async getCompanyGrowth(): Promise<CompanyGrowth[]> {
-    // Mock data based on typical company hiring patterns
     return [
       { company: 'Google', openings: 1250, growth: 'Growing', hiringLevel: 'High' },
       { company: 'Amazon', openings: 2100, growth: 'Growing', hiringLevel: 'High' },
@@ -385,14 +380,12 @@ export class MarketService {
   async getSkillRecommendations(userId: string): Promise<SkillRecommendation[]> {
     const client = this.supabase.getClient();
 
-    // Get user's current jobs/applications to understand target roles
     const { data: userJobs } = await client
       .from('jobs')
       .select('title, industry')
       .eq('userId', userId)
       .limit(10);
 
-    // Generate recommendations based on market trends and user's interests
     const recommendations: SkillRecommendation[] = [
       {
         skill: 'React',
@@ -455,7 +448,6 @@ export class MarketService {
   async getCompetitiveLandscape(userId: string): Promise<CompetitiveLandscape> {
     const client = this.supabase.getClient();
 
-    // Get user's profile data
     const { data: education } = await client
       .from('education')
       .select('*')
@@ -466,7 +458,6 @@ export class MarketService {
       .select('*')
       .eq('user_id', userId);
 
-    // Mock competitive analysis
     return {
       role: 'Software Engineer',
       avgCandidatesPerRole: 250,
