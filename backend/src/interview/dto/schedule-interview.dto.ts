@@ -1,7 +1,6 @@
 import { IsOptional, IsString, IsDateString, IsNumber } from 'class-validator';
 
 export class ScheduleInterviewDto {
-  // Required fields
   @IsString()
   company_name: string;
 
@@ -14,7 +13,6 @@ export class ScheduleInterviewDto {
   @IsString()
   interview_format: string;
 
-  // Optional fields
   @IsOptional()
   @IsString()
   interviewer_name?: string;
@@ -37,30 +35,10 @@ export class ScheduleInterviewDto {
 
   @IsOptional()
   @IsNumber()
-  prep_time_hours?: number;
+  prep_time_hours?: number | null;
 
-  // New optional fields based on your table
-  @IsOptional()
-  @IsNumber()
-  job_application_id?: number;
-
+  // Keep status but optional
   @IsOptional()
   @IsString()
-  job_id?: string;
-
-  @IsOptional()
-  @IsString()
-  notes?: string;
-
-  @IsOptional()
-  @IsString()
-  duration?: string;
-
-  @IsOptional()
-  @IsString()
-  title?: string;
-
-  @IsOptional()
-  @IsString()
-  status?: string;
+  status?: string | null;
 }

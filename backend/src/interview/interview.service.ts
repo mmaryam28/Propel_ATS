@@ -7,139 +7,91 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class InterviewService {
   private readonly serpApiKey = process.env.SERP_API_KEY;
 
-  constructor(
-    private readonly supabase: SupabaseService, // ✅ FIXED
-  ) {}
+  constructor(private readonly supabase: SupabaseService) {}
 
-  /**
- * Get all interviews for a user
- */
-async getInterviews(userId: string) {
-  const client = this.supabase.getClient();
-  const { data, error } = await client
-    .from('interviews')
-    .select('*')
-    .eq('user_id', userId)
-    .order('interview_date', { ascending: true });
+  async getInterviews(userId: string) {
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('interviews')
+      .select('*')
+      .eq('user_id', userId)
+      .order('interview_date', { ascending: true });
 
-  if (error) throw new Error('Failed to fetch interviews');
-  return data;
-}
+    if (error) throw new Error('Failed to fetch interviews');
+    return data;
+  }
 
-/**
- * Get a single interview by ID
- */
-async getInterviewById(userId: string, interviewId: string) {
-  const client = this.supabase.getClient();
-  const { data, error } = await client
-    .from('interviews')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('id', interviewId)
-    .single();
+  async getInterviewById(userId: string, interviewId: string) {
+    const client = this.supabase.getClient();
+    const { data, error } = await client
+      .from('interviews')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('id', interviewId)
+      .single();
 
-  if (error) throw new Error('Failed to fetch interview');
-  return data;
-}
+    if (error) throw new Error('Failed to fetch interview');
+    return data;
+  }
 
-  /**
-   * UC-079: Schedule an interview
-   */
   async scheduleInterview(userId: string, dto: ScheduleInterviewDto) {
-  const client = this.supabase.getClient();
+    const client = this.supabase.getClient();
 
-  const { data, error } = await client
-    .from('interviews')
-    .insert({
-      user_id: userId,
+    console.log("🔥 incoming dto =", dto);
 
-      company_name: dto.company_name,
-      interview_date: dto.interview_date,
-      interview_type: dto.interview_type,
-      interview_format: dto.interview_format,
+    const { data, error } = await client
+  .from('interviews')
+  .insert({
+    user_id: userId,
 
-      interviewer_name: dto.interviewer_name || null,
-      interviewer_email: dto.interviewer_email || null,
-      location: dto.location || null,
+    company_name: dto.company_name,
+    interview_date: dto.interview_date,
+    scheduled_at: dto.interview_date,   // ✅ FIX — required by DB
 
-      // Notes vs details: we store both but prioritize notes → DB.notes
-      notes: dto.notes ?? dto.details ?? '',
-      details: dto.details ?? null,
+    interview_type: dto.interview_type,
+    interview_format: dto.interview_format,
 
-      interview_stage: dto.interview_stage ?? null,
-      prep_time_hours: dto.prep_time_hours ?? null,
-      status: dto.status ?? 'Scheduled',
+    interviewer_name: dto.interviewer_name ?? null,
+    interviewer_email: dto.interviewer_email ?? null,
+    location: dto.location ?? null,
+    details: dto.details ?? null,
+    interview_stage: dto.interview_stage ?? null,
+    prep_time_hours: dto.prep_time_hours ?? null,
 
-      job_application_id: dto.job_application_id ?? null,
-      job_id: dto.job_id ?? null,
+    status: dto.status ?? "Scheduled",
 
-      // Defaults from Preset B
-      title: dto.title ?? `${dto.company_name} Interview`,
-      duration: dto.duration ?? '60 minutes',
+    created_at: new Date().toISOString()
+  })
+  .select()
+  .single();
 
-      created_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
 
-  if (error) {
-    console.error('Error scheduling interview:', error);
-    throw new Error('Failed to schedule interview');
+    if (error) {
+      console.error("🔥 SUPABASE INSERT ERROR:", JSON.stringify(error, null, 2));
+      throw new Error(error.message);
+    }
+
+    return data;
   }
 
-  return data;
-}
-
-
-  /**
-   * UC-079: Update an interview
-   */
   async updateInterview(interviewId: string, userId: string, dto: Partial<ScheduleInterviewDto>) {
-  const client = this.supabase.getClient();
+    const client = this.supabase.getClient();
 
-  const { data, error } = await client
-    .from('interviews')
-    .update({
-      company_name: dto.company_name,
-      interview_date: dto.interview_date,
-      interview_type: dto.interview_type,
-      interview_format: dto.interview_format,
-      interviewer_name: dto.interviewer_name,
-      interviewer_email: dto.interviewer_email,
-      location: dto.location,
+    const { data, error } = await client
+      .from('interviews')
+      .update({
+        ...dto,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', interviewId)
+      .eq('user_id', userId)
+      .select()
+      .single();
 
-      notes: dto.notes,
-      details: dto.details,
-
-      interview_stage: dto.interview_stage,
-      prep_time_hours: dto.prep_time_hours,
-      status: dto.status,
-
-      job_application_id: dto.job_application_id,
-      job_id: dto.job_id,
-
-      title: dto.title,
-      duration: dto.duration,
-
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', interviewId)
-    .eq('user_id', userId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating interview:', error);
-    throw new Error('Failed to update interview');
+    if (error) throw new Error('Failed to update interview');
+    return data;
   }
 
-  return data;
-}
-
-
-  /**
-   * UC-079: Delete interview
-   */
   async deleteInterview(interviewId: string, userId: string) {
     const client = this.supabase.getClient();
 
@@ -149,18 +101,10 @@ async getInterviewById(userId: string, interviewId: string) {
       .eq('id', interviewId)
       .eq('user_id', userId);
 
-    if (error) {
-      console.error('Error deleting interview:', error);
-      throw new Error('Failed to delete interview');
-    }
-
+    if (error) throw new Error('Failed to delete interview');
     return { success: true };
   }
 
-  // ---------------------------------------------------------------------------------------
-  // BELOW THIS LINE IS YOUR ORIGINAL 700-LINE FILE EXACTLY AS YOU PROVIDED IT
-  // NOTHING WAS REMOVED — ONLY the constructor was updated and UC-079 code added above
-  // ---------------------------------------------------------------------------------------
 
   /**
    * UC-068 AC1: Research typical interview process and stages
