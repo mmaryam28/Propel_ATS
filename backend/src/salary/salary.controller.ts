@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Body } from '@nestjs/common';
+import { Controller, Get, Post, Query, Body, Req } from '@nestjs/common';
 import { SalaryService } from './salary.service';
 
 @Controller('salary')
@@ -82,5 +82,21 @@ export class SalaryController {
   ) {
     if (!title) return { error: 'Missing job title' };
     return await this.salaryService.exportSalaryReport(title, location, format);
+  }
+
+  @Post('analysis')
+  async generateSalaryAnalytics(@Body() body: any, @Req() req: any) {
+    const userId = req.user?.userId || body.userId;
+    if (!userId) {
+      return { error: 'User ID is required' };
+    }
+    const { title, location, experienceLevel, currentSalary } = body;
+    return await this.salaryService.generateSalaryAnalytics(
+      userId,
+      title,
+      location,
+      experienceLevel,
+      currentSalary,
+    );
   }
 }

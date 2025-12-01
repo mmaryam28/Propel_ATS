@@ -99,7 +99,13 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      await onSaved?.(form);
+      // Convert salary values to integers before sending
+      const payload = {
+        ...form,
+        salaryMin: form.salaryMin === "" ? null : parseInt(form.salaryMin, 10),
+        salaryMax: form.salaryMax === "" ? null : parseInt(form.salaryMax, 10),
+      };
+      await onSaved?.(payload);
     } finally {
       setLoading(false);
     }
