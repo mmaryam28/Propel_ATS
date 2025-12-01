@@ -51,6 +51,7 @@ import InterviewInsights from './pages/Resumes/InterviewInsights';
 import InterviewPerformanceAnalytics from './pages/Prepare/InterviewPerformanceAnalytics';
 import ApplicationSuccessAnalytics from './pages/Jobs/ApplicationSuccessAnalytics';
 import GoalsDashboard from './pages/Goals/GoalsDashboard';
+import MarketIntelligence from './pages/MarketIntelligence';
 
 import './index.css';
 import './styles/globals.css';
@@ -112,6 +113,7 @@ const router = createBrowserRouter([
       { path: '/interview-performance', element: <InterviewPerformanceAnalytics /> },
       { path: '/application-success', element: <ApplicationSuccessAnalytics /> },
       { path: '/goals', element: <GoalsDashboard /> },
+      { path: '/market-intelligence', element: <MarketIntelligence /> },
 
       // ✅ New Cover Letter Templates route
       {

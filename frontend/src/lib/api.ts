@@ -442,3 +442,9 @@ export async function deleteAutomationRule(id: string) {
   const { data } = await api.delete(`/jobs/automation-rules/${id}`, { withCredentials: true });
   return data;
 }
+
+// Market Intelligence
+export async function getMarketIntelligence() {
+  const { data } = await api.get('/market/intelligence', { withCredentials: true });
+  return data;
+}
