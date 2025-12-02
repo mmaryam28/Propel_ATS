@@ -65,7 +65,7 @@ export default function AnalyticsDashboard() {
       {/* Status Breakdown */}
       {analytics.byStatus && Object.keys(analytics.byStatus).length > 0 && (
         <div className="page-card p-6">
-          <h3 className="text-lg font-semibold mb-4">Applications by Status</h3>
+          <h3 className="text-lg font-semibold mb-4 text-blue-700">Applications by Status</h3>
           <div className="space-y-3">
             {Object.entries(analytics.byStatus).map(([status, count]) => (
               <div key={status} className="flex items-center gap-3">
@@ -115,7 +115,7 @@ export default function AnalyticsDashboard() {
       {analytics.applicationsByDay && Object.keys(analytics.applicationsByDay).length > 0 ? (
         <div className="page-card p-6">
           <div className="mb-4">
-            <h3 className="text-lg font-semibold">Applications Submitted</h3>
+            <h3 className="text-lg font-semibold text-blue-700">Applications Submitted</h3>
             <p className="text-sm text-gray-600">Number of applications submitted per day (last 30 days)</p>
           </div>
           <div className="overflow-x-auto">
