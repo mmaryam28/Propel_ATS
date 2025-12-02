@@ -422,7 +422,9 @@ function GoalProgressItem({ title, current, target, unit }) {
     <div className="border border-gray-200 rounded-lg p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="text-sm font-medium text-gray-700">{title}</div>
-        <div className="text-xs text-gray-500">{current} / {target} {unit}</div>
+        <div className="text-xs text-gray-500">
+          {unit === '%' ? `${current}% (Goal: ${target}%)` : `${current} / ${target} ${unit}`}
+        </div>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-3">
         <div 

@@ -226,14 +226,15 @@ function Navbar() {
                 {prepareOpen && (
                   <div className="absolute top-full mt-1 left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
                     <Link to="/research" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Company Research</Link>
-                    <Link to="/salary-analysis" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Salary Analysis</Link>
-                    <Link to="/resumes/interview-insights" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Interview Insights</Link>
-                    <Link to="/interview-performance" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Performance Analytics</Link>
-                    <Link to="/job-match" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Match</Link>
                     <Link to="/market-intelligence" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Market Intelligence</Link>
+                    <Link to="/job-match" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Match</Link>
+                    <Link to="/resumes/interview-insights" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Interview Insights</Link>
+                    <Link to="/salary-analysis" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Salary Analysis</Link>
+                    <Link to="/interview-performance" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Performance Analytics</Link>
                     <Link to="/prepare/competitive-analysis" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Competitive Analysis</Link>
                     <Link to="/prepare/custom-reports" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Custom Reports</Link>
                     <Link to="/prepare/forecasting" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Forecasting & Prediction</Link>
+                    <Link to="/jobs/statistics" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Statistics</Link>
                   </div>
                 )}
               </div>
@@ -347,14 +348,15 @@ function Navbar() {
                 </summary>
                 <div className="pl-6 flex flex-col">
                   <Link to="/research" className="py-1 text-sm text-gray-700 hover:underline">Company Research</Link>
-                  <Link to="/salary-analysis" className="py-1 text-sm text-gray-700 hover:underline">Salary Analysis</Link>
-                  <Link to="/resumes/interview-insights" className="py-1 text-sm text-gray-700 hover:underline">Interview Insights</Link>
-                  <Link to="/interview-performance" className="py-1 text-sm text-gray-700 hover:underline">Performance Analytics</Link>
-                  <Link to="/job-match" className="py-1 text-sm text-gray-700 hover:underline">Job Match</Link>
                   <Link to="/market-intelligence" className="py-1 text-sm text-gray-700 hover:underline">Market Intelligence</Link>
+                  <Link to="/job-match" className="py-1 text-sm text-gray-700 hover:underline">Job Match</Link>
+                  <Link to="/resumes/interview-insights" className="py-1 text-sm text-gray-700 hover:underline">Interview Insights</Link>
+                  <Link to="/salary-analysis" className="py-1 text-sm text-gray-700 hover:underline">Salary Analysis</Link>
+                  <Link to="/interview-performance" className="py-1 text-sm text-gray-700 hover:underline">Performance Analytics</Link>
                   <Link to="/prepare/competitive-analysis" className="py-1 text-sm text-gray-700 hover:underline">Competitive Analysis</Link>
                   <Link to="/prepare/custom-reports" className="py-1 text-sm text-gray-700 hover:underline">Custom Reports</Link>
                   <Link to="/prepare/forecasting" className="py-1 text-sm text-gray-700 hover:underline">Forecasting & Prediction</Link>
+                  <Link to="/jobs/statistics" className="py-1 text-sm text-gray-700 hover:underline">Statistics</Link>
                 </div>
               </details>
             </nav>
