@@ -85,10 +85,9 @@ const InterviewInsights = () => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'home' },
-    { id: 'process', label: 'Process & Stages', icon: 'timeline' },
+    { id: 'preparation', label: 'Preparation', icon: 'timeline' },
     { id: 'questions', label: 'Common Questions', icon: 'help' },
     { id: 'formats', label: 'Interview Formats', icon: 'list' },
-    { id: 'preparation', label: 'Preparation', icon: 'book' },
     { id: 'tips', label: 'Success Tips', icon: 'star' }
   ];
 
