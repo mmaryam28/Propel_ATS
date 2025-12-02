@@ -77,4 +77,23 @@ export class InterviewController {
     }
     return this.interviewService.getComprehensiveInsights(company, role);
   }
+
+  @Get('prep-checklist')
+  async getPreparationChecklist(
+    @Query('company') company: string,
+    @Query('role') role?: string,
+    @Query('interviewDate') interviewDate?: string,
+    @Query('format') format?: string,
+  ) {
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+
+    return this.interviewService.getPreparationChecklist(
+      company,
+      role,
+      interviewDate,
+      format,
+    );
+  }
 }

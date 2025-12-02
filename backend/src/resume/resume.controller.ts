@@ -28,10 +28,6 @@ import { GenerateAIDto } from './dto/generate-ai.dto';
 export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}
 
-  // ============================================
-  // STATIC ROUTES (must come before dynamic ones)
-  // ============================================
-
   @Post()
   create(@Body() dto: CreateResumeDto) {
     return this.resumeService.create(dto);

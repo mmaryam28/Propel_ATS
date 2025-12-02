@@ -6,10 +6,18 @@ import { Icon } from '../../components/ui/Icon';
 const InterviewInsights = () => {
   const [company, setCompany] = useState('');
   const [role, setRole] = useState('');
+  const [interviewDate, setInterviewDate] = useState("");
+  const [format, setFormat] = useState("");
+  const [loadingChecklist, setLoadingChecklist] = useState(false);
+  const [checklist, setChecklist] = useState(null);
+  const [checklistError, setChecklistError] = useState(null);
+  const [completedItems, setCompletedItems] = useState({});
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+
+  const userId = localStorage.getItem("userId") || "demo-user";
 
   const handleSearch = async () => {
     if (!company.trim()) {
@@ -42,6 +50,39 @@ const InterviewInsights = () => {
     }
   };
 
+  const handleFetchChecklist = async (e) => {
+    e.preventDefault();
+    if (!company.trim()) {
+      setChecklistError("Company is required.");
+      return;
+    }
+
+    setChecklistError(null);
+    setLoadingChecklist(true);
+
+    try {
+      const res = await axios.get(
+        "http://localhost:3000/interview/prep-checklist",
+        {
+          params: {
+            company: company.trim(),
+            role: role.trim() || undefined,
+            interviewDate: interviewDate || undefined,
+            format: format || undefined,
+          },
+        }
+      );
+
+      setChecklist(res.data);
+      setCompletedItems({});
+    } catch (err) {
+      console.error(err);
+      setChecklistError("Failed to generate checklist.");
+    } finally {
+      setLoadingChecklist(false);
+    }
+  };
+
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'home' },
     { id: 'process', label: 'Process & Stages', icon: 'timeline' },
@@ -50,6 +91,29 @@ const InterviewInsights = () => {
     { id: 'preparation', label: 'Preparation', icon: 'book' },
     { id: 'tips', label: 'Success Tips', icon: 'star' }
   ];
+
+  const toggleItem = (sectionId, itemId) => {
+    const key = `${sectionId}:${itemId}`;
+    setCompletedItems((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const countProgress = () => {
+    if (!checklist) return { total: 0, done: 0 };
+    const total = checklist.sections.reduce(
+      (sum, s) => sum + s.items.length,
+      0
+    );
+    const done = Object.values(completedItems).filter(Boolean).length;
+    return { total, done };
+  };
+
+  const { total, done } = countProgress();
+  const progressPercent = total ? Math.round((done / total) * 100) : 0;
+
+
 
   const TabContent = () => {
     if (!insights) return null;
@@ -124,105 +188,172 @@ const InterviewInsights = () => {
       case 'process':
         return (
           <div className="space-y-6">
+
+            {/* === Checklist Builder Form === */}
             <Card>
               <Card.Header>
-                <Card.Title>Interview Process & Stages</Card.Title>
-                {insights.process?.source && (
-                  <p className="text-sm text-gray-500 mt-1">Source: {insights.process.source}</p>
-                )}
+                <Card.Title className="flex items-center gap-2">
+                  <Icon name="clipboard" size="sm" />
+                  Build Your Pre-Interview Checklist
+                </Card.Title>
               </Card.Header>
+
               <Card.Body>
-                {insights.process?.stages?.length > 0 ? (
-                  <div className="space-y-4">
-                    {insights.process.source === 'SERP API Search Results' && (
-                      <div className="mb-4 p-3 bg-green-50 rounded-lg">
-                        <p className="text-sm text-green-800">
-                          <strong>Found specific interview process information</strong> for {company} based on real candidate experiences.
-                        </p>
-                      </div>
-                    )}
-                    {insights.process.source === 'Default Process' && (
-                      <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                          <strong>Using standard interview process</strong> - specific {company} process information not found. This represents a typical tech company interview flow.
-                        </p>
-                      </div>
-                    )}
-                    <div className="space-y-3">
-                      {insights.process.stages.map((stage, index) => (
-                        <div key={index} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
-                          <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">{stage.stage}</h4>
-                            <p className="text-gray-600 text-sm mt-1">{stage.description}</p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              <span className="font-medium">Duration:</span> {stage.duration}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-6 p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
-                      <h4 className="font-medium text-yellow-800 mb-2">Preparation Tips</h4>
-                      <ul className="text-sm text-yellow-700 space-y-1">
-                        <li>• Research each stage thoroughly and prepare accordingly</li>
-                        <li>• Ask your recruiter about the specific format and expectations</li>
-                        <li>• Practice technical skills if coding interviews are involved</li>
-                        <li>• Prepare behavioral examples using the STAR method</li>
-                      </ul>
-                    </div>
+                <form
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                  onSubmit={handleFetchChecklist}
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Company *
+                    </label>
+                    <input
+                      type="text"
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                      className="mt-1 w-full border p-2 rounded-md"
+                      required
+                    />
                   </div>
-                ) : (
-                  <p className="text-gray-600">No specific process information available.</p>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Role
+                    </label>
+                    <input
+                      type="text"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="mt-1 w-full border p-2 rounded-md"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Interview Date
+                    </label>
+                    <input
+                      type="date"
+                      value={interviewDate}
+                      onChange={(e) => setInterviewDate(e.target.value)}
+                      className="mt-1 w-full border p-2 rounded-md"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Format
+                    </label>
+                    <select
+                      value={format}
+                      onChange={(e) => setFormat(e.target.value)}
+                      className="mt-1 w-full border p-2 rounded-md"
+                    >
+                      <option value="">Auto-detect</option>
+                      <option value="Phone/Video Call">Phone/Video</option>
+                      <option value="Panel">Panel</option>
+                      <option value="Technical">Technical</option>
+                      <option value="Onsite">Onsite</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2 text-right">
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                    >
+                      Generate Checklist
+                    </button>
+                  </div>
+                </form>
+
+                {checklistError && (
+                  <p className="text-red-600 text-sm mt-3">{checklistError}</p>
                 )}
               </Card.Body>
             </Card>
 
-            <Card>
-              <Card.Header>
-                <Card.Title>Timeline Information</Card.Title>
-                {insights.timeline?.source && (
-                  <p className="text-sm text-gray-500 mt-1">Source: {insights.timeline.source}</p>
-                )}
-              </Card.Header>
-              <Card.Body>
-                {insights.timeline?.timeline ? (
-                  <div className="space-y-4">
-                    {insights.timeline.source === 'SERP API Search Results' && (
-                      <div className="mb-4 p-3 bg-green-50 rounded-lg">
-                        <p className="text-sm text-green-800">
-                          <strong>Found specific timeline information</strong> for {company} from candidate experiences.
-                        </p>
-                      </div>
-                    )}
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <h3 className="font-medium text-blue-900">Expected Total Duration</h3>
-                      <p className="text-2xl font-bold text-blue-700 mt-1">{insights.timeline.timeline.estimated_duration}</p>
-                      <p className="text-sm text-blue-600 mt-1">From application to final decision</p>
-                    </div>
-                    {insights.timeline.timeline.stages?.map((stage, index) => (
-                      <div key={index} className="border-l-4 border-blue-200 pl-4 py-2">
-                        <h4 className="font-medium text-gray-900">{stage.stage}</h4>
-                        <p className="text-sm text-gray-600">{stage.duration}</p>
-                      </div>
-                    ))}
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-600">
-                        <strong>Note:</strong> Timeline can vary based on role level, team availability, and current hiring demand.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-orange-50 rounded-lg">
-                    <p className="text-orange-800">
-                      <strong>Timeline information not available.</strong> Contact the recruiter for specific timeline expectations.
+            {/* === Loading Spinner === */}
+            {loadingChecklist && (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin h-10 w-10 border-b-2 border-blue-600 rounded-full" />
+              </div>
+            )}
+
+            {/* === Checklist Output === */}
+            {checklist && (
+              <>
+                {/* === Progress Bar === */}
+                <Card>
+                  <Card.Header>
+                    <Card.Title>Checklist Progress</Card.Title>
+                  </Card.Header>
+                  <Card.Body>
+
+                    <p className="text-sm">
+                      {done}/{total} tasks complete
                     </p>
-                  </div>
-                )}
-              </Card.Body>
-            </Card>
+
+                    <div className="w-full bg-gray-200 h-3 rounded-full mt-2">
+                      <div
+                        className="bg-blue-600 h-3 rounded-full"
+                        style={{ width: `${progressPercent}%` }}
+                      ></div>
+                    </div>
+
+                  </Card.Body>
+                </Card>
+
+                {/* === Checklist Sections === */}
+                <div className="space-y-4">
+                  {checklist.sections.map((section) => (
+                    <Card key={section.id}>
+                      <Card.Header>
+                        <Card.Title>{section.title}</Card.Title>
+                        {section.description && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            {section.description}
+                          </p>
+                        )}
+                      </Card.Header>
+
+                      <Card.Body>
+                        <div className="space-y-2">
+                          {section.items.map((item) => {
+                            const key = `${section.id}:${item.id}`;
+                            const checked = completedItems[key];
+
+                            return (
+                              <label
+                                key={item.id}
+                                className="flex items-start gap-3 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked || false}
+                                  onChange={() => toggleItem(section.id, item.id)}
+                                  className="mt-1"
+                                />
+                                <div>
+                                  <div className="text-sm font-medium">
+                                    {item.label}
+                                  </div>
+                                  {item.description && (
+                                    <p className="text-xs text-gray-600">
+                                      {item.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         );
 
