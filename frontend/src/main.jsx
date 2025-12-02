@@ -54,6 +54,7 @@ import GoalsDashboard from './pages/Goals/GoalsDashboard';
 import MarketIntelligence from './pages/MarketIntelligence';
 import CompetitiveAnalysis from './pages/Prepare/CompetitiveAnalysis';
 import CustomReports from './pages/Prepare/CustomReports';
+import Forecasting from './pages/Prepare/Forecasting';
 import ProductivityAnalytics from './pages/Jobs/ProductivityAnalytics';
 import NetworkingAnalytics from './pages/Networking/NetworkingAnalytics';
 
@@ -121,6 +122,7 @@ const router = createBrowserRouter([
       { path: '/market-intelligence', element: <MarketIntelligence /> },
       { path: '/prepare/competitive-analysis', element: <CompetitiveAnalysis /> },
       { path: '/prepare/custom-reports', element: <CustomReports /> },
+      { path: '/prepare/forecasting', element: <Forecasting /> },
       { path: '/productivity-tracker', element: <ProductivityAnalytics /> },
       { path: '/network-analytics', element: <NetworkingAnalytics /> },
 

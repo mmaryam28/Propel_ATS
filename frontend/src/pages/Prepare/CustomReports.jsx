@@ -219,7 +219,7 @@ export default function CustomReports() {
           {/* Left Sidebar - Templates */}
           <div className="lg:col-span-1">
             <Card className="p-4">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-700">
                 <Icon name="file-text" size="sm" />
                 Report Templates
               </h2>
@@ -251,7 +251,7 @@ export default function CustomReports() {
           <div className="lg:col-span-3 space-y-6">
             {/* Configuration Panel */}
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Report Configuration</h2>
+              <h2 className="text-xl font-semibold mb-4 text-blue-700">Report Configuration</h2>
               
               {/* Metrics Selection */}
               <div className="mb-6">
@@ -395,7 +395,7 @@ export default function CustomReports() {
             {/* Report Preview */}
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Report Preview</h2>
+                <h2 className="text-xl font-semibold text-blue-700">Report Preview</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowShareDialog(true)}
@@ -441,7 +441,7 @@ export default function CustomReports() {
 
               {/* Insights Section */}
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border border-blue-200">
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-blue-700">
                   <Icon name="lightbulb" size="sm" className="text-blue-600" />
                   Insights & Recommendations
                 </h3>

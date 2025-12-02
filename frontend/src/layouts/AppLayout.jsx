@@ -233,6 +233,7 @@ function Navbar() {
                     <Link to="/market-intelligence" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Market Intelligence</Link>
                     <Link to="/prepare/competitive-analysis" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Competitive Analysis</Link>
                     <Link to="/prepare/custom-reports" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Custom Reports</Link>
+                    <Link to="/prepare/forecasting" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Forecasting & Prediction</Link>
                   </div>
                 )}
               </div>
@@ -353,6 +354,7 @@ function Navbar() {
                   <Link to="/market-intelligence" className="py-1 text-sm text-gray-700 hover:underline">Market Intelligence</Link>
                   <Link to="/prepare/competitive-analysis" className="py-1 text-sm text-gray-700 hover:underline">Competitive Analysis</Link>
                   <Link to="/prepare/custom-reports" className="py-1 text-sm text-gray-700 hover:underline">Custom Reports</Link>
+                  <Link to="/prepare/forecasting" className="py-1 text-sm text-gray-700 hover:underline">Forecasting & Prediction</Link>
                 </div>
               </details>
             </nav>

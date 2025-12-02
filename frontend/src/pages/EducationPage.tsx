@@ -267,7 +267,7 @@ export default function EducationPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Entries list */}
         <div>
-          <h3 className="mb-3 text-lg font-semibold">Entries</h3>
+          <h3 className="mb-3 text-lg font-semibold text-blue-700">Entries</h3>
           <ul className="space-y-3">
             {sorted.map((e) => (
               <li
@@ -333,7 +333,7 @@ export default function EducationPage() {
 
         {/* Timeline */}
         <div>
-          <h3 className="mb-3 text-lg font-semibold">Timeline</h3>
+          <h3 className="mb-3 text-lg font-semibold text-blue-700">Timeline</h3>
           <div className="relative pl-6">
             <div className="absolute left-2 top-0 h-full w-[2px] bg-[var(--border-color)]" />
             {sorted.map((e) => (
