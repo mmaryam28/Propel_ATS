@@ -231,6 +231,7 @@ function Navbar() {
                     <Link to="/job-match" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Match</Link>
                     <Link to="/market-intelligence" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Market Intelligence</Link>
                     <Link to="/prepare/competitive-analysis" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Competitive Analysis</Link>
+                    <Link to="/prepare/custom-reports" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Custom Reports</Link>
                   </div>
                 )}
               </div>
@@ -349,6 +350,7 @@ function Navbar() {
                   <Link to="/job-match" className="py-1 text-sm text-gray-700 hover:underline">Job Match</Link>
                   <Link to="/market-intelligence" className="py-1 text-sm text-gray-700 hover:underline">Market Intelligence</Link>
                   <Link to="/prepare/competitive-analysis" className="py-1 text-sm text-gray-700 hover:underline">Competitive Analysis</Link>
+                  <Link to="/prepare/custom-reports" className="py-1 text-sm text-gray-700 hover:underline">Custom Reports</Link>
                 </div>
               </details>
             </nav>
