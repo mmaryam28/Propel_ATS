@@ -24,6 +24,7 @@ import { GoalsModule } from './goals/goals.module';
 import { MarketModule } from './market/market.module';
 import { CompetitiveModule } from './competitive/competitive.module';
 import { ProductivityModule } from './productivity/productivity.module';
+import { NetworkingModule } from './networking/networking.module';
 
 @Module({
   imports: [
@@ -52,7 +53,8 @@ import { ProductivityModule } from './productivity/productivity.module';
   GoalsModule,
   MarketModule,
   CompetitiveModule,
-  ProductivityModule
+  ProductivityModule,
+  NetworkingModule
   ],
   controllers: [AppController],
   providers: [AppService],
