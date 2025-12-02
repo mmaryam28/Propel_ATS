@@ -53,6 +53,8 @@ import ApplicationSuccessAnalytics from './pages/Jobs/ApplicationSuccessAnalytic
 import GoalsDashboard from './pages/Goals/GoalsDashboard';
 import MarketIntelligence from './pages/MarketIntelligence';
 import ProductivityAnalytics from './pages/Jobs/ProductivityAnalytics';
+import NetworkingAnalytics from './pages/Networking/NetworkingAnalytics';
+
 
 import './index.css';
 import './styles/globals.css';
@@ -116,6 +118,8 @@ const router = createBrowserRouter([
       { path: '/goals', element: <GoalsDashboard /> },
       { path: '/market-intelligence', element: <MarketIntelligence /> },
       { path: '/productivity-tracker', element: <ProductivityAnalytics /> },
+      { path: '/network-analytics', element: <NetworkingAnalytics /> },
+
 
       // ✅ New Cover Letter Templates route
       {
