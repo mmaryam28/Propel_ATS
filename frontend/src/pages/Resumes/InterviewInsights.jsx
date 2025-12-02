@@ -254,7 +254,7 @@ const InterviewInsights = () => {
           </div>
         );
 
-      case 'process':
+      case 'preparation':
         return (
           <div className="space-y-6">
 
@@ -561,47 +561,6 @@ const InterviewInsights = () => {
               </Card.Body>
             </Card>
           </div>
-        );
-
-      case 'preparation':
-        return (
-          <Card>
-            <Card.Header>
-              <Card.Title>Preparation Recommendations</Card.Title>
-            </Card.Header>
-            <Card.Body>
-              {insights.recommendations?.recommendations?.length > 0 ? (
-                <div className="space-y-2">
-                  {insights.recommendations.recommendations.map((rec, index) => (
-                    <label key={index} className="flex items-start gap-3 cursor-pointer">
-                      <input type="checkbox" className="mt-1" />
-                      <span className="text-sm">{rec}</span>
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {[
-                    `Research ${company}'s mission, values, and recent developments`,
-                    `Review the ${role || 'target role'} job description thoroughly`,
-                    'Prepare specific examples of past achievements',
-                    'Practice explaining technical concepts clearly',
-                    'Prepare thoughtful questions about the role and company',
-                    'Plan your outfit and route to the interview location',
-                    'Bring multiple copies of your resume',
-                    'Research the interviewer(s) on LinkedIn if known',
-                    'Practice your elevator pitch',
-                    'Review your portfolio or work samples'
-                  ].map((item, index) => (
-                    <label key={index} className="flex items-start gap-3 cursor-pointer">
-                      <input type="checkbox" className="mt-1" />
-                      <span className="text-sm">{item}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </Card.Body>
-          </Card>
         );
 
       case 'tips':
