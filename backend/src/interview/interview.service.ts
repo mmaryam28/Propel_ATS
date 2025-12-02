@@ -962,4 +962,109 @@ export class InterviewService {
     };
   }
 
+    /**
+   * UC-082: Generate interview follow-up templates
+   * - Thank-you email
+   * - Status inquiry
+   * - Feedback request
+   * - Networking follow-up (for rejections)
+   */
+  async getFollowUpTemplates(params: {
+    company: string;
+    role?: string;
+    interviewerName?: string;
+    interviewDate?: string; // ISO string like '2025-12-01'
+    outcome?: 'pending' | 'rejected' | 'offer' | 'no_response';
+    topicsDiscussed?: string[];
+  }): Promise<any> {
+    const {
+      company,
+      role,
+      interviewerName,
+      interviewDate,
+      outcome = 'pending',
+      topicsDiscussed = [],
+    } = params;
+
+    const roleLabel = role ? `${role} role` : 'this opportunity';
+    const interviewerLabel = interviewerName || 'there';
+    const topicsSentence =
+      topicsDiscussed.length > 0
+        ? ` I especially enjoyed our discussion about ${topicsDiscussed.join(', ')}.`
+        : '';
+
+    // Basic timing guidance (can be displayed on FE)
+    const suggestedTimings = {
+      thankYouHoursAfterInterview: 24,
+      statusInquiryDaysAfterInterview: 5,
+      feedbackRequestDaysAfterDecision: 3,
+      networkingFollowUpDaysAfterRejection: 2,
+    };
+
+    const baseSignOff = `\n\nBest regards,\n[Your Name]`;
+
+    const thankYou = {
+      type: 'thank_you',
+      suggestedTiming: suggestedTimings.thankYouHoursAfterInterview,
+      subject: `Thank you for the interview at ${company}`,
+      body:
+        `Hi ${interviewerName || 'there'},\n\n` +
+        `Thank you again for taking the time to speak with me about the ${roleLabel} at ${company}.${topicsSentence}\n\n` +
+        `Our conversation reinforced my interest in ${company} and in contributing to your team. ` +
+        `Please let me know if I can share any additional information that would be helpful in your decision process.` +
+        baseSignOff,
+    };
+
+    const statusInquiry = {
+      type: 'status_inquiry',
+      suggestedTiming: suggestedTimings.statusInquiryDaysAfterInterview,
+      subject: `Checking in on ${role || 'interview'} status at ${company}`,
+      body:
+        `Hi ${interviewerName || 'there'},\n\n` +
+        `I hope you are doing well. I wanted to follow up regarding my interview for the ${roleLabel} at ${company}. ` +
+        `I remain very interested in the opportunity and would love to know if there are any updates you can share on the process.` +
+        `\n\nThank you again for your time and consideration.` +
+        baseSignOff,
+    };
+
+    const feedbackRequest = {
+      type: 'feedback_request',
+      suggestedTiming: suggestedTimings.feedbackRequestDaysAfterDecision,
+      subject: `Request for feedback on my interview for the ${roleLabel}`,
+      body:
+        `Hi ${interviewerName || 'there'},\n\n` +
+        `Thank you again for considering me for the ${roleLabel} at ${company}. ` +
+        `I am always looking to improve, so if you have a few minutes, I would greatly appreciate any feedback on my interview performance ` +
+        `or areas I can strengthen for future opportunities.` +
+        baseSignOff,
+    };
+
+    const networkingFollowUp = {
+      type: 'networking',
+      suggestedTiming: suggestedTimings.networkingFollowUpDaysAfterRejection,
+      subject: `Thank you and staying in touch – ${role || 'opportunity'} at ${company}`,
+      body:
+        `Hi ${interviewerName || 'there'},\n\n` +
+        `Thank you again for the opportunity to interview for the ${roleLabel} at ${company}. ` +
+        `Although I understand that I was not selected, I genuinely enjoyed learning more about your team and the work you are doing.\n\n` +
+        `If you are open to it, I would love to stay in touch and potentially reconnect about future opportunities or learn more about your career path.` +
+        baseSignOff,
+    };
+
+    return {
+      company,
+      role,
+      interviewerName,
+      interviewDate,
+      outcome,
+      suggestedTimings,
+      templates: {
+        thankYou,
+        statusInquiry,
+        feedbackRequest,
+        networkingFollowUp,
+      },
+    };
+  }
+
 }

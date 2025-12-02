@@ -78,6 +78,33 @@ export class InterviewController {
     return this.interviewService.getComprehensiveInsights(company, role);
   }
 
+    @Get('follow-up-templates')
+  async getFollowUpTemplates(
+    @Query('company') company: string,
+    @Query('role') role?: string,
+    @Query('interviewerName') interviewerName?: string,
+    @Query('interviewDate') interviewDate?: string,
+    @Query('outcome') outcome?: string,
+    @Query('topics') topics?: string, // comma-separated from FE: "ML system design,team culture"
+  ) {
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+
+    const topicsDiscussed = topics
+      ? topics.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
+
+    return this.interviewService.getFollowUpTemplates({
+      company,
+      role,
+      interviewerName,
+      interviewDate,
+      outcome: (outcome as any) || 'pending',
+      topicsDiscussed,
+    });
+  }
+
   @Get('prep-checklist')
   async getPreparationChecklist(
     @Query('company') company: string,

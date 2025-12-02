@@ -489,6 +489,139 @@ export class AnalyticsService {
     };
   }
 
+    /**
+   * UC-082: Log a follow-up event (send, complete, respond)
+   */
+  async logFollowUpEvent(payload: {
+    userId: string;
+    interviewId?: string;
+    company?: string;
+    role?: string;
+    interviewerName?: string;
+    type: 'thank_you' | 'status_inquiry' | 'feedback_request' | 'networking';
+    status?: 'pending' | 'sent' | 'completed' | 'responded';
+    channel?: string;
+    suggestedSendAt?: string; // ISO
+    sentAt?: string;          // ISO
+    respondedAt?: string;     // ISO
+  }) {
+    const {
+      userId,
+      interviewId,
+      company,
+      role,
+      interviewerName,
+      type,
+      status = 'sent',
+      channel,
+      suggestedSendAt,
+      sentAt,
+      respondedAt,
+    } = payload;
+
+    const { data, error } = await this.supabase.getClient()
+      .from('interview_followups')
+      .insert({
+        user_id: userId,
+        interview_id: interviewId || null,
+        company,
+        role,
+        interviewer_name: interviewerName,
+        type,
+        status,
+        channel,
+        suggested_send_at: suggestedSendAt || null,
+        sent_at: sentAt || null,
+        responded_at: respondedAt || null,
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * UC-082: Update follow-up status (e.g., when response is received)
+   */
+  async updateFollowUpStatus(id: string, status: 'pending' | 'sent' | 'completed' | 'responded', respondedAt?: string) {
+    const update: any = { status };
+    if (respondedAt) {
+      update.responded_at = respondedAt;
+    }
+
+    const { data, error } = await this.supabase.getClient()
+      .from('interview_followups')
+      .update(update)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * UC-082: Track follow-up completion and response rates
+   */
+  async getFollowUpStats(userId: string) {
+    const { data: followups, error } = await this.supabase.getClient()
+      .from('interview_followups')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    if (!followups || followups.length === 0) {
+      return {
+        totalFollowUps: 0,
+        sentCount: 0,
+        respondedCount: 0,
+        completedCount: 0,
+        completionRate: '0',
+        responseRate: '0',
+        byType: {},
+      };
+    }
+
+    const byType: Record<string, { total: number; responded: number; completed: number }> = {};
+
+    followups.forEach(f => {
+      const type = f.type || 'unknown';
+      if (!byType[type]) {
+        byType[type] = { total: 0, responded: 0, completed: 0 };
+      }
+      byType[type].total += 1;
+
+      const responded = f.status === 'responded' || !!f.responded_at;
+      const completed = f.status === 'completed' || f.status === 'responded';
+
+      if (responded) byType[type].responded += 1;
+      if (completed) byType[type].completed += 1;
+    });
+
+    const totalFollowUps = followups.length;
+    const sentCount = followups.filter(
+      f => f.status === 'sent' || f.status === 'completed' || f.status === 'responded',
+    ).length;
+    const respondedCount = followups.filter(
+      f => f.status === 'responded' || !!f.responded_at,
+    ).length;
+    const completedCount = followups.filter(
+      f => f.status === 'completed' || f.status === 'responded',
+    ).length;
+
+    return {
+      totalFollowUps,
+      sentCount,
+      respondedCount,
+      completedCount,
+      completionRate: sentCount > 0 ? ((completedCount / sentCount) * 100).toFixed(1) : '0',
+      responseRate: sentCount > 0 ? ((respondedCount / sentCount) * 100).toFixed(1) : '0',
+      byType,
+    };
+  }
+
+
   // Helper methods
   private generateRecommendations(interviews: any[]): string[] {
     const recommendations: string[] = [];

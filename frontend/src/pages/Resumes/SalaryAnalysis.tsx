@@ -431,6 +431,489 @@ const SalaryAnalysis: React.FC = () => {
     );
   };
 
+    const renderNegotiationPrep = () => {
+    // Only show this if we have some negotiation-related data
+    if (!negotiationAdvice && !salaryComparison && !userAnalytics) return null;
+
+    const roleLabel = title || "this role";
+    const locationLabel = location || "your location";
+
+    const marketAvg =
+      negotiationAdvice?.marketAverage ??
+      salaryComparison?.marketComparison?.total ??
+      null;
+
+    const userTotalComp =
+      (salaryComparison?.userCompensation?.total ?? currentSalary) || null;
+
+    return (
+      <div
+        style={{
+          background: "#fff7e6",
+          padding: "1.5rem",
+          borderRadius: "8px",
+          border: "1px solid #ffe8b2",
+          marginTop: "1.5rem",
+        }}
+      >
+        <h2
+          style={{
+            color: "#d35400",
+            marginBottom: "1rem",
+            fontSize: "20px",
+            fontWeight: 700,
+          }}
+        >
+          Salary Negotiation Preparation Playbook
+        </h2>
+
+        {/* 1. Quick snapshot */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "12px",
+            marginBottom: "1rem",
+          }}
+        >
+          <div
+            style={{
+              padding: "12px",
+              background: "#fff",
+              borderRadius: "6px",
+              borderLeft: "4px solid #f39c12",
+            }}
+          >
+            <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>
+              Role / Location
+            </div>
+            <div style={{ fontWeight: "bold", color: "#333" }}>
+              {roleLabel} • {locationLabel}
+            </div>
+          </div>
+
+          {marketAvg !== null && (
+            <div
+              style={{
+                padding: "12px",
+                background: "#fff",
+                borderRadius: "6px",
+                borderLeft: "4px solid #3498db",
+              }}
+            >
+              <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>
+                Market Benchmark (Total)
+              </div>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  color: "#3498db",
+                  fontSize: "16px",
+                }}
+              >
+                ${Number(marketAvg).toLocaleString()}
+              </div>
+            </div>
+          )}
+
+          {userTotalComp !== null && (
+            <div
+              style={{
+                padding: "12px",
+                background: "#fff",
+                borderRadius: "6px",
+                borderLeft: "4px solid #27ae60",
+              }}
+            >
+              <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>
+                Your Current / Offered Total
+              </div>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  color: "#27ae60",
+                  fontSize: "16px",
+                }}
+              >
+                ${Number(userTotalComp).toLocaleString()}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 2. Talking points based on data */}
+        <div
+          style={{
+            marginTop: "1rem",
+            padding: "12px",
+            background: "#fff",
+            borderRadius: "6px",
+          }}
+        >
+          <h3
+            style={{
+              color: "#d35400",
+              marginBottom: "0.5rem",
+              fontSize: "16px",
+              fontWeight: 600,
+            }}
+          >
+            Negotiation Talking Points
+          </h3>
+          <p style={{ fontSize: "13px", color: "#555", marginBottom: "6px" }}>
+            Use these data-backed points when discussing compensation:
+          </p>
+          <ul style={{ paddingLeft: "1.1rem", fontSize: "13px", color: "#333" }}>
+            {negotiationAdvice?.percentageDifference !== undefined && (
+              <li style={{ marginBottom: "4px" }}>
+                Your current pay is{" "}
+                <strong>
+                  {negotiationAdvice.percentageDifference >= 0 ? "+" : ""}
+                  {negotiationAdvice.percentageDifference}%
+                </strong>{" "}
+                {negotiationAdvice.percentageDifference >= 0
+                  ? "above"
+                  : "below"}{" "}
+                the market average for {roleLabel} in {locationLabel}.
+              </li>
+            )}
+            {salaryComparison?.differences?.totalDiff !== undefined && (
+              <li style={{ marginBottom: "4px" }}>
+                The market total compensation is{" "}
+                <strong>
+                  {salaryComparison.differences.totalDiff >= 0 ? "+" : ""}
+                  $
+                  {salaryComparison.differences.totalDiff.toLocaleString()}
+                </strong>{" "}
+                {salaryComparison.differences.totalDiff >= 0
+                  ? "higher than"
+                  : "lower than"}{" "}
+                your current/offer package.
+              </li>
+            )}
+            {totalCompensation?.breakdown?.avgBase !== undefined && (
+              <li style={{ marginBottom: "4px" }}>
+                Similar roles report an average base of{" "}
+                <strong>
+                  $
+                  {Number(
+                    totalCompensation.breakdown.avgBase
+                  ).toLocaleString()}
+                </strong>{" "}
+                and benefits around{" "}
+                <strong>
+                  $
+                  {Number(
+                    totalCompensation.breakdown.avgBenefits || 0
+                  ).toLocaleString()}
+                </strong>
+                .
+              </li>
+            )}
+            <li style={{ marginBottom: "4px" }}>
+              Highlight your experience level (
+              {experienceLevel || "your experience"}), recent accomplishments,
+              and impact to justify being closer to the{" "}
+              <strong>75th percentile</strong> of the range.
+            </li>
+          </ul>
+        </div>
+
+        {/* 3. Total compensation evaluation framework */}
+        <div
+          style={{
+            marginTop: "1rem",
+            padding: "12px",
+            background: "#fff",
+            borderRadius: "6px",
+          }}
+        >
+          <h3
+            style={{
+              color: "#d35400",
+              marginBottom: "0.5rem",
+              fontSize: "16px",
+              fontWeight: 600,
+            }}
+          >
+            Total Compensation Evaluation Framework
+          </h3>
+          <p style={{ fontSize: "13px", color: "#555", marginBottom: "6px" }}>
+            Use this checklist when reviewing an offer:
+          </p>
+          <ul style={{ paddingLeft: "1.1rem", fontSize: "13px", color: "#333" }}>
+            <li>Base salary vs. market median and 75th percentile.</li>
+            <li>Bonus percentage and typical payout reliability.</li>
+            <li>Equity / RSUs / stock purchase plans.</li>
+            <li>Benefits value: health, dental, 401k match, PTO, education.</li>
+            <li>Remote/hybrid flexibility and commute cost/time.</li>
+            <li>Growth potential: promotion track, title, scope.</li>
+          </ul>
+          <p style={{ fontSize: "12px", color: "#777", marginTop: "6px" }}>
+            You can combine your numbers with the{" "}
+            <strong>“Your Salary Comparison”</strong> card above to compute a
+            realistic counteroffer range.
+          </p>
+        </div>
+
+        {/* 4. Scenario scripts */}
+        <div
+          style={{
+            marginTop: "1rem",
+            padding: "12px",
+            background: "#fff",
+            borderRadius: "6px",
+          }}
+        >
+          <h3
+            style={{
+              color: "#d35400",
+              marginBottom: "0.5rem",
+              fontSize: "16px",
+              fontWeight: 600,
+            }}
+          >
+            Sample Scripts for Common Scenarios
+          </h3>
+
+          <div style={{ display: "grid", gap: "8px" }}>
+            <div
+              style={{
+                padding: "10px",
+                background: "#fdf2e9",
+                borderRadius: "6px",
+                borderLeft: "3px solid #f39c12",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  marginBottom: "4px",
+                }}
+              >
+                1. Initial Offer – Asking Above Market Median
+              </div>
+              <div style={{ fontSize: "12px", color: "#555" }}>
+                “Thank you again for the offer for the {roleLabel} position. Based
+                on my research for similar roles in {locationLabel} and my
+                experience in [your key achievements], I was expecting a total
+                compensation closer to $
+                {marketAvg ? Number(marketAvg).toLocaleString() : "____"}.
+                Is there flexibility to move the base salary closer to that
+                range?”
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: "10px",
+                background: "#fdf2e9",
+                borderRadius: "6px",
+                borderLeft: "3px solid #e67e22",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  marginBottom: "4px",
+                }}
+              >
+                2. Counteroffer – When You Have Another Offer
+              </div>
+              <div style={{ fontSize: "12px", color: "#555" }}>
+                “I am very excited about {roleLabel} at your team. I do have
+                another offer at $
+                {userTotalComp
+                  ? Number(userTotalComp).toLocaleString()
+                  : "____"}{" "}
+                total comp. If we could get closer to that number, I would feel
+                confident accepting your offer.”
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: "10px",
+                background: "#fdf2e9",
+                borderRadius: "6px",
+                borderLeft: "3px solid #d35400",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  marginBottom: "4px",
+                }}
+              >
+                3. Non-Salary Compensation Focus
+              </div>
+              <div style={{ fontSize: "12px", color: "#555" }}>
+                “If there is limited room to move on base salary, I’d love to
+                explore adjusting other parts of the package such as bonus,
+                equity, or additional PTO to make the overall compensation more
+                aligned with market.”
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Timing strategies */}
+        <div
+          style={{
+            marginTop: "1rem",
+            padding: "12px",
+            background: "#fff",
+            borderRadius: "6px",
+          }}
+        >
+          <h3
+            style={{
+              color: "#d35400",
+              marginBottom: "0.5rem",
+              fontSize: "16px",
+              fontWeight: 600,
+            }}
+          >
+            Timing Strategy for Salary Discussions
+          </h3>
+          <ul style={{ paddingLeft: "1.1rem", fontSize: "13px", color: "#333" }}>
+            <li>
+              Wait until you have a{" "}
+              <strong>formal written offer</strong> before negotiating salary.
+            </li>
+            <li>
+              If pressed early, say: “I’m happy to discuss ranges, but I’d love
+              to learn more about the role and expectations first.”
+            </li>
+            {userAnalytics?.timingInsights?.bestQuarter && (
+              <li>
+                Your historical best period for offers has been{" "}
+                <strong>{userAnalytics.timingInsights.bestQuarter}</strong>.
+                Use that as a signal for future job search planning.
+              </li>
+            )}
+            <li>
+              Aim to respond to an offer within{" "}
+              <strong>2–3 business days</strong> after doing your research and
+              preparing talking points.
+            </li>
+          </ul>
+        </div>
+
+        {/* 6. Counteroffer evaluation template */}
+        <div
+          style={{
+            marginTop: "1rem",
+            padding: "12px",
+            background: "#fff",
+            borderRadius: "6px",
+          }}
+        >
+          <h3
+            style={{
+              color: "#d35400",
+              marginBottom: "0.5rem",
+              fontSize: "16px",
+              fontWeight: 600,
+            }}
+          >
+            Counteroffer Evaluation Template
+          </h3>
+          <p style={{ fontSize: "12px", color: "#555", marginBottom: "6px" }}>
+            Plug in your numbers below while reviewing an offer:
+          </p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.2fr 1fr",
+              gap: "8px",
+              fontSize: "13px",
+            }}
+          >
+            <div
+              style={{
+                padding: "8px",
+                background: "#fdf2e9",
+                borderRadius: "6px",
+              }}
+            >
+              <strong>Target Base Salary</strong>
+              <div>
+                Use:
+                <ul style={{ margin: 0, paddingLeft: "1rem" }}>
+                  <li>
+                    Median:{" "}
+                    {negotiationAdvice?.marketRange?.median
+                      ? `$${negotiationAdvice.marketRange.median.toLocaleString()}`
+                      : "your research"}
+                  </li>
+                  <li>
+                    Or 75th percentile:{" "}
+                    {negotiationAdvice?.marketRange?.p75
+                      ? `$${negotiationAdvice.marketRange.p75.toLocaleString()}`
+                      : "stretch target"}
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div
+              style={{
+                padding: "8px",
+                background: "#fdf2e9",
+                borderRadius: "6px",
+              }}
+            >
+              <strong>Walk-Away Number</strong>
+              <div>
+                Decide the minimum you would accept after considering:
+                title, growth, and risk.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 7. Confidence-building exercises */}
+        <div
+          style={{
+            marginTop: "1rem",
+            padding: "12px",
+            background: "#fff",
+            borderRadius: "6px",
+          }}
+        >
+          <h3
+            style={{
+              color: "#d35400",
+              marginBottom: "0.5rem",
+              fontSize: "16px",
+              fontWeight: 600,
+            }}
+          >
+            Confidence-Building Exercises
+          </h3>
+          <ul style={{ paddingLeft: "1.1rem", fontSize: "13px", color: "#333" }}>
+            <li>Write down 3 recent achievements that had measurable impact.</li>
+            <li>
+              Practice your negotiation script out loud 2–3 times, ideally with
+              a friend or mock interviewer.
+            </li>
+            <li>
+              Rehearse saying your target number confidently and then staying
+              silent while the other side responds.
+            </li>
+            <li>
+              Remind yourself that negotiation is{" "}
+              <strong>normal and expected</strong>, not ungrateful.
+            </li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto" }}>
       <h1 style={{ color: "black", marginBottom: "2rem", textAlign: "center" }}>Salary Analysis Tool</h1>
@@ -1033,6 +1516,8 @@ const SalaryAnalysis: React.FC = () => {
                 </div>
               </div>
             )}
+            {/* UC-083: Negotiation preparation playbook */}
+            {renderNegotiationPrep()}   
           </div>
         )}
       </div>

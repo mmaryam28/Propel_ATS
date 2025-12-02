@@ -16,6 +16,13 @@ const InterviewInsights = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [interviewerName, setInterviewerName] = useState('');
+  const [outcome, setOutcome] = useState('pending'); // 'pending' | 'rejected' | 'offer' | 'no_response'
+  const [topics, setTopics] = useState(''); // comma or line separated topics discussed
+  const [followUpTemplates, setFollowUpTemplates] = useState(null);
+  const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [followUpError, setFollowUpError] = useState(null);
+  const [followUpSuccess, setFollowUpSuccess] = useState(null);
 
   const userId = localStorage.getItem("userId") || "demo-user";
 
@@ -83,12 +90,75 @@ const InterviewInsights = () => {
     }
   };
 
+    const handleGenerateFollowUps = async () => {
+    if (!company.trim()) {
+      setFollowUpError('Please enter a company name first.');
+      return;
+    }
+
+    setFollowUpError(null);
+    setFollowUpSuccess(null);
+    setFollowUpLoading(true);
+    setFollowUpTemplates(null);
+
+    try {
+      const response = await axios.get('http://localhost:3000/interview/follow-up-templates', {
+        params: {
+          company: company.trim(),
+          role: role.trim() || undefined,
+          interviewerName: interviewerName.trim() || undefined,
+          interviewDate: interviewDate || undefined,
+          outcome,
+          // send topics as comma-separated string
+          topics: topics
+            .split('\n')
+            .join(',')
+        },
+      });
+
+      if (response.data.error) {
+        setFollowUpError(response.data.error);
+      } else {
+        setFollowUpTemplates(response.data.templates);
+      }
+    } catch (err) {
+      console.error('Error fetching follow-up templates:', err);
+      setFollowUpError('Failed to generate follow-up templates. Please try again.');
+    } finally {
+      setFollowUpLoading(false);
+    }
+  };
+
+  // Log the follow-up as "sent" for tracking
+  const handleLogFollowUpSent = async (type) => {
+    try {
+      setFollowUpSuccess(null);
+      await axios.post('http://localhost:3000/interview/analytics/follow-up-event', {
+        userId,
+        company: company || followUpTemplates?.company,
+        role: role || followUpTemplates?.role,
+        interviewerName,
+        type,               // 'thank_you' | 'status_inquiry' | 'feedback_request' | 'networking'
+        status: 'sent',
+        channel: 'email',
+        sentAt: new Date().toISOString(),
+      });
+
+      setFollowUpSuccess(`Marked ${type.replace('_', ' ')} follow-up as sent and logged for tracking.`);
+    } catch (err) {
+      console.error('Error logging follow-up event:', err);
+      setFollowUpError('Follow-up was generated but tracking failed. Please try again later.');
+    }
+  };
+
+
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'home' },
     { id: 'preparation', label: 'Preparation', icon: 'timeline' },
     { id: 'questions', label: 'Common Questions', icon: 'help' },
     { id: 'formats', label: 'Interview Formats', icon: 'list' },
-    { id: 'tips', label: 'Success Tips', icon: 'star' }
+    { id: 'tips', label: 'Success Tips', icon: 'star' },
+    { id: 'followup', label: 'Follow-Up Templates', icon: 'mail' }
   ];
 
   const toggleItem = (sectionId, itemId) => {
@@ -570,6 +640,312 @@ const InterviewInsights = () => {
             </Card.Body>
           </Card>
         );
+
+        case 'followup':
+          return (
+            <div className="space-y-6">
+              <Card>
+                <Card.Header>
+                  <Card.Title className="flex items-center gap-2">
+                    <Icon name="mail" size="sm" />
+                    Interview Follow-Up Templates
+                  </Card.Title>
+                </Card.Header>
+                <Card.Body>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Generate personalized follow-up emails for your interviews and log them for tracking.
+                  </p>
+
+                  {/* Input form */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Company *
+                      </label>
+                      <input
+                        type="text"
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        placeholder="e.g., Pfizer, BNY Mellon"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Role (optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        placeholder="e.g., Software Engineer Intern"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Interviewer Name (optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={interviewerName}
+                        onChange={(e) => setInterviewerName(e.target.value)}
+                        placeholder="e.g., Sarah, Blake"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Interview Date (optional)
+                      </label>
+                      <input
+                        type="date"
+                        value={interviewDate}
+                        onChange={(e) => setInterviewDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Outcome (to tailor templates)
+                      </label>
+                      <select
+                        value={outcome}
+                        onChange={(e) => setOutcome(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="pending">Process still ongoing</option>
+                        <option value="no_response">No response yet</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="offer">Offer received</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Topics Discussed (optional)
+                      </label>
+                      <textarea
+                        value={topics}
+                        onChange={(e) => setTopics(e.target.value)}
+                        placeholder="e.g., ML system design, team culture, impact of your dashboard..."
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        You can list one per line; they will be woven into the thank-you template.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleGenerateFollowUps}
+                    disabled={followUpLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {followUpLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="sparkles" size="sm" />
+                        Generate Templates
+                      </>
+                    )}
+                  </button>
+
+                  {followUpError && (
+                    <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-md text-sm">
+                      {followUpError}
+                    </div>
+                  )}
+
+                  {followUpSuccess && (
+                    <div className="mt-3 bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-md text-sm">
+                      {followUpSuccess}
+                    </div>
+                  )}
+                </Card.Body>
+              </Card>
+
+              {/* Templates List */}
+              {followUpTemplates && (
+                <div className="space-y-4">
+                  {/* Thank You */}
+                  <Card>
+                    <Card.Header>
+                      <Card.Title>Thank-You Email</Card.Title>
+                    </Card.Header>
+                    <Card.Body>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Suggested timing: within 24 hours of the interview.
+                      </p>
+                      <p className="text-sm font-semibold mb-1">
+                        Subject: {followUpTemplates.thankYou.subject}
+                      </p>
+                      <textarea
+                        readOnly
+                        value={followUpTemplates.thankYou.body}
+                        className="w-full border border-gray-300 rounded-md p-3 text-sm font-mono whitespace-pre-wrap"
+                        rows={6}
+                      />
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigator.clipboard.writeText(
+                              `Subject: ${followUpTemplates.thankYou.subject}\n\n${followUpTemplates.thankYou.body}`
+                            )
+                          }
+                          className="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200"
+                        >
+                          Copy to Clipboard
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleLogFollowUpSent('thank_you')}
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          Mark as Sent & Track
+                        </button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+
+                  {/* Status Inquiry */}
+                  <Card>
+                    <Card.Header>
+                      <Card.Title>Status Inquiry Email</Card.Title>
+                    </Card.Header>
+                    <Card.Body>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Suggested timing: ~5 days after last interview if no response.
+                      </p>
+                      <p className="text-sm font-semibold mb-1">
+                        Subject: {followUpTemplates.statusInquiry.subject}
+                      </p>
+                      <textarea
+                        readOnly
+                        value={followUpTemplates.statusInquiry.body}
+                        className="w-full border border-gray-300 rounded-md p-3 text-sm font-mono whitespace-pre-wrap"
+                        rows={6}
+                      />
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigator.clipboard.writeText(
+                              `Subject: ${followUpTemplates.statusInquiry.subject}\n\n${followUpTemplates.statusInquiry.body}`
+                            )
+                          }
+                          className="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200"
+                        >
+                          Copy to Clipboard
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleLogFollowUpSent('status_inquiry')}
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          Mark as Sent & Track
+                        </button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+
+                  {/* Feedback Request */}
+                  <Card>
+                    <Card.Header>
+                      <Card.Title>Feedback Request Email</Card.Title>
+                    </Card.Header>
+                    <Card.Body>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Suggested timing: a few days after a decision is communicated.
+                      </p>
+                      <p className="text-sm font-semibold mb-1">
+                        Subject: {followUpTemplates.feedbackRequest.subject}
+                      </p>
+                      <textarea
+                        readOnly
+                        value={followUpTemplates.feedbackRequest.body}
+                        className="w-full border border-gray-300 rounded-md p-3 text-sm font-mono whitespace-pre-wrap"
+                        rows={6}
+                      />
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigator.clipboard.writeText(
+                              `Subject: ${followUpTemplates.feedbackRequest.subject}\n\n${followUpTemplates.feedbackRequest.body}`
+                            )
+                          }
+                          className="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200"
+                        >
+                          Copy to Clipboard
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleLogFollowUpSent('feedback_request')
+                          }
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          Mark as Sent & Track
+                        </button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+
+                  {/* Networking follow-up (especially useful on rejection) */}
+                  <Card>
+                    <Card.Header>
+                      <Card.Title>Networking Follow-Up Email</Card.Title>
+                    </Card.Header>
+                    <Card.Body>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Suggested timing: shortly after learning you were not selected.
+                      </p>
+                      <p className="text-sm font-semibold mb-1">
+                        Subject: {followUpTemplates.networkingFollowUp.subject}
+                      </p>
+                      <textarea
+                        readOnly
+                        value={followUpTemplates.networkingFollowUp.body}
+                        className="w-full border border-gray-300 rounded-md p-3 text-sm font-mono whitespace-pre-wrap"
+                        rows={6}
+                      />
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigator.clipboard.writeText(
+                              `Subject: ${followUpTemplates.networkingFollowUp.subject}\n\n${followUpTemplates.networkingFollowUp.body}`
+                            )
+                          }
+                          className="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200"
+                        >
+                          Copy to Clipboard
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleLogFollowUpSent('networking')}
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          Mark as Sent & Track
+                        </button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </div>
+              )}
+            </div>
+          );
 
       default:
         return null;
