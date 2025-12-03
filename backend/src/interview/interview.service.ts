@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import fetch from 'node-fetch';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class InterviewService {
+  constructor(private readonly supabase: SupabaseService) {}
   private readonly serpApiKey = process.env.SERP_API_KEY;
 
   /**
@@ -1318,5 +1320,90 @@ export class InterviewService {
       improvementTips,
     };
   }
+
+  async calculateSuccessScore(params: {
+    userId: string;
+    company: string;
+    role?: string;
+    checklistProgress: number;
+    practiceSessions: number;
+  }) {
+    const { userId, company, role, checklistProgress, practiceSessions } = params;
+
+    try {
+      // 1. Pull interview history for ML-like scoring
+      const { data: history, error } = await this.supabase.getClient()
+        .from('interviews')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      const total = history?.length || 0;
+      const passed = history?.filter(i => i.offer_received || i.outcome === 'Passed').length || 0;
+      const avgPrep =
+        total > 0
+          ? (history.filter(h => h.prep_time_hours).reduce((s, h) => s + (h.prep_time_hours || 0), 0) /
+            history.filter(h => h.prep_time_hours).length)
+          : 0;
+
+      // (A) PREPARATION SCORE
+      const prepScore = Math.min(100, checklistProgress);
+
+      // (B) PRACTICE SCORE
+      const practiceScore = Math.min(100, practiceSessions * 10); // 10% boost per session
+
+      // (C) EXPERIENCE/HISTORY SCORE
+      const historyScore =
+        total > 0 ? Math.min(100, (passed / total) * 120) : 40; // default 40% baseline
+
+      // (D) COMPANY RESEARCH SCORE (basic version)
+      const companyResearchScore = Math.min(100, Math.max(20, checklistProgress * 0.8));
+
+      // (E) ROLE MATCH SCORE (static starter model)
+      const roleMatchScore = role ? 70 : 55; // later upgrade to real NLP
+
+      // Weighted final score
+      const finalScore = Math.round(
+        prepScore * 0.30 +
+        practiceScore * 0.20 +
+        historyScore * 0.20 +
+        companyResearchScore * 0.15 +
+        roleMatchScore * 0.15
+      );
+
+      // Confidence based on data completeness:
+      let confidence = 'low';
+      if (total >= 6) confidence = 'high';
+      else if (total >= 2) confidence = 'medium';
+
+      // Recommendations
+      const recommendations: string[] = [];
+
+      if (prepScore < 80) recommendations.push('Increase preparation completeness to 80%+');
+      if (practiceSessions < 3) recommendations.push('Complete at least 2 more practice sessions');
+      if (historyScore < 60) recommendations.push('Review previous interviews to improve weak areas');
+      if (companyResearchScore < 70) recommendations.push(`Deepen company research for ${company}`);
+      if (roleMatchScore < 60) recommendations.push('Tailor STAR stories more closely to the role');
+
+      return {
+        score: finalScore,
+        confidence,
+        factors: {
+          prepLevel: prepScore,
+          practiceHours: practiceSessions,
+          roleMatch: roleMatchScore,
+          companyResearch: companyResearchScore,
+          historySuccessRate: historyScore
+        },
+        recommendations
+      };
+
+    } catch (err) {
+      console.error('Error calculating success score:', err);
+      return { error: 'Failed to calculate success probability' };
+    }
+  }
+
 
 }

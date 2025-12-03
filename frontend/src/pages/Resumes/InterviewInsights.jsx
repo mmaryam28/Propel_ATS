@@ -47,6 +47,10 @@ const InterviewInsights = () => {
     wins: '',
     story: '',
   });
+  const [successScore, setSuccessScore] = useState(null);
+  const [successLoading, setSuccessLoading] = useState(false);
+  const [successError, setSuccessError] = useState(null);
+
 
   useEffect(() => {
     if (!timerActive || timeLeft === null) return;
@@ -317,7 +321,40 @@ const InterviewInsights = () => {
     }));
   };
 
+  const fetchSuccessScore = async () => {
+    if (!company.trim()) {
+      setSuccessError("Please enter a company first.");
+      return;
+    }
 
+    setSuccessLoading(true);
+    setSuccessError(null);
+
+    try {
+      const response = await axios.get(
+        "http://localhost:3000/interview/success-score",
+        {
+          params: {
+            userId,
+            company: company.trim(),
+            role: role.trim() || undefined,
+            // factors you already track:
+            checklistProgress: progressPercent,         // completeness %
+            practiceSessions: practiceHistory.length,   // count of attempts
+          }
+        }
+      );
+
+      setSuccessScore(response.data);
+    } catch (err) {
+      console.error(err);
+      setSuccessError("Failed to calculate success probability.");
+    } finally {
+      setSuccessLoading(false);
+    }
+  };
+
+  
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'home' },
     { id: 'preparation', label: 'Preparation', icon: 'timeline' },
@@ -413,6 +450,86 @@ const InterviewInsights = () => {
                     <div className="text-sm text-gray-600">Interview Formats</div>
                   </div>
                 </div>
+              </Card.Body>
+            </Card>
+
+            <Card className="mt-4">
+              <Card.Header>
+                <Card.Title className="flex items-center gap-2">
+                  <Icon name="trending-up" size="sm" />
+                  Interview Success Probability
+                </Card.Title>
+              </Card.Header>
+
+              <Card.Body>
+                {/* Button to calculate */}
+                <div className="mb-4">
+                  <button
+                    onClick={fetchSuccessScore}
+                    disabled={successLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {successLoading ? "Calculating..." : "Calculate Success Probability"}
+                  </button>
+                </div>
+
+                {/* Error */}
+                {successError && (
+                  <p className="text-red-600 text-sm mb-3">{successError}</p>
+                )}
+
+                {/* Display Score */}
+                {successScore && (
+                  <div className="space-y-4">
+
+                    {/* Score Bar */}
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        Probability of Success: 
+                        <span className="text-blue-600 ml-1">
+                          {successScore.score}% 
+                        </span>
+                      </p>
+
+                      <div className="w-full bg-gray-200 h-3 rounded-full mt-2">
+                        <div
+                          className="bg-blue-600 h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${successScore.score}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Confidence */}
+                    <p className="text-sm">
+                      <strong>Confidence Level:</strong> {successScore.confidence}
+                    </p>
+
+                    {/* Factor Breakdown */}
+                    <div className="p-3 bg-gray-50 rounded-md border">
+                      <p className="font-semibold mb-2">Factors Considered</p>
+                      <ul className="list-disc text-sm ml-4 space-y-1">
+                        <li>Preparation completeness: {successScore.factors.prepLevel}%</li>
+                        <li>Role match score: {successScore.factors.roleMatch}%</li>
+                        <li>Company research: {successScore.factors.companyResearch}%</li>
+                        <li>Practice hours: {successScore.factors.practiceHours} hr</li>
+                        <li>Historical improvement trends included</li>
+                      </ul>
+                    </div>
+
+                    {/* Recommendations */}
+                    <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+                      <p className="font-semibold text-blue-900 mb-1">
+                        Recommended Improvements
+                      </p>
+                      <ul className="list-disc ml-4 text-sm text-blue-800 space-y-1">
+                        {successScore.recommendations.map((rec, i) => (
+                          <li key={i}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                  </div>
+                )}
               </Card.Body>
             </Card>
           </div>

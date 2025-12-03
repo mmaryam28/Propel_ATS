@@ -139,4 +139,26 @@ export class InterviewController {
       format,
     );
   }
+
+  @Get('success-score')
+  async getSuccessScore(
+    @Query('userId') userId: string,
+    @Query('company') company: string,
+    @Query('role') role?: string,
+    @Query('checklistProgress') checklistProgress?: string,
+    @Query('practiceSessions') practiceSessions?: string,
+  ) {
+    if (!userId || !company) {
+      return { error: 'userId and company are required' };
+    }
+
+    return this.interviewService.calculateSuccessScore({
+      userId,
+      company,
+      role,
+      checklistProgress: Number(checklistProgress) || 0,
+      practiceSessions: Number(practiceSessions) || 0,
+    });
+  }
+
 }
