@@ -1,12 +1,36 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import AuthCard from "../components/AuthCard";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+
+  // Handle OAuth token from redirect
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const error = searchParams.get('error');
+    
+    if (token) {
+      // Store token and redirect to dashboard
+      window.localStorage.setItem('token', token);
+      // Extract userId from token (JWT payload)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.userId) {
+          window.localStorage.setItem('userId', payload.userId);
+        }
+      } catch (e) {
+        console.error('Failed to parse token:', e);
+      }
+      navigate('/dashboard');
+    } else if (error) {
+      setError(decodeURIComponent(error));
+    }
+  }, [searchParams, navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,14 +95,14 @@ export default function Login() {
             <button
               type="button"
               className="btn btn--oauth"
-              onClick={() => (window.location.href = "/auth/google")}
+              onClick={() => (window.location.href = "http://localhost:3000/auth/google")}
             >
               Sign in with Google
             </button>
             <button
               type="button"
               className="btn btn--oauth"
-              onClick={() => (window.location.href = "/auth/linkedin")}
+              onClick={() => (window.location.href = "http://localhost:3000/auth/linkedin")}
             >
               Sign in with LinkedIn
             </button>

@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { MailModule } from '../mail/mail.module';
 import { JwtStrategy } from './jwt.strategy';
+import { LinkedInStrategy } from './strategies/linkedin.strategy';
 
 // JSON Web Token "ms" style duration string type
 type MsString = `${number}${'ms'|'s'|'m'|'h'|'d'|'w'|'y'}`;
@@ -38,6 +39,7 @@ type MsString = `${number}${'ms'|'s'|'m'|'h'|'d'|'w'|'y'}`;
   providers: [
     AuthService,
     JwtStrategy,
+    LinkedInStrategy,
   ],
   exports: [AuthService],
 })

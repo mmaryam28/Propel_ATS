@@ -26,6 +26,13 @@ import { CompetitiveModule } from './competitive/competitive.module';
 import { ProductivityModule } from './productivity/productivity.module';
 import { NetworkingModule } from './networking/networking.module';
 import { PatternsModule } from './patterns/patterns.module';
+import { LinkedinAuthModule } from './linkedin-auth/linkedin-auth.module';
+import { ContactsModule } from './contacts/contacts.module';
+import { ReferralsModule } from './referrals/referrals.module';
+import { NetworkingEventsModule } from './networking-events/networking-events.module';
+import { InformationalInterviewsModule } from './informational-interviews/informational-interviews.module';
+import { ReferencesModule } from './references/references.module';
+import { RelationshipMaintenanceModule } from './relationship-maintenance/relationship-maintenance.module';
 
 @Module({
   imports: [
@@ -56,7 +63,14 @@ import { PatternsModule } from './patterns/patterns.module';
   CompetitiveModule,
   ProductivityModule,
   NetworkingModule,
-  PatternsModule
+  PatternsModule,
+  LinkedinAuthModule,
+  ContactsModule,
+  ReferralsModule,
+  NetworkingEventsModule,
+  InformationalInterviewsModule,
+  ReferencesModule,
+  RelationshipMaintenanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

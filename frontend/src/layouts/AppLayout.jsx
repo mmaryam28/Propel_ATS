@@ -50,6 +50,48 @@ function Breadcrumbs() {
   );
 }
 
+function NetworkingDropdown() {
+  const [networkingOpen, setNetworkingOpen] = useState(false);
+  
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setNetworkingOpen((v) => !v)}
+        className={classNames(
+          "px-3 py-2 rounded-xl text-sm flex items-center gap-2 transition",
+          networkingOpen ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+        )}
+      >
+        <Icon name="user" size="sm" />
+        <span>Networking</span>
+        <svg
+          className={classNames(
+            "h-3 w-3 transition-transform",
+            networkingOpen ? "rotate-180" : ""
+          )}
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {networkingOpen && (
+        <div className="absolute top-full mt-1 left-0 w-64 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
+          <Link to="/networking/contacts" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Contacts</Link>
+          <Link to="/networking/referrals" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Referral Requests</Link>
+          <Link to="/networking/references" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Professional References</Link>
+          <Link to="/networking/events" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Events</Link>
+          <Link to="/networking/interviews" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Informational Interviews</Link>
+          <Link to="/networking/maintenance" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Relationship Maintenance</Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Navbar() {
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false); // Profile dropdown
@@ -239,6 +281,9 @@ function Navbar() {
                   </div>
                 )}
               </div>
+
+              {/* Networking Dropdown */}
+              <NetworkingDropdown />
             </nav>
           </div>
 

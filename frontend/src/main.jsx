@@ -60,6 +60,15 @@ import NetworkingAnalytics from './pages/Networking/NetworkingAnalytics';
 import SuccessPatterns from './pages/Analytics/SuccessPatterns';
 
 
+// Networking pages
+import ContactsPage from './pages/networking/ContactsPage';
+import ContactDetailPage from './pages/networking/ContactDetailPage';
+import ReferralsPage from './pages/networking/ReferralsPage';
+import ReferencesPage from './pages/networking/ReferencesPage';
+import EventsPage from './pages/networking/EventsPage';
+import InformationalInterviewsPage from './pages/networking/InformationalInterviewsPage';
+import MaintenancePage from './pages/networking/MaintenancePage';
+
 import './index.css';
 import './styles/globals.css';
 import './styles/theme.css';
@@ -128,6 +137,15 @@ const router = createBrowserRouter([
       { path: '/network-analytics', element: <NetworkingAnalytics /> },
       { path: '/success-patterns', element: <SuccessPatterns /> },
 
+
+      // Networking routes
+      { path: '/networking/contacts', element: <ContactsPage /> },
+      { path: '/networking/contacts/:id', element: <ContactDetailPage /> },
+      { path: '/networking/referrals', element: <ReferralsPage /> },
+      { path: '/networking/references', element: <ReferencesPage /> },
+      { path: '/networking/events', element: <EventsPage /> },
+      { path: '/networking/interviews', element: <InformationalInterviewsPage /> },
+      { path: '/networking/maintenance', element: <MaintenancePage /> },
 
       // ✅ New Cover Letter Templates route
       {

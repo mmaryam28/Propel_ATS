@@ -66,6 +66,20 @@ export default function Navbar() {
                   { to: '/prepare/company', label: 'Company Research' },
                 ]}
               />
+
+              {/* Networking dropdown */}
+              <NavDropdown 
+                label="Networking" 
+                active={location.pathname.startsWith('/networking')}
+                items={[
+                  { to: '/networking/contacts', label: 'Contacts' },
+                  { to: '/networking/referrals', label: 'Referral Requests' },
+                  { to: '/networking/references', label: 'Professional References' },
+                  { to: '/networking/events', label: 'Events' },
+                  { to: '/networking/interviews', label: 'Informational Interviews' },
+                  { to: '/networking/maintenance', label: 'Relationship Maintenance' },
+                ]}
+              />
             </div>
           </div>
 
