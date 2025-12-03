@@ -3,6 +3,18 @@ import { importJobFromUrl } from "../lib/api";
 
 const INDUSTRIES = ["Software", "Finance", "Healthcare", "Education", "Other"];
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Internship", "Temporary"];
+const JOB_SOURCES = [
+  "LinkedIn",
+  "Company Website",
+  "Referral",
+  "Recruiter Contact",
+  "Indeed",
+  "Glassdoor",
+  "AngelList",
+  "Networking Event",
+  "Cold Application",
+  "Other"
+];
 
 export default function JobForm({ initial = {}, onCancel, onSaved }) {
   const [form, setForm] = React.useState({
@@ -16,6 +28,7 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
     description: "",
     industry: "",
     jobType: "",
+    source: "Direct Application",
     ...initial
   });
   const [errors, setErrors] = React.useState({});
@@ -50,6 +63,7 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
 
       if (result.success) {
         // Auto-populate form fields with imported data
+        // Note: We preserve the source field from the form state
         setForm(f => ({
           ...f,
           title: result.data.title || f.title,
@@ -57,6 +71,7 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
           location: result.data.location || f.location,
           description: result.data.description || f.description,
           postingUrl: result.data.postingUrl || f.postingUrl,
+          // source is preserved from f.source (defaults to "Direct Application")
         }));
       }
     } catch (error) {
@@ -105,6 +120,8 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
         salaryMin: form.salaryMin === "" ? null : parseInt(form.salaryMin, 10),
         salaryMax: form.salaryMax === "" ? null : parseInt(form.salaryMax, 10),
       };
+      console.log('JobForm payload being sent:', payload);
+      console.log('JobForm source value:', form.source);
       await onSaved?.(payload);
     } finally {
       setLoading(false);
@@ -225,7 +242,7 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <label className="form-label">Industry</label>
           <select
@@ -250,6 +267,20 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
           >
             <option value="">Select…</option>
             {JOB_TYPES.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="form-label">Source</label>
+          <select
+            className="input"
+            value={form.source}
+            onChange={(e) => setValue("source", e.target.value)}
+          >
+            {JOB_SOURCES.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>

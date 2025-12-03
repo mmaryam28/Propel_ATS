@@ -23,6 +23,7 @@ function toDb(dto: CreateJobDto & { userId: string }) {
     description: toNull(dto.description),
     industry: toNull(dto.industry),
     jobType: toNull(dto.jobType),
+    source: toNull((dto as any).source),
     salaryMin: toInt(dto.salaryMin),
     salaryMax: toInt(dto.salaryMax),
     // Company profile fields
@@ -59,6 +60,7 @@ function toApi(row: any) {
     description: row.description ?? null,
     industry: row.industry ?? null,
     jobType: row.jobType ?? row.job_type ?? null,
+    source: row.source ?? null,
     salaryMin: row.salaryMin ?? row.salary_min ?? null,
     salaryMax: row.salaryMax ?? row.salary_max ?? null,
     // Company profile fields
@@ -173,6 +175,13 @@ export class JobsService {
 
   async create(userId: string, dto: CreateJobDto) {
     const client = this.supabase.getClient();
+    
+    console.log('DEBUG: Creating job with dto:', { 
+      title: dto.title, 
+      company: dto.company, 
+      source: (dto as any).source 
+    });
+    
     // Try applying user defaults for materials if not provided
     let resumeVersionId: string | null | undefined = (dto as any).resumeVersionId;
     let coverLetterVersionId: string | null | undefined = (dto as any).coverLetterVersionId;
@@ -190,6 +199,12 @@ export class JobsService {
       }
     } catch { /* ignore missing table */ }
     const payload = toDb({ ...dto, userId, ...(resumeVersionId !== undefined ? { resumeVersionId } : {}), ...(coverLetterVersionId !== undefined ? { coverLetterVersionId } : {} ) } as any);
+    
+    console.log('DEBUG: toDb payload:', { 
+      title: payload.title, 
+      source: payload.source 
+    });
+    
     const { data, error } = await client
       .from('jobs')
       .insert(payload)
