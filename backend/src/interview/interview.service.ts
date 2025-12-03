@@ -1067,4 +1067,256 @@ export class InterviewService {
     };
   }
 
+    /**
+   * UC-084: Analyze an interview response for clarity, structure, and professionalism.
+   * This is a lightweight, rule-based analyzer that:
+   * - scores clarity (wordiness, filler words, sentence lengths)
+   * - scores structure (STAR-like flow)
+   * - scores professionalism (tone & slang)
+   * - suggests improvements and a STAR summary
+   */
+  async analyzeResponse(payload: {
+    userId?: string;
+    question?: string;
+    response: string;
+  }) {
+    const { userId, question, response } = payload;
+    const text = (response || '').trim();
+
+    if (!text) {
+      return { error: 'Response text is required' };
+    }
+
+    // Basic text stats
+    const words = text.split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+    const sentenceMatches = text.match(/[.!?]+/g) || [];
+    const sentenceCount = Math.max(1, sentenceMatches.length || 1);
+    const avgSentenceLength = wordCount / sentenceCount;
+
+    // Filler words / phrases
+    const fillerWords = [
+      'um',
+      'uh',
+      'like',
+      'you know',
+      'kind of',
+      'kinda',
+      'sort of',
+      'i guess',
+      'basically',
+      'honestly',
+      'to be honest',
+    ];
+    const lowerText = text.toLowerCase();
+    let fillerCount = 0;
+    fillerWords.forEach((f) => {
+      const regex = new RegExp(`\\b${f.replace(/\s+/g, '\\s+')}\\b`, 'gi');
+      fillerCount += (lowerText.match(regex) || []).length;
+    });
+    const fillerRatio = wordCount > 0 ? fillerCount / wordCount : 0;
+
+    // Clarity score (0–10)
+    let clarityScore = 10;
+
+    // Penalize very long or very short sentences
+    if (avgSentenceLength > 30) clarityScore -= 2;
+    if (avgSentenceLength > 40) clarityScore -= 2;
+    if (avgSentenceLength < 6) clarityScore -= 1;
+
+    // Penalize heavy filler usage
+    if (fillerRatio > 0.03) clarityScore -= 2;
+    if (fillerRatio > 0.06) clarityScore -= 2;
+
+    // Penalize if it's extremely short overall
+    if (wordCount < 60) clarityScore -= 2;
+
+    clarityScore = Math.max(1, Math.min(10, clarityScore));
+
+    let clarityFeedback = '';
+    if (clarityScore >= 8) {
+      clarityFeedback =
+        'Your answer is generally clear and easy to follow. Keep this level of concise detail.';
+    } else if (clarityScore >= 6) {
+      clarityFeedback =
+        'Your answer is understandable, but you can tighten wording and reduce filler phrases.';
+    } else {
+      clarityFeedback =
+        'Your response feels a bit hard to follow. Try shorter sentences, fewer filler phrases, and clearer transitions.';
+    }
+
+    // STAR structure detection
+    const starHints = {
+      situation: /(situation|context|background|originally|at the time)/i,
+      task: /(task|goal|responsibility|challenge|objective|my role)/i,
+      action: /(action|took|implemented|i decided|i worked on|i did)/i,
+      result: /(result|outcome|impact|as a result|eventually|in the end|we achieved)/i,
+    };
+
+    const hasSituation = starHints.situation.test(lowerText);
+    const hasTask = starHints.task.test(lowerText);
+    const hasAction = starHints.action.test(lowerText);
+    const hasResult = starHints.result.test(lowerText);
+
+    const starCount = [hasSituation, hasTask, hasAction, hasResult].filter(Boolean)
+      .length;
+
+    // Structure score (0–10)
+    let structureScore = 4;
+    if (starCount === 4) structureScore = 9;
+    else if (starCount === 3) structureScore = 8;
+    else if (starCount === 2) structureScore = 6;
+    else if (starCount === 1) structureScore = 5;
+
+    // Slight bump if there are multiple paragraphs
+    const paragraphCount = text.split(/\n\s*\n/).filter((p) => p.trim().length > 0)
+      .length;
+    if (paragraphCount >= 2) structureScore += 1;
+    structureScore = Math.max(1, Math.min(10, structureScore));
+
+    let structureFeedback = '';
+    if (structureScore >= 8) {
+      structureFeedback =
+        'Your answer follows a strong structure, similar to STAR (Situation, Task, Action, Result). This makes it very easy to follow.';
+    } else if (structureScore >= 6) {
+      structureFeedback =
+        'Your structure is decent, but you can make the Situation–Task–Action–Result flow more explicit.';
+    } else {
+      structureFeedback =
+        'Your response would benefit from a clearer beginning (situation), middle (action), and end (result). Try mapping your story to STAR.';
+    }
+
+    // Professionalism score
+    const slang = [
+      'lol',
+      'lmao',
+      'omg',
+      'btw',
+      'idk',
+      'dude',
+      'bro',
+      'nah',
+      'kinda',
+      'gonna',
+      'wanna',
+      'sorta',
+    ];
+    let slangCount = 0;
+    slang.forEach((s) => {
+      const regex = new RegExp(`\\b${s}\\b`, 'gi');
+      slangCount += (lowerText.match(regex) || []).length;
+    });
+
+    let professionalismScore = 10;
+    if (slangCount > 0) professionalismScore -= 3;
+    if (lowerText.includes('hate my job') || lowerText.includes('trash')) {
+      professionalismScore -= 3;
+    }
+    if (!/thank you|thanks for|i appreciate|excited about/i.test(text)) {
+      professionalismScore -= 1;
+    }
+    professionalismScore = Math.max(1, Math.min(10, professionalismScore));
+
+    let professionalismFeedback = '';
+    if (professionalismScore >= 8) {
+      professionalismFeedback =
+        'Your tone is professional and appropriate for an interview setting.';
+    } else if (professionalismScore >= 6) {
+      professionalismFeedback =
+        'Overall tone is okay, but you may want to remove informal phrases or slang.';
+    } else {
+      professionalismFeedback =
+        'Your answer contains informal or negative language. Aim for more neutral, professional phrasing.';
+    }
+
+    // STAR summary text
+    const starSummaryLines: string[] = [];
+    starSummaryLines.push(
+      `Detected STAR elements: ` +
+        [
+          hasSituation ? 'Situation' : null,
+          hasTask ? 'Task' : null,
+          hasAction ? 'Action' : null,
+          hasResult ? 'Result' : null,
+        ]
+          .filter(Boolean)
+          .join(', ') || 'none explicitly detected'
+    );
+    if (!hasSituation) {
+      starSummaryLines.push(
+        '- Add a brief setup: where you were, what the context was, and who was involved.'
+      );
+    }
+    if (!hasTask) {
+      starSummaryLines.push(
+        '- Clarify your specific responsibility or goal in that situation.'
+      );
+    }
+    if (!hasAction) {
+      starSummaryLines.push(
+        '- Describe clearly what you did, step by step, to address the situation.'
+      );
+    }
+    if (!hasResult) {
+      starSummaryLines.push(
+        '- End with the result and quantify impact where possible (metrics, outcomes, lessons).'
+      );
+    }
+
+    const starSummary = starSummaryLines.join('\n');
+
+    // Improvement tips list
+    const improvementTips: string[] = [];
+
+    if (clarityScore < 8) {
+      improvementTips.push(
+        'Shorten long sentences and remove filler phrases like “um”, “like”, or “you know”.'
+      );
+    }
+    if (structureScore < 8) {
+      improvementTips.push(
+        'Outline your answer before speaking: 1) Situation, 2) Task, 3) Action, 4) Result.'
+      );
+    }
+    if (professionalismScore < 8) {
+      improvementTips.push(
+        'Replace informal slang with neutral, professional wording and avoid negative comments about past employers.'
+      );
+    }
+    if (wordCount < 80) {
+      improvementTips.push(
+        'Add a bit more detail and specific examples so the interviewer can clearly see your contribution.'
+      );
+    }
+    if (wordCount > 260) {
+      improvementTips.push(
+        'Try to keep answers in the 1–2 minute range by focusing on the most relevant details.'
+      );
+    }
+
+    if (improvementTips.length === 0) {
+      improvementTips.push(
+        'You are in a good place. Keep practicing to make your delivery even smoother and more confident.'
+      );
+    }
+
+    return {
+      userId,
+      question,
+      response: text,
+      createdAt: new Date().toISOString(),
+      wordCount,
+      sentenceCount,
+      avgSentenceLength,
+      clarityScore,
+      clarityFeedback,
+      structureScore,
+      structureFeedback,
+      professionalismScore,
+      professionalismFeedback,
+      starSummary,
+      improvementTips,
+    };
+  }
+
 }

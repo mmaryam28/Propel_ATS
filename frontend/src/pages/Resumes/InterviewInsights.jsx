@@ -1,7 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Card } from '../../components/ui/Card';
 import { Icon } from '../../components/ui/Icon';
+
+const PRACTICE_QUESTIONS = [
+  "Tell me about yourself.",
+  "Describe a time you overcame a challenge.",
+  "Talk about a project you're proud of.",
+  "Explain a conflict you resolved.",
+  "Why do you want to work here?",
+  "Tell me about a mistake you made and what you learned."
+];
+
 
 const InterviewInsights = () => {
   const [company, setCompany] = useState('');
@@ -23,9 +33,34 @@ const InterviewInsights = () => {
   const [followUpLoading, setFollowUpLoading] = useState(false);
   const [followUpError, setFollowUpError] = useState(null);
   const [followUpSuccess, setFollowUpSuccess] = useState(null);
+  const [practiceQuestion, setPracticeQuestion] = useState(null);
+  const [responseText, setResponseText] = useState("");
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [timerActive, setTimerActive] = useState(false);
+  const [practiceResult, setPracticeResult] = useState(null);
+  const [practiceHistory, setPracticeHistory] = useState([]);
+  const [checklistSuggestions, setChecklistSuggestions] = useState([]);
+  const [memorableSuggestions, setMemorableSuggestions] = useState(null);
+  const [nervesChecklist, setNervesChecklist] = useState({});
+  const [warmupNotes, setWarmupNotes] = useState({
+    strengths: '',
+    wins: '',
+    story: '',
+  });
+
+  useEffect(() => {
+    if (!timerActive || timeLeft === null) return;
+    if (timeLeft === 0) {
+      setTimerActive(false);
+      analyzeResponse();
+      return;
+    }
+    const interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+    return () => clearInterval(interval);
+  }, [timerActive, timeLeft]);
 
   const userId = localStorage.getItem("userId") || "demo-user";
-
+  
   const handleSearch = async () => {
     if (!company.trim()) {
       setError('Please enter a company name');
@@ -151,13 +186,144 @@ const InterviewInsights = () => {
     }
   };
 
+  const analyzeResponse = async () => {
+    if (!responseText.trim()) return;
+
+    const payload = {
+      userId,
+      question: practiceQuestion,
+      response: responseText,
+    };
+
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/interview/insights/analyze-response',
+        payload
+      );
+
+      const result = {
+        ...res.data,
+        question: practiceQuestion,
+      };
+
+      setPracticeResult(result);
+
+      // Track progression over time with timestamps
+      setPracticeHistory((prev) => [
+        ...prev,
+        { ...result, createdAt: new Date().toISOString() },
+      ]);
+
+      // Drive checklist suggestions from this attempt
+      setChecklistSuggestions(generateChecklistSuggestions(result));
+
+      // Reset memorable suggestions whenever a new analysis comes in
+      setMemorableSuggestions(null);
+    } catch (err) {
+      console.error('Error analyzing response:', err);
+    }
+  };
+
+
+  const generateChecklistSuggestions = (result) => {
+    const suggestions = [];
+    if (!result) return suggestions;
+
+    if (result.clarityScore < 8) {
+      suggestions.push({
+        id: 'clarity-outline',
+        label: 'Create a 1–2 sentence outline before answering behavioral questions',
+        description:
+          'Write down Situation → Action → Result or 3 bullet points before you start speaking.',
+      });
+    }
+
+    if (result.structureScore < 8) {
+      suggestions.push({
+        id: 'star-rehearsal',
+        label: 'Rehearse 3 STAR stories for this interview',
+        description:
+          'Pick examples that show impact, ownership, and learning related to this role.',
+      });
+    }
+
+    if (result.professionalismScore < 8) {
+      suggestions.push({
+        id: 'tone-review',
+        label: 'Do a tone and filler-word review',
+        description:
+          'Record yourself once and note any casual language, filler words, or run-on sentences.',
+      });
+    }
+
+    // Always suggest one more timed round – reinforces “track improvement over time”
+    suggestions.push({
+      id: 'repeat-practice',
+      label: 'Schedule one more timed practice round',
+      description:
+        'Repeat this question under the 3-minute timer to reinforce improvements.',
+    });
+
+    return suggestions;
+  };
+
+  const handleGenerateMemorableSuggestions = () => {
+    if (!practiceResult || !responseText.trim()) return;
+
+    const targetCompany = company || 'this team';
+
+    const hooks = [
+      '“One experience that really changed how I work was…”',
+      '“Let me walk you through a story that shows how I handle challenges.”',
+      '“A good example of how I approach problems came from a recent project…”',
+      `“One of the clearest ways I can show what I’d bring to ${targetCompany} is this story…”`,
+    ];
+
+    const closings = [
+      'Overall, this experience shows how I stay calm under pressure and focus on outcomes.',
+      `That story captures how I collaborate, communicate, and follow through—things I’d bring to ${targetCompany}.`,
+      'In short, this example reflects the way I learn quickly and turn problems into improvements.',
+    ];
+
+    const rewriteTips = [
+      'Try opening with the result (“We shipped X on time”), then rewind to explain how you got there.',
+      'Cut one extra detail from each sentence and keep only the words that move the story forward.',
+      'Aim for 3–4 sentences per STAR section so your answer stays tight but specific.',
+    ];
+
+    const powerVerbs = [
+      'designed',
+      'led',
+      'implemented',
+      'optimized',
+      'launched',
+      'debugged',
+      'coordinated',
+      'automated',
+    ];
+
+    setMemorableSuggestions({
+      hooks,
+      closings,
+      rewriteTips,
+      powerVerbs,
+    });
+  };
+
+  const toggleNervesItem = (id) => {
+    setNervesChecklist((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'home' },
     { id: 'preparation', label: 'Preparation', icon: 'timeline' },
     { id: 'questions', label: 'Common Questions', icon: 'help' },
-    { id: 'formats', label: 'Interview Formats', icon: 'list' },
-    { id: 'tips', label: 'Success Tips', icon: 'star' },
+    { id: 'formats', label: 'Writing Tools', icon: 'list' },
+    { id: 'practiceTools', label: 'Practice Tools', icon: 'sparkles' },
     { id: 'followup', label: 'Follow-Up Templates', icon: 'mail' }
   ];
 
@@ -181,8 +347,6 @@ const InterviewInsights = () => {
 
   const { total, done } = countProgress();
   const progressPercent = total ? Math.round((done / total) * 100) : 0;
-
-
 
   const TabContent = () => {
     if (!insights) return null;
@@ -513,89 +677,409 @@ const InterviewInsights = () => {
 
       case 'formats':
         return (
-          <div className="space-y-6">
-            <Card>
-              <Card.Header>
-                <Card.Title>Interview Formats</Card.Title>
-              </Card.Header>
-              <Card.Body>
-                {insights.formats?.formats?.length > 0 ? (
-                  <div className="space-y-4">
-                    {insights.formats.formats.map((format, index) => (
-                      <div key={index} className="p-4 border rounded-lg">
-                        <h4 className="font-semibold text-gray-900">{format.type}</h4>
-                        <p className="text-gray-600 text-sm mt-1">{format.description}</p>
-                        <div className="mt-2 text-xs text-gray-500">
-                          <span className="font-medium">Duration:</span> {format.duration}
-                        </div>
-                        <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                          <span className="font-medium text-blue-800">Tips:</span> {format.tips}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-600">No specific format information available.</p>
-                )}
-              </Card.Body>
-            </Card>
+          <Card>
+            <Card.Header>
+              <Card.Title className="flex items-center gap-2">
+                <Icon name="edit" size="sm" />
+                Interview Response Writing Practice
+              </Card.Title>
+            </Card.Header>
 
-            <Card>
-              <Card.Header>
-                <Card.Title>Interviewer Information</Card.Title>
-              </Card.Header>
-              <Card.Body>
-                {insights.interviewers?.interviewers?.length > 0 ? (
+            <Card.Body className="space-y-6">
+
+              {/* SECTION 1 — Pick a practice question */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Select a Practice Question</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {PRACTICE_QUESTIONS.map((q, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setPracticeQuestion(q);
+                        setResponseText("");
+                        setPracticeResult(null);
+                        setTimeLeft(180); // 3 minutes
+                        setTimerActive(false);
+                      }}
+                      className="p-3 bg-gray-100 hover:bg-gray-200 rounded text-left text-sm"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* SECTION 2 — Timer + Response Input */}
+              {practiceQuestion && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-gray-900 flex items-center justify-between">
+                    {practiceQuestion}
+                    {timerActive && (
+                      <span className="text-red-600 text-sm font-semibold">
+                        Time left: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+                      </span>
+                    )}
+                  </h3>
+
+                  <textarea
+                    className="w-full border rounded p-3 h-40 text-sm"
+                    placeholder="Start writing your response here…"
+                    value={responseText}
+                    onChange={(e) => setResponseText(e.target.value)}
+                  />
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setTimerActive(true);
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    >
+                      Start Timer (3 min)
+                    </button>
+
+                    <button
+                      onClick={analyzeResponse}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                    >
+                      Submit Response
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION 3 — AI FEEDBACK */}
+              {practiceResult && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-gray-900">Your Feedback</h3>
+
+                  <div className="p-4 bg-blue-50 rounded border-l-4 border-blue-600">
+                    <p className="font-medium text-blue-800">Clarity Score: {practiceResult.clarityScore}/10</p>
+                    <p className="text-sm text-blue-700">{practiceResult.clarityFeedback}</p>
+                  </div>
+
+                  <div className="p-4 bg-green-50 rounded border-l-4 border-green-600">
+                    <p className="font-medium text-green-800">Structure Score: {practiceResult.structureScore}/10</p>
+                    <p className="text-sm text-green-700">{practiceResult.structureFeedback}</p>
+                  </div>
+
+                  <div className="p-4 bg-purple-50 rounded border-l-4 border-purple-600">
+                    <p className="font-medium text-purple-800">Professionalism: {practiceResult.professionalismScore}/10</p>
+                    <p className="text-sm text-purple-700">{practiceResult.professionalismFeedback}</p>
+                  </div>
+
+                  <div className="p-4 bg-orange-50 rounded border-l-4 border-orange-600">
+                    <p className="font-medium text-orange-800">STAR Breakdown</p>
+                    <p className="text-sm text-orange-700 whitespace-pre-line">
+                      {practiceResult.starSummary}
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-red-50 rounded border-l-4 border-red-600">
+                    <p className="font-medium text-red-800">Improvement Tips</p>
+                    <ul className="list-disc text-sm text-red-700 ml-4">
+                      {practiceResult.improvementTips.map((t,i)=>(
+                        <li key={i}>{t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Suggested additions for the virtual prep checklist */}
+              {checklistSuggestions.length > 0 && (
+                <div className="p-4 bg-sky-50 rounded border-l-4 border-sky-600">
+                  <p className="font-medium text-sky-800 mb-1">
+                    Suggested additions to your preparation checklist
+                  </p>
+                  <p className="text-xs text-sky-700 mb-2">
+                    These don’t change your checklist automatically, but you can add them on the
+                    <span className="font-semibold"> Preparation</span> tab.
+                  </p>
+                  <ul className="list-disc text-sm text-sky-800 ml-4 space-y-1">
+                    {checklistSuggestions.map((item) => (
+                      <li key={item.id}>
+                        <span className="font-semibold">{item.label}</span>
+                          {item.description && (
+                            <span className="block text-xs text-sky-700">
+                                {item.description}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                  {/* Button to generate memorable response helpers */}
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleGenerateMemorableSuggestions}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+                    >
+                      Enhance My Response
+                    </button>
+                  </div>
+
+                  {/* Memorable response suggestions */}
+                  {memorableSuggestions && (
+                    <div className="p-4 bg-indigo-50 rounded border-l-4 border-indigo-600 space-y-3">
+                      <p className="font-medium text-indigo-800">
+                        Make this answer more engaging and memorable
+                      </p>
+
+                      <div>
+                        <p className="text-xs font-semibold text-indigo-700 mb-1">Hook ideas</p>
+                        <ul className="list-disc text-sm text-indigo-800 ml-4 space-y-1">
+                          {memorableSuggestions.hooks.map((h, i) => (
+                            <li key={i}>{h}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold text-indigo-700 mb-1">
+                          Strong closing lines
+                        </p>
+                        <ul className="list-disc text-sm text-indigo-800 ml-4 space-y-1">
+                          {memorableSuggestions.closings.map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold text-indigo-700 mb-1">
+                          Rewrite strategies
+                        </p>
+                        <ul className="list-disc text-sm text-indigo-800 ml-4 space-y-1">
+                          {memorableSuggestions.rewriteTips.map((tip, i) => (
+                            <li key={i}>{tip}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold text-indigo-700 mb-1">Power verbs</p>
+                        <p className="text-sm text-indigo-800">
+                          Try weaving some of these into your answer:{' '}
+                          <span className="font-mono">
+                            {memorableSuggestions.powerVerbs.join(', ')}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+              {/* SECTION 4 — HISTORY / PROGRESSION */}
+              {practiceHistory.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-gray-900">Your Practice Progression</h3>
                   <div className="space-y-3">
-                    {insights.interviewers.interviewers.map((interviewer, index) => (
-                      <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                        <h5 className="font-medium">{interviewer.role}</h5>
-                        <p className="text-sm text-gray-600">{interviewer.background}</p>
-                        <p className="text-xs text-green-700 mt-1">💡 {interviewer.tips}</p>
+                    {practiceHistory.map((s, i) => (
+                      <div key={i} className="p-3 bg-gray-50 rounded border">
+                        <p className="text-sm font-medium text-gray-900 mb-1">{s.question}</p>
+                        <p className="text-xs text-gray-600">
+                          Clarity {s.clarityScore}/10 • Structure {s.structureScore}/10 • Professionalism {s.professionalismScore}/10
+                        </p>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-gray-600">No specific interviewer information available.</p>
-                )}
-              </Card.Body>
-            </Card>
-          </div>
+                </div>
+              )}
+
+              {/* SECTION 4b — Side-by-side comparison of last two sessions */}
+              {practiceHistory.length >= 2 && (() => {
+                const last = practiceHistory[practiceHistory.length - 1];
+                const prev = practiceHistory[practiceHistory.length - 2];
+
+                const deltaText = (curr, previous) => {
+                  if (curr == null || previous == null) return '–';
+                  const diff = curr - previous;
+                  if (diff === 0) return `${curr}/10 (no change)`;
+                  const sign = diff > 0 ? '+' : '';
+                  return `${curr}/10 (${sign}${diff})`;
+                };
+
+                return (
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-gray-900">
+                      Last Two Sessions Comparison
+                    </h3>
+                    <div className="p-4 bg-white border rounded-lg">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="font-semibold text-gray-800 mb-1">Previous Session</p>
+                          <p className="text-xs text-gray-500 mb-1">
+                            {prev.question || 'Previous question'}
+                          </p>
+                          <p>Clarity: {prev.clarityScore}/10</p>
+                          <p>Structure: {prev.structureScore}/10</p>
+                          <p>Professionalism: {prev.professionalismScore}/10</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800 mb-1">Most Recent</p>
+                          <p className="text-xs text-gray-500 mb-1">
+                            {last.question || 'Most recent question'}
+                          </p>
+                          <p>Clarity: {deltaText(last.clarityScore, prev.clarityScore)}</p>
+                          <p>Structure: {deltaText(last.structureScore, prev.structureScore)}</p>
+                          <p>
+                            Professionalism:{' '}
+                            {deltaText(last.professionalismScore, prev.professionalismScore)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* SECTION 5 — Nerves / Confidence / Storytelling */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Extra Exercises</h3>
+                <ul className="list-disc ml-5 text-sm text-gray-700 space-y-1">
+                  <li>Record yourself answering and watch for filler words (“um,” “like”).</li>
+                  <li>Practice speaking slower than feels normal.</li>
+                  <li>Rehearse your top 3 stories using STAR.</li>
+                  <li>Practice answering with a 3-part structure: Point → Example → Result.</li>
+                  <li>Write 3 opening hooks that make you memorable.</li>
+                </ul>
+              </div>
+
+            </Card.Body>
+          </Card>
         );
 
-      case 'tips':
+      case 'practiceTools':
         return (
           <Card>
             <Card.Header>
-              <Card.Title>Success Tips from Candidates</Card.Title>
+              <Card.Title className="flex items-center gap-2">
+                <Icon name="sparkles" size="sm" />
+                Practice Tools & Nerves Management
+              </Card.Title>
             </Card.Header>
-            <Card.Body>
-              {insights.successTips?.tips?.length > 0 ? (
-                <div className="space-y-3">
-                  {insights.successTips.tips.map((tip, index) => (
-                    <div key={index} className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                      <p className="text-gray-800">{tip}</p>
-                    </div>
-                  ))}
+            <Card.Body className="space-y-6">
+              {/* Confidence warm-up exercises */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Confidence Warm-Up</h3>
+                <p className="text-sm text-gray-600">
+                  Use these quick prompts before you start a timed practice or real interview.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      3 strengths I want to highlight
+                    </label>
+                    <textarea
+                      className="w-full border rounded p-2 h-24"
+                      value={warmupNotes.strengths}
+                      onChange={(e) =>
+                        setWarmupNotes((prev) => ({ ...prev, strengths: e.target.value }))
+                      }
+                      placeholder="- Problem solving\n- Communication\n- Ownership"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      2 recent wins I&apos;m proud of
+                    </label>
+                    <textarea
+                      className="w-full border rounded p-2 h-24"
+                      value={warmupNotes.wins}
+                      onChange={(e) =>
+                        setWarmupNotes((prev) => ({ ...prev, wins: e.target.value }))
+                      }
+                      placeholder="- Shipped X feature\n- Nailed Y project"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      1 story I definitely want to use
+                    </label>
+                    <textarea
+                      className="w-full border rounded p-2 h-24"
+                      value={warmupNotes.story}
+                      onChange={(e) =>
+                        setWarmupNotes((prev) => ({ ...prev, story: e.target.value }))
+                      }
+                      placeholder="Brief outline of a strong STAR story"
+                    />
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-3">
+              </div>
+
+              {/* Nerves / grounding checklist */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Grounding Checklist</h3>
+                <p className="text-sm text-gray-600">
+                  Check these off right before your interview to calm nerves through preparation.
+                </p>
+                <div className="space-y-2 text-sm">
                   {[
-                    `Thoroughly research ${company}'s products, services, and company culture`,
-                    'Practice the STAR method for behavioral questions',
-                    'Prepare specific examples that demonstrate your skills',
-                    'Ask thoughtful questions about the role and team',
-                    'Show enthusiasm for the company and position',
-                    'Be honest about your experience and learning areas',
-                    'Follow up with a thank-you email within 24 hours',
-                    'Demonstrate how you can add value to their team'
-                  ].map((tip, index) => (
-                    <div key={index} className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                      <p className="text-gray-800">{tip}</p>
-                    </div>
+                    {
+                      id: 'breathing',
+                      label: 'Did 60 seconds of slow breathing (inhale 4, hold 4, exhale 6).',
+                    },
+                    {
+                      id: 'visualize',
+                      label:
+                        'Visualized the interview going well and myself answering calmly.',
+                    },
+                    {
+                      id: 'cheatSheet',
+                      label:
+                        'Prepared a one-page “cheat sheet” of key stories, metrics, and questions.',
+                    },
+                    {
+                      id: 'notesSkim',
+                      label:
+                        'Skimmed key notes instead of trying to re-study everything last minute.',
+                    },
+                    {
+                      id: 'kindSelfTalk',
+                      label:
+                        'Said one kind, realistic sentence to myself about my skills and effort.',
+                    },
+                  ].map((item) => (
+                    <label
+                      key={item.id}
+                      className="flex items-start gap-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={!!nervesChecklist[item.id]}
+                        onChange={() => toggleNervesItem(item.id)}
+                      />
+                      <span>{item.label}</span>
+                    </label>
                   ))}
                 </div>
-              )}
+              </div>
+
+              {/* Mini scripts for if you blank or stumble */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">If I Blank, I Can Say…</h3>
+                <p className="text-sm text-gray-600">
+                  Having a “backup script” ready makes it easier to recover smoothly.
+                </p>
+                <ul className="list-disc ml-5 text-sm text-gray-700 space-y-1">
+                  <li>
+                    “That&apos;s a great question—let me take a second to organize my thoughts.”
+                  </li>
+                  <li>
+                    “I actually had a similar situation recently. Let me walk you through that
+                    example.”
+                  </li>
+                  <li>
+                    “I haven&apos;t done exactly that, but here&apos;s how I would approach it based
+                    on similar work I&apos;ve done.”
+                  </li>
+                </ul>
+              </div>
             </Card.Body>
           </Card>
         );

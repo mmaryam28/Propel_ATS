@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Post, Body } from '@nestjs/common';
 import { InterviewService } from './interview.service';
 
 @Controller('interview')
@@ -77,8 +77,24 @@ export class InterviewController {
     }
     return this.interviewService.getComprehensiveInsights(company, role);
   }
+  @Post('insights/analyze-response')
+  async analyzeResponse(
+    @Body()
+    body: {
+      userId?: string;
+      question?: string;
+      response: string;
+    },
+  ) {
+    if (!body || !body.response || !body.response.trim()) {
+      return { error: 'Response text is required' };
+    }
 
-    @Get('follow-up-templates')
+    return this.interviewService.analyzeResponse(body);
+  }
+
+
+  @Get('follow-up-templates')
   async getFollowUpTemplates(
     @Query('company') company: string,
     @Query('role') role?: string,
