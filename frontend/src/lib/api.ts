@@ -423,6 +423,25 @@ export async function getInterviewPrep(interviewId: string): Promise<InterviewPr
   return data;
 }
 
+export async function generateInterviewSection(interviewId: string, section: string) {
+  const { data } = await api.post(
+    `/interview/${interviewId}/generate-section`,
+    {},
+    { withCredentials: true, params: { section } }
+  );
+  return data;
+}
+
+export async function generateInterviewAll(interviewId: string) {
+  const { data } = await api.post(
+    `/interview/${interviewId}/generate-all`,
+    {},
+    { withCredentials: true }
+  );
+  return data;
+}
+
+
 
 export async function updateInterview(id: string, data: Partial<Interview>): Promise<Interview> {
   const { data: interview } = await api.patch(`/jobs/interviews/${id}`, data, { withCredentials: true });

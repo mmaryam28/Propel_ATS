@@ -2,18 +2,15 @@ import {
   Controller,
   Get,
   Post,
-  Put,
-  Delete,
-  Body,
-  Param,
   Req,
+  Param,
+  Query,
   UseGuards,
+  HttpException,
 } from '@nestjs/common';
 import { InterviewService } from './interview.service';
-import { ScheduleInterviewDto } from './dto/schedule-interview.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { InterviewPrepService } from './interview-prep.service';
-
 
 @Controller('interview')
 @UseGuards(JwtAuthGuard)
@@ -24,7 +21,7 @@ export class InterviewController {
   ) {}
 
   // ------------------------------------------------
-  // UC-074+ Research Endpoints (fixed routes FIRST)
+  // UC-074+ Research Endpoints (company / role insights)
   // ------------------------------------------------
   @Get('process')
   async getInterviewProcess(@Req() req) {
@@ -33,7 +30,10 @@ export class InterviewController {
 
   @Get('questions')
   async getCommonQuestions(@Req() req) {
-    return this.interviewService.getCommonQuestions(req.query.company, req.query.role);
+    return this.interviewService.getCommonQuestions(
+      req.query.company,
+      req.query.role,
+    );
   }
 
   @Get('interviewers')
@@ -48,7 +48,10 @@ export class InterviewController {
 
   @Get('recommendations')
   async getPreparationRecommendations(@Req() req) {
-    return this.interviewService.getPreparationRecommendations(req.query.company, req.query.role);
+    return this.interviewService.getPreparationRecommendations(
+      req.query.company,
+      req.query.role,
+    );
   }
 
   @Get('timeline')
@@ -63,15 +66,65 @@ export class InterviewController {
 
   @Get('insights')
   async getComprehensiveInsights(@Req() req) {
-    return this.interviewService.getComprehensiveInsights(req.query.company, req.query.role);
+    return this.interviewService.getComprehensiveInsights(
+      req.query.company,
+      req.query.role,
+    );
   }
 
   // ------------------------------------------------
-  // UC-079 — Get/Update/Delete Interview
+  // UC-079 + UC-074–078 — AI Interview Prep Package
   // ------------------------------------------------
+
+  // Frontend: GET /interview/:id/prep
   @Get(':id/prep')
   async getInterviewPrep(@Req() req, @Param('id') id: string) {
-    return this.interviewPrepService.getOrCreatePrep(req.user.userId, id);
+    const userId = req.user.userId;
+    return this.interviewPrepService.getOrCreatePrep(userId, id);
   }
 
+  // Frontend: POST /interview/:id/generate-section?section=company_research|question_bank|mock_interview|technical_prep|checklist
+  @Post(':id/generate-section')
+  async generateSection(
+    @Req() req,
+    @Param('id') id: string,
+    @Query('section') section: string,
+  ) {
+    const userId = req.user.userId;
+    const sec = section || 'all';
+
+    try {
+      return await this.interviewPrepService.generateAndUpsertSection(
+        userId,
+        id,
+        sec,
+      );
+    } catch (err: any) {
+      console.error('[InterviewController] generateSection error:', err);
+      throw new HttpException(
+        {
+          message: err?.message || 'Generation error',
+        },
+        500,
+      );
+    }
+  }
+
+  // Frontend: POST /interview/:id/generate-all
+  @Post(':id/generate-all')
+  async generateAll(@Req() req, @Param('id') id: string) {
+    const userId = req.user.userId;
+
+    try {
+      return await this.interviewPrepService.generateAllSections(userId, id);
+    } catch (err: any) {
+      console.error('[InterviewController] generateAll error:', err);
+      throw new HttpException(
+        {
+          message: err?.message || 'Generation error',
+        },
+        500,
+      );
+    }
+  }
 }

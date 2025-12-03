@@ -20,6 +20,22 @@ export default function JobCalendar() {
     loadData();
   }, []);
 
+  // Listen for AI prep updates triggered from the panel
+  useEffect(() => {
+    function onUpdated(e) {
+      try {
+        const { interviewId: id, data } = e.detail || {};
+        if (activeInterview && id === activeInterview.id) {
+          setPrepData(data);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+    window.addEventListener('aiPrepUpdated', onUpdated);
+    return () => window.removeEventListener('aiPrepUpdated', onUpdated);
+  }, [activeInterview]);
+
   async function loadData() {
     try {
       setLoading(true);
