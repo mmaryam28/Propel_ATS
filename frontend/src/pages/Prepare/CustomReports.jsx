@@ -16,6 +16,8 @@ import {
 } from 'recharts';
 import { Card } from '../../components/ui/Card';
 import { Icon } from '../../components/ui/Icon';
+import { getCustomReportData, shareReport } from '../../lib/api';
+import { exportReportToPDF, exportReportToExcel } from '../../lib/reportExport';
 
 // Dummy data for charts
 const dummyData = [
@@ -95,6 +97,10 @@ export default function CustomReports() {
   const [chartType, setChartType] = useState('line'); // 'line', 'bar', 'pie'
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [shareMessage, setShareMessage] = useState('');
 
   const handleTemplateSelect = (template) => {
     setSelectedTemplate(template);
@@ -109,28 +115,69 @@ export default function CustomReports() {
     );
   };
 
-  const handleGenerate = () => {
-    // In real implementation, this would call the backend API
-    console.log('Generating report with:', {
-      template: selectedTemplate?.id,
-      metrics: selectedMetrics,
-      dateRange,
-      filters,
-    });
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const data = await getCustomReportData(selectedMetrics, dateRange, filters);
+      console.log('📊 Report Data Received:', data);
+      console.log('📈 Statistics:', data?.statistics);
+      setReportData(data);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert('Failed to generate report. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleExport = (format) => {
-    // Placeholder for export functionality
-    console.log(`Exporting report as ${format}`);
-    alert(`Export as ${format} - Feature coming soon when backend is ready!`);
-    setShowExportDialog(false);
+    if (!reportData) {
+      alert('Please generate a report first before exporting.');
+      return;
+    }
+
+    const exportData = {
+      title: selectedTemplate?.name || 'Custom Report',
+      dateRange,
+      metrics: selectedMetrics,
+      filters,
+      data: reportData,
+    };
+
+    try {
+      if (format === 'PDF') {
+        exportReportToPDF(exportData);
+      } else if (format === 'Excel') {
+        exportReportToExcel(exportData);
+      }
+      setShowExportDialog(false);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export report. Please try again.');
+    }
   };
 
-  const handleShare = () => {
-    // Placeholder for share functionality
-    console.log('Sharing report');
-    alert('Share functionality coming soon!');
-    setShowShareDialog(false);
+  const handleShare = async () => {
+    if (!reportData) {
+      alert('Please generate a report first before sharing.');
+      return;
+    }
+
+    if (!shareEmail) {
+      alert('Please enter an email address.');
+      return;
+    }
+
+    try {
+      await shareReport(shareEmail, reportData, shareMessage);
+      alert('Report shared successfully!');
+      setShowShareDialog(false);
+      setShareEmail('');
+      setShareMessage('');
+    } catch (error) {
+      console.error('Share error:', error);
+      alert('Failed to share report. Please try again.');
+    }
   };
 
   const renderChart = () => {
@@ -385,10 +432,20 @@ export default function CustomReports() {
               {/* Generate Button */}
               <button
                 onClick={handleGenerate}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                <Icon name="play" size="sm" />
-                Generate Report
+                {loading ? (
+                  <>
+                    <Icon name="loader" size="sm" className="animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Icon name="play" size="sm" />
+                    Generate Report
+                  </>
+                )}
               </button>
             </Card>
 
@@ -423,19 +480,27 @@ export default function CustomReports() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-600 mb-1">Total Applications</div>
-                  <div className="text-2xl font-bold text-blue-600">65</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {reportData?.statistics?.totalApplications || 65}
+                  </div>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-600 mb-1">Interviews</div>
-                  <div className="text-2xl font-bold text-purple-600">18</div>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {reportData?.statistics?.interviews || 18}
+                  </div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-600 mb-1">Offers</div>
-                  <div className="text-2xl font-bold text-green-600">4</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {reportData?.statistics?.offers || 4}
+                  </div>
                 </div>
                 <div className="bg-orange-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-600 mb-1">Success Rate</div>
-                  <div className="text-2xl font-bold text-orange-600">6.2%</div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {reportData?.statistics?.successRate ? `${reportData.statistics.successRate.toFixed(1)}%` : '6.2%'}
+                  </div>
                 </div>
               </div>
 
@@ -526,6 +591,8 @@ export default function CustomReports() {
               </label>
               <input
                 type="email"
+                value={shareEmail}
+                onChange={(e) => setShareEmail(e.target.value)}
                 placeholder="mentor@example.com"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -536,6 +603,8 @@ export default function CustomReports() {
               </label>
               <textarea
                 rows="3"
+                value={shareMessage}
+                onChange={(e) => setShareMessage(e.target.value)}
                 placeholder="Add a personal message..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -554,9 +623,9 @@ export default function CustomReports() {
                 Cancel
               </button>
             </div>
-            <div className="mt-4 p-3 bg-gray-50 rounded border border-gray-200">
-              <p className="text-xs text-gray-500">
-                💡 Share link feature coming soon! Backend integration required.
+            <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
+              <p className="text-xs text-gray-600">
+                💡 Reports are shared via email with mentors and coaches.
               </p>
             </div>
           </div>

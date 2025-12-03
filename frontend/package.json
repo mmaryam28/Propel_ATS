@@ -22,6 +22,7 @@
     "class-validator": "^0.14.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "raf": "^3.4.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -36,7 +37,8 @@
     "redux-thunk": "^3.1.0",
     "rgbcolor": "^1.0.1",
     "stackblur-canvas": "^2.7.0",
-    "svg-pathdata": "^8.0.0"
+    "svg-pathdata": "^8.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
