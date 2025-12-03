@@ -460,3 +460,48 @@ export async function generateSalaryAnalytics(payload: {
   const { data } = await api.post('/salary/analysis', payload, { withCredentials: true });
   return data;
 }
+
+// UC-106: Custom Report Generation
+export async function getCustomReportData(
+  metrics: string[],
+  dateRange: { start: string; end: string },
+  filters: { company?: string; role?: string; industry?: string }
+) {
+  const params: any = {
+    metrics: metrics.join(','),
+    ...filters,
+  };
+  if (dateRange.start) params.startDate = dateRange.start;
+  if (dateRange.end) params.endDate = dateRange.end;
+
+  // Fetch data from multiple endpoints
+  const promises = [];
+  
+  // Always fetch basic statistics with date range
+  promises.push(api.get('/statistics/overview', { withCredentials: true, params }));
+  
+  // Always try to fetch networking and application analytics (they'll handle date filtering on backend)
+  promises.push(api.get('/networking/analytics/overview', { withCredentials: true, params }).catch(() => ({ data: {} })));
+  promises.push(api.get('/networking/analytics/roi', { withCredentials: true, params }).catch(() => ({ data: {} })));
+  promises.push(api.get('/application-analytics/dashboard', { withCredentials: true, params }).catch(() => ({ data: {} })));
+  promises.push(api.get('/application-analytics/success-rates', { withCredentials: true, params }).catch(() => ({ data: {} })));
+
+  const results = await Promise.all(promises);
+  
+  return {
+    statistics: results[0]?.data || {},
+    networking: results[1]?.data || {},
+    networkingROI: results[2]?.data || {},
+    applicationAnalytics: results[3]?.data || {},
+    successRates: results[4]?.data || {},
+  };
+}
+
+export async function shareReport(email: string, reportData: any, message?: string) {
+  const { data } = await api.post('/reports/share', {
+    email,
+    reportData,
+    message,
+  }, { withCredentials: true });
+  return data;
+}

@@ -27,6 +27,7 @@ export interface JobStatistics {
   timeToOffer: number | null; // average days from application to offer
   timeToResponse: number | null; // average days from application to first response
   timeToInterview: number | null; // average days from application to interview
+  averageSalary: number | null; // average salary from job offers
 }
 
 export interface MonthlyVolume {
@@ -105,6 +106,25 @@ export class StatisticsService {
     const timeToResponse = await this.calculateAverageTimeToResponse(userId);
     const timeToInterview = await this.calculateAverageTimeToInterview(userId);
 
+    // Calculate average salary from jobs with salary data
+    const jobsWithSalary = jobs.filter((j) => {
+      const min = j.salaryMin || j.salary_min;
+      const max = j.salaryMax || j.salary_max;
+      return (min && min > 0) || (max && max > 0);
+    });
+
+    let averageSalary: number | null = null;
+    if (jobsWithSalary.length > 0) {
+      const totalSalary = jobsWithSalary.reduce((sum, j) => {
+        const min = j.salaryMin || j.salary_min || 0;
+        const max = j.salaryMax || j.salary_max || 0;
+        // Use average of min and max, or whichever is available
+        const jobAvg = (min + max) / 2 || min || max;
+        return sum + jobAvg;
+      }, 0);
+      averageSalary = Math.round(totalSalary / jobsWithSalary.length);
+    }
+
     return {
       totalJobs,
       byStatus,
@@ -119,6 +139,7 @@ export class StatisticsService {
       timeToOffer,
       timeToResponse,
       timeToInterview,
+      averageSalary,
     };
   }
 
@@ -186,6 +207,7 @@ export class StatisticsService {
     lines.push(`Interview Success Rate,${stats.interviewSuccessRate}%`);
     lines.push(`Response Rate,${stats.responseRate}%`);
     lines.push(`Time to Offer (days),${stats.timeToOffer ?? 'N/A'}`);
+    lines.push(`Average Salary,${stats.averageSalary ? '$' + stats.averageSalary.toLocaleString() : 'N/A'}`);
     lines.push('');
     
     // Status breakdown
@@ -485,6 +507,7 @@ export class StatisticsService {
       timeToOffer: null,
       timeToResponse: null,
       timeToInterview: null,
+      averageSalary: null,
     };
   }
 }

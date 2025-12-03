@@ -79,6 +79,24 @@ const iconMap = {
   projects: HiIcons.HiCollection,      // used for Projects
   brain: FaIcons.FaBrain,
   target: HiIcons.HiFlag,              // used for Goals (flag represents target/goal)
+  
+  // Custom Reports icons
+  'file-text': HiIcons.HiDocumentText,
+  users: HiIcons.HiUserGroup,
+  briefcase: BiIcons.BiBriefcase,
+  'dollar-sign': HiIcons.HiCurrencyDollar,
+  building: BiIcons.BiBuildings,
+  clock: HiIcons.HiClock,
+  'trending-up': HiIcons.HiTrendingUp,
+  'bar-chart-2': HiIcons.HiChartBar,
+  'pie-chart': HiIcons.HiChartPie,
+  play: HiIcons.HiPlay,
+  loader: AiIcons.AiOutlineLoading3Quarters,
+  'share-2': HiIcons.HiShare,
+  lightbulb: HiIcons.HiLightBulb,
+  'check-circle': HiIcons.HiCheckCircle,
+  'alert-circle': HiIcons.HiExclamationCircle,
+  file: HiIcons.HiDocument,
 };
 
 
