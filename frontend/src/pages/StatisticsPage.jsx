@@ -212,21 +212,21 @@ export default function StatisticsPage() {
           />
           <MetricCard
             title="Time to Response"
-            value={statistics.timeToResponse ? `${statistics.timeToResponse} days` : 'N/A'}
+            value={statistics.timeToResponse ? (statistics.timeToResponse < 1 ? `${Math.round(statistics.timeToResponse * 24)} hours` : `${Math.round(statistics.timeToResponse)} days`) : 'N/A'}
             subtitle="Average"
             icon="📬"
             color="bg-teal-50 text-teal-600"
           />
           <MetricCard
             title="Time to Interview"
-            value={statistics.timeToInterview ? `${statistics.timeToInterview} days` : 'N/A'}
+            value={statistics.timeToInterview ? (statistics.timeToInterview < 1 ? `${Math.round(statistics.timeToInterview * 24)} hours` : `${Math.round(statistics.timeToInterview)} days`) : 'N/A'}
             subtitle="Average"
             icon="📅"
             color="bg-indigo-50 text-indigo-600"
           />
           <MetricCard
             title="Time to Offer"
-            value={statistics.timeToOffer ? `${statistics.timeToOffer} days` : 'N/A'}
+            value={statistics.timeToOffer ? (statistics.timeToOffer < 1 ? `${Math.round(statistics.timeToOffer * 24)} hours` : `${Math.round(statistics.timeToOffer)} days`) : 'N/A'}
             subtitle="Average"
             icon="⏱️"
             color="bg-orange-50 text-orange-600"
@@ -390,13 +390,14 @@ function BenchmarkItem({ label, yourValue, benchmark, unit, reverse = false }) {
   const isGood = reverse ? yourValue < benchmark : yourValue > benchmark;
   const color = isGood ? 'text-green-600' : 'text-orange-600';
   const bgColor = isGood ? 'bg-green-50' : 'bg-orange-50';
+  const displayValue = unit === ' days' ? Math.round(yourValue) : yourValue;
   
   return (
     <div className={`${bgColor} rounded-lg p-4`}>
       <div className="text-sm font-medium text-gray-700 mb-2">{label}</div>
       <div className="flex items-baseline justify-between mb-2">
         <div>
-          <span className={`text-2xl font-bold ${color}`}>{yourValue}{unit}</span>
+          <span className={`text-2xl font-bold ${color}`}>{displayValue}{unit}</span>
           <span className="text-sm text-gray-500 ml-2">vs {benchmark}{unit}</span>
         </div>
       </div>
