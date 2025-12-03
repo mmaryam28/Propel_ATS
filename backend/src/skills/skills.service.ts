@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { CreateSkillDto } from './dto/create-skill.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { ReorderDto } from './dto/reorder.dto';
+import { SupabaseService } from '../supabase/supabase.service';
 import { v4 as uuid } from 'uuid';
 
 export type SkillCategory = 'Technical' | 'Soft Skills' | 'Languages' | 'Industry-Specific';
@@ -19,33 +20,64 @@ export interface Skill {
 
 @Injectable()
 export class SkillsService {
-  // In-memory store: Map<userId, Skill[]>
-  private store = new Map<string, Skill[]>();
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   private normalizeName(name: string) {
     return name.trim().toLowerCase();
   }
 
-  findAll(userId: string, search?: string): Skill[] {
+  async findAll(userId: string, search?: string): Promise<Skill[]> {
     if (!userId) throw new BadRequestException('userId is required');
-    const list = this.store.get(userId) ?? [];
-    if (!search) return list.sort((a, b) => a.category.localeCompare(b.category) || a.order - b.order);
-    const s = search.toLowerCase();
-    return list
-      .filter(item => item.name.toLowerCase().includes(s))
-      .sort((a, b) => a.category.localeCompare(b.category) || a.order - b.order);
+    const supabase = this.supabaseService.getClient();
+    
+    let query = supabase
+      .from('skills')
+      .select('*')
+      .eq('userId', userId);
+    
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
+    }
+    
+    const { data, error } = await query.order('category').order('order');
+    
+    if (error) throw new BadRequestException(error.message);
+    return data || [];
   }
 
-  create(dto: CreateSkillDto): Skill {
+  async create(dto: CreateSkillDto): Promise<Skill> {
     const { userId, name, category, proficiency } = dto;
     if (!userId) throw new BadRequestException('userId is required');
     if (!name?.trim()) throw new BadRequestException('name is required');
 
-    const list = this.store.get(userId) ?? [];
-    const dup = list.find(s => this.normalizeName(s.name) === this.normalizeName(name));
-    if (dup) throw new BadRequestException('Duplicate skill');
-
-    const order = Math.max(0, ...list.filter(s => s.category === category).map(s => s.order)) + 1;
+    const supabase = this.supabaseService.getClient();
+    
+    console.log('DEBUG: Creating skill:', { userId, name, category, proficiency });
+    
+    // Check for duplicate
+    const { data: existing, error: checkError } = await supabase
+      .from('skills')
+      .select('id')
+      .eq('userId', userId)
+      .ilike('name', name.trim());
+    
+    console.log('DEBUG: Duplicate check:', { existing, checkError });
+    
+    if (existing && existing.length > 0) {
+      throw new BadRequestException('Duplicate skill');
+    }
+    
+    // Get max order for category
+    const { data: categorySkills } = await supabase
+      .from('skills')
+      .select('order')
+      .eq('userId', userId)
+      .eq('category', category)
+      .order('order', { ascending: false })
+      .limit(1);
+    
+    const order = categorySkills && categorySkills.length > 0 ? categorySkills[0].order + 1 : 1;
+    
     const newSkill: Skill = {
       id: uuid(),
       userId,
@@ -54,66 +86,115 @@ export class SkillsService {
       proficiency,
       order,
     };
-    this.store.set(userId, [...list, newSkill]);
-    return newSkill;
+    
+    console.log('DEBUG: Inserting skill:', newSkill);
+    
+    const { data, error } = await supabase
+      .from('skills')
+      .insert(newSkill)
+      .select()
+      .single();
+    
+    console.log('DEBUG: Insert result:', { data, error });
+    
+    if (error) throw new BadRequestException(error.message);
+    return data;
   }
 
-  update(id: string, dto: UpdateSkillDto): Skill {
+  async update(id: string, dto: UpdateSkillDto): Promise<Skill> {
     const userId = dto.userId;
     if (!userId) throw new BadRequestException('userId is required');
 
-    const list = this.store.get(userId) ?? [];
-    const idx = list.findIndex(s => s.id === id);
-    if (idx < 0) throw new NotFoundException('Skill not found');
+    const supabase = this.supabaseService.getClient();
+    
+    // Get existing skill
+    const { data: existing, error: fetchError } = await supabase
+      .from('skills')
+      .select('*')
+      .eq('id', id)
+      .eq('userId', userId)
+      .single();
+    
+    if (fetchError || !existing) throw new NotFoundException('Skill not found');
 
     // Prevent duplicate on rename
-    if (dto.name && this.normalizeName(dto.name) !== this.normalizeName(list[idx].name)) {
-      const dup = list.find(s => this.normalizeName(s.name) === this.normalizeName(dto.name!));
-      if (dup) throw new BadRequestException('Duplicate skill');
+    if (dto.name && this.normalizeName(dto.name) !== this.normalizeName(existing.name)) {
+      const { data: dup } = await supabase
+        .from('skills')
+        .select('id')
+        .eq('userId', userId)
+        .ilike('name', dto.name.trim())
+        .neq('id', id);
+      
+      if (dup && dup.length > 0) throw new BadRequestException('Duplicate skill');
     }
 
-    const updated: Skill = { ...list[idx], ...dto, name: dto.name?.trim() ?? list[idx].name };
-    const newList = [...list];
-    newList[idx] = updated;
+    const updates: any = { ...dto };
+    if (dto.name) updates.name = dto.name.trim();
 
     // If category changed, push to end of that category ordering
-    if (dto.category && dto.category !== list[idx].category) {
-      const maxOrder = Math.max(0, ...newList.filter(s => s.category === dto.category).map(s => s.order));
-      updated.order = maxOrder + 1;
+    if (dto.category && dto.category !== existing.category) {
+      const { data: categorySkills } = await supabase
+        .from('skills')
+        .select('order')
+        .eq('userId', userId)
+        .eq('category', dto.category)
+        .order('order', { ascending: false })
+        .limit(1);
+      
+      updates.order = categorySkills && categorySkills.length > 0 ? categorySkills[0].order + 1 : 1;
     }
 
-    this.store.set(userId, newList);
-    return updated;
+    const { data, error } = await supabase
+      .from('skills')
+      .update(updates)
+      .eq('id', id)
+      .eq('userId', userId)
+      .select()
+      .single();
+    
+    if (error) throw new BadRequestException(error.message);
+    return data;
   }
 
-  remove(id: string) {
-    // Find userId first
-    for (const [uid, arr] of this.store.entries()) {
-      const exists = arr.some(s => s.id === id);
-      if (exists) {
-        this.store.set(uid, arr.filter(s => s.id !== id));
-        return { id };
-      }
-    }
-    throw new NotFoundException('Skill not found');
+  async remove(id: string): Promise<{ id: string }> {
+    const supabase = this.supabaseService.getClient();
+    
+    const { error } = await supabase
+      .from('skills')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw new NotFoundException('Skill not found');
+    return { id };
   }
 
-  reorder(dto: ReorderDto) {
+  async reorder(dto: ReorderDto): Promise<Skill[]> {
     const { userId, category, orderedIds } = dto;
     if (!userId) throw new BadRequestException('userId is required');
-    const list = this.store.get(userId) ?? [];
-    const target = list.filter(s => s.category === category);
+    
+    const supabase = this.supabaseService.getClient();
+    
+    const { data: target } = await supabase
+      .from('skills')
+      .select('*')
+      .eq('userId', userId)
+      .eq('category', category);
 
-    if (target.length !== orderedIds.length || new Set(orderedIds).size !== orderedIds.length) {
+    if (!target || target.length !== orderedIds.length || new Set(orderedIds).size !== orderedIds.length) {
       throw new BadRequestException('orderedIds must include and only include skills within the category');
     }
 
-    // Re-number orders according to orderedIds
-    const orderMap = new Map<string, number>();
-    orderedIds.forEach((id, i) => orderMap.set(id, i + 1));
-
-    const updated = list.map(s => (s.category === category ? { ...s, order: orderMap.get(s.id)! } : s));
-    this.store.set(userId, updated);
+    // Update orders for each skill
+    const updates = orderedIds.map((id, index) => 
+      supabase
+        .from('skills')
+        .update({ order: index + 1 })
+        .eq('id', id)
+        .eq('userId', userId)
+    );
+    
+    await Promise.all(updates);
     return this.findAll(userId);
   }
 }

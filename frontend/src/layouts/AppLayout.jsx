@@ -192,6 +192,7 @@ function Navbar() {
                     <Link to="/application-success" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Application Analytics</Link>
                     <Link to="/productivity-tracker" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Productivity Tracker</Link>
                     <Link to="/network-analytics" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Network Analytics</Link>
+                    <Link to="/success-patterns" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Success Patterns</Link>
                     <Link to="/resumes" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Resumes</Link>
                     <Link to="/coverletters/templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Cover Letters</Link>
                   </div>
@@ -333,6 +334,7 @@ function Navbar() {
                   <Link to="/application-success" className="py-1 text-sm text-gray-700 hover:underline">Application Analytics</Link>
                   <Link to="/productivity-tracker" className="py-1 text-sm text-gray-700 hover:underline">Productivity Tracker</Link>
                   <Link to="/network-analytics" className="py-1 text-sm text-gray-700 hover:underline">Network Analytics</Link>
+                  <Link to="/success-patterns" className="py-1 text-sm text-gray-700 hover:underline">Success Patterns</Link>
                   <Link to="/resumes" className="py-1 text-sm text-gray-700 hover:underline">Resumes</Link>
                   <Link to="/coverletters/templates" className="py-1 text-sm text-gray-700 hover:underline">Cover Letters</Link>
                 </div>

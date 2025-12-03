@@ -44,6 +44,10 @@ export class CreateJobDto {
   jobType?: string | null;
 
   @IsOptional()
+  @IsString()
+  source?: string | null;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   salaryMin?: number | null;

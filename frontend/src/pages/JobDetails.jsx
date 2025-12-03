@@ -45,7 +45,10 @@ export default function JobDetails() {
     } catch { setError("Failed to load job"); }
   })(); }, [jobId]);
 
-  function setField(key, value) { setJob(j => ({ ...j, [key]: value })); }
+  function setField(key, value) { 
+    console.log('setField called:', key, value);
+    setJob(j => ({ ...j, [key]: value })); 
+  }
 
   async function onImport() {
     if (!importUrl) return;
@@ -85,6 +88,7 @@ export default function JobDetails() {
         deadlineValue = deadlineValue + 'T12:00:00.000Z';
       }
       
+      console.log('JobDetails - Saving with source:', job.source);
       const payload = {
         title: job.title,
         company: job.company,
@@ -94,6 +98,7 @@ export default function JobDetails() {
         description: job.description ?? null,
         industry: job.industry ?? null,
         jobType: job.jobType ?? null,
+        source: job.source ?? null,
         salaryMin: job.salaryMin ?? null,
         salaryMax: job.salaryMax ?? null,
         // Company profile
@@ -408,6 +413,23 @@ export default function JobDetails() {
             {edit ? (
               <input className="input" value={job.industry||""} onChange={e=>setField('industry', e.target.value)} />
             ) : (<div className="text-sm">{job.industry || "—"}</div>)}
+          </div>
+          <div>
+            <div className="form-label">Source</div>
+            {edit ? (
+              <select className="input" value={job.source || "Direct Application"} onChange={e=>setField('source', e.target.value)}>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Company Website">Company Website</option>
+                <option value="Referral">Referral</option>
+                <option value="Recruiter Contact">Recruiter Contact</option>
+                <option value="Indeed">Indeed</option>
+                <option value="Glassdoor">Glassdoor</option>
+                <option value="AngelList">AngelList</option>
+                <option value="Networking Event">Networking Event</option>
+                <option value="Cold Application">Cold Application</option>
+                <option value="Other">Other</option>
+              </select>
+            ) : (<div className="text-sm">{job.source || "Direct Application"}</div>)}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>

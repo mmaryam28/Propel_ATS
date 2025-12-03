@@ -126,6 +126,7 @@ export async function createJob(payload: NewJobPayload): Promise<Job> {
     description: toStrOrNull((payload.description ?? '').slice(0, 2000)),
     industry: toStrOrNull(payload.industry),
     jobType: toStrOrNull(payload.jobType),
+    source: toStrOrNull((payload as any).source),
     salaryMin: toNum(payload.salaryMin),
     salaryMax: toNum(payload.salaryMax),
     // Optional company profile fields at creation time

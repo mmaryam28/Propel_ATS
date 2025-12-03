@@ -38,6 +38,9 @@ export class JobsController {
   @Post()
   async create(@Req() req: any, @Body() dto: CreateJobDto) {
     const userId = req.user.userId;
+    console.log('CONTROLLER: Raw body source:', req.body?.source);
+    console.log('CONTROLLER: DTO source:', dto.source);
+    console.log('CONTROLLER: Full DTO:', dto);
     return this.jobs.create(userId, dto);
   }
 

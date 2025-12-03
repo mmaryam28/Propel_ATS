@@ -56,6 +56,7 @@ import CompetitiveAnalysis from './pages/Prepare/CompetitiveAnalysis';
 import CustomReports from './pages/Prepare/CustomReports';
 import ProductivityAnalytics from './pages/Jobs/ProductivityAnalytics';
 import NetworkingAnalytics from './pages/Networking/NetworkingAnalytics';
+import SuccessPatterns from './pages/Analytics/SuccessPatterns';
 
 
 import './index.css';
@@ -123,6 +124,7 @@ const router = createBrowserRouter([
       { path: '/prepare/custom-reports', element: <CustomReports /> },
       { path: '/productivity-tracker', element: <ProductivityAnalytics /> },
       { path: '/network-analytics', element: <NetworkingAnalytics /> },
+      { path: '/success-patterns', element: <SuccessPatterns /> },
 
 
       // ✅ New Cover Letter Templates route
