@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { contactsAPI } from '../../api/networking';
 
-export default function ContactModal({ contact, onClose }) {
+export default function ContactModal({ contact, initialData, onClose }) {
   const [formData, setFormData] = useState({
     fullName: '',
     headline: '',
@@ -32,8 +32,22 @@ export default function ContactModal({ contact, onClose }) {
         email: contact.email || '',
         phone: contact.phone || '',
       });
+    } else if (initialData) {
+      // Pre-fill from suggested contact
+      setFormData({
+        fullName: initialData.full_name || '',
+        headline: initialData.headline || '',
+        company: initialData.company || '',
+        role: initialData.role || '',
+        industry: initialData.industry || '',
+        relationshipType: 'linkedin_connection',
+        source: 'discovery',
+        linkedinProfileUrl: initialData.linkedin_profile_url || '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
+      });
     }
-  }, [contact]);
+  }, [contact, initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

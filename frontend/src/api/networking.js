@@ -102,4 +102,16 @@ export const contactsAPI = {
   deleteInteraction: (id) => api.delete(`/contacts/interactions/${id}`),
 };
 
+// Discovery API
+export const discoveryAPI = {
+  // Get suggested contacts
+  getSuggestions: () => api.get('/discovery/suggestions'),
+
+  // Get connection path for a suggested contact
+  getConnectionPath: (contactId) => api.get(`/discovery/path/${contactId}`),
+
+  // Track action on a suggestion
+  trackAction: (data) => api.post('/discovery/track', data),
+};
+
 export default api;
