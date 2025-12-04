@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import fetch from 'node-fetch';
+import { jsonrepair } from 'jsonrepair';
 
 // ------------ Types ------------
 export type QuestionBank = {
@@ -187,22 +188,25 @@ Role: "${role}"
   }
 
   private async generateMockInterview(company: string, role: string): Promise<MockInterview> {
-    const prompt = `
-Return ONLY JSON:
+    const prompt = `You are a JSON generator. Return ONLY a valid JSON object. Do not include any text before or after the JSON. Do not include comments or markdown formatting.
 
 {
-  "intro": "",
+  "intro": "string",
   "questions": [
-    { "id": "q1", "type": "behavioral", "text": "" }
+    { "id": "q1", "type": "behavioral", "text": "string" }
   ],
-  "summary": ""
+  "summary": "string"
 }
 
 Company: "${company}"
 Role: "${role}"
-`;
 
-    return await this.callOllamaJson<MockInterview>(prompt);
+Requirements:
+- Return ONLY the JSON object. Nothing else.
+- Ensure all quotes are properly closed.
+- Do not include any explanatory text.`;
+
+    return await this.callOllamaJsonWithRetry<MockInterview>(prompt);
   }
 
   private async generateTechnicalPrep(company: string, role: string): Promise<TechnicalPrep> {
@@ -270,6 +274,22 @@ Role: "${role}"
     }
   }
 
+  // Retry wrapper specialized for stubborn sections like mock interview
+  private async callOllamaJsonWithRetry<T>(prompt: string, attempts = 2, delayMs = 1000): Promise<T> {
+    let lastErr: any;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await this.callOllamaJson<T>(prompt);
+      } catch (err) {
+        lastErr = err;
+        if (i < attempts - 1) {
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+      }
+    }
+    throw lastErr;
+  }
+
   private async basicOllamaCall(prompt: string): Promise<string> {
     const response = await fetch(`${OLLAMA_URL}/api/generate`, {
       method: 'POST',
@@ -286,50 +306,40 @@ Role: "${role}"
   private extractJson(rawText: string): any {
     if (!rawText) throw new Error("Empty AI response");
 
-    // remove fences
+    // 1) Strip code fences and leading chatter (e.g., "Here's your JSON:")
     let text = rawText
       .replace(/```json/gi, "")
       .replace(/```/g, "")
+      .trim()
+      .replace(/^[^({\[]+/g, "")
       .trim();
 
-    // remove leading junk like "Here's your JSON:"
-    text = text.replace(/^[^({\[]+/g, "").trim();
+    // 2) Find the first JSON-looking structure and slice from there
+    const firstObject = text.indexOf("{");
+    const firstArray = text.indexOf("[");
+    const firstToken = [firstObject, firstArray]
+      .filter((i) => i !== -1)
+      .sort((a, b) => a - b)[0];
 
-    const firstBrace = text.indexOf("{");
-    if (firstBrace === -1) throw new Error("No JSON found");
-
-    let candidate = text.slice(firstBrace);
-
-    // 1. remove trailing commas
-    candidate = candidate.replace(/,\s*([}\]])/g, "$1");
-
-    // 2. escape apostrophes in strings to avoid breaking JSON (e.g., "you've" → "you\'ve")
-    // Don't blindly convert apostrophes to double quotes; that breaks strings like "you've"
-    candidate = candidate.replace(/([^\\])'/g, "$1\\'");
-
-    // 3. remove comments
-    candidate = candidate.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
-
-    // 4. ensure keys are quoted
-    // Only quote unquoted keys (keys following { or ,). This avoids double-quoting keys
-    // that are already properly quoted which would produce invalid JSON.
-    candidate = candidate.replace(/([\{,]\s*)([A-Za-z0-9_]+)\s*:/g, '$1"$2":');
-
-    // 5. fix brace imbalance
-    const open = (candidate.match(/{/g) || []).length;
-    const close = (candidate.match(/}/g) || []).length;
-    if (open > close) {
-      candidate += "}".repeat(open - close);
+    if (firstToken === -1 || firstToken === undefined) {
+      throw new Error("No JSON found");
     }
 
-    // try full parse
+    let candidate = text.slice(firstToken);
+
+    // 3) Use jsonrepair first — it fixes trailing commas, single quotes,
+    // unquoted keys, comments, and some structural issues.
+    try {
+      const repaired = jsonrepair(candidate);
+      return JSON.parse(repaired);
+    } catch {}
+
+    // 4) Direct parse fallback
     try {
       return JSON.parse(candidate);
-    } catch (e) {
-      // fall through to partial attempts
-    }
+    } catch {}
 
-    // try partial until valid
+    // 5) Progressive truncation fallback: try parsing progressively shorter slices
     for (let end = candidate.length; end > 0; end--) {
       const slice = candidate.slice(0, end);
       try {
@@ -337,7 +347,7 @@ Role: "${role}"
       } catch {}
     }
 
-    // As a last resort, throw with candidate preview to help debugging
+    // 6) If all else fails, raise with preview to aid debugging
     throw new Error("Failed to extract JSON. Candidate preview: " + candidate.slice(0, 2000));
   }
 }
