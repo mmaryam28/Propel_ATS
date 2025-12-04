@@ -69,6 +69,16 @@ import EventsPage from './pages/networking/EventsPage';
 import InformationalInterviewsPage from './pages/networking/InformationalInterviewsPage';
 import MaintenancePage from './pages/networking/MaintenancePage';
 
+// Mentorship pages
+import Mentors from './pages/Mentors';
+import MentorDashboard from './pages/MentorDashboard';
+
+// Team Management pages
+import TeamManagement from './pages/TeamManagement';
+import TeamMembers from './pages/TeamMembers';
+import TeamDashboard from './pages/TeamDashboard';
+import AcceptTeamInvitation from './pages/AcceptTeamInvitation';
+
 import './index.css';
 import './styles/globals.css';
 import './styles/theme.css';
@@ -146,7 +156,17 @@ const router = createBrowserRouter([
       { path: '/networking/events', element: <EventsPage /> },
       { path: '/networking/interviews', element: <InformationalInterviewsPage /> },
       { path: '/networking/maintenance', element: <MaintenancePage /> },
+      
+      // Mentorship routes
+      { path: '/mentors', element: <Mentors /> },
+      { path: '/mentor-dashboard', element: <MentorDashboard /> },
+      { path: '/mentor-dashboard/:menteeId', element: <MentorDashboard /> },
 
+      // Team Management routes
+      { path: '/teams', element: <TeamManagement /> },
+      { path: '/teams/:teamId/members', element: <TeamMembers /> },
+      { path: '/teams/:teamId/dashboard', element: <TeamDashboard /> },
+      { path: '/teams/invite/:token', element: <AcceptTeamInvitation /> },
 
       //New Cover Letter Templates route
       {

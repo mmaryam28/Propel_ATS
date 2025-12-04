@@ -86,6 +86,11 @@ function NetworkingDropdown() {
           <Link to="/networking/events" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Events</Link>
           <Link to="/networking/interviews" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Informational Interviews</Link>
           <Link to="/networking/maintenance" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Relationship Maintenance</Link>
+          <div className="border-t border-gray-200 my-1"></div>
+          <Link to="/mentors" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">My Mentors</Link>
+          <Link to="/mentor-dashboard" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Mentor Dashboard</Link>
+          <div className="border-t border-gray-200 my-1"></div>
+          <Link to="/teams" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">Team Accounts</Link>
         </div>
       )}
     </div>

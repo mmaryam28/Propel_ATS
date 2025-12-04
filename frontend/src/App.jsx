@@ -33,6 +33,11 @@ import EventsPage from "./pages/networking/EventsPage";
 import InformationalInterviewsPage from "./pages/networking/InformationalInterviewsPage";
 import MaintenancePage from "./pages/networking/MaintenancePage";
 
+// Team Management Pages
+import TeamManagement from "./pages/TeamManagement";
+import TeamMembers from "./pages/TeamMembers";
+import TeamDashboard from "./pages/TeamDashboard";
+
 const TemplatesPage = React.lazy(() =>
   import("./coverletters/pages/TemplatesPage")
 );
@@ -79,6 +84,11 @@ export default function App() {
         <Route path="/networking/events" element={<EventsPage />} />
         <Route path="/networking/interviews" element={<InformationalInterviewsPage />} />
         <Route path="/networking/maintenance" element={<MaintenancePage />} />
+
+        {/* Team Management */}
+        <Route path="/teams" element={<TeamManagement />} />
+        <Route path="/teams/:teamId/members" element={<TeamMembers />} />
+        <Route path="/teams/:teamId/dashboard" element={<TeamDashboard />} />
 
         <Route
           path="/coverletters/templates"

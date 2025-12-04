@@ -1,9 +1,12 @@
 // frontend/src/pages/Jobs.jsx
 import React from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import JobForm from "../components/JobForm";
 import { Toast } from "../components/Toast";
 import { listJobs, createJob, bulkArchiveJobs, restoreJob } from "../lib/api";
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function Jobs() {
   // Load saved preferences from localStorage
@@ -39,6 +42,52 @@ export default function Jobs() {
   const [showToast, setShowToast] = React.useState(false);
   const [archivedJobIds, setArchivedJobIds] = React.useState([]);
   const [showFilterPanel, setShowFilterPanel] = React.useState(false);
+  const [teams, setTeams] = React.useState([]);
+  const [showShareModal, setShowShareModal] = React.useState(false);
+  const [jobToShare, setJobToShare] = React.useState(null);
+  const [shareMessage, setShareMessage] = React.useState(null);
+
+  React.useEffect(() => {
+    fetchTeams();
+  }, []);
+
+  async function fetchTeams() {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/teams`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTeams(response.data || []);
+    } catch (e) {
+      console.error('Error fetching teams:', e);
+    }
+  }
+
+  async function handleShareJob(teamId) {
+    if (!jobToShare) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API}/teams/${teamId}/job-postings`, {
+        company: jobToShare.company,
+        position: jobToShare.title,
+        location: jobToShare.location,
+        jobDescription: jobToShare.description,
+        salary: jobToShare.salary,
+        status: jobToShare.status || 'saved',
+        notes: jobToShare.notes
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setShareMessage({ text: 'Job shared with team successfully!', type: 'success' });
+      setTimeout(() => setShareMessage(null), 3000);
+      setShowShareModal(false);
+      setJobToShare(null);
+    } catch (e) {
+      console.error('Error sharing job:', e);
+      setShareMessage({ text: 'Failed to share job', type: 'error' });
+      setTimeout(() => setShareMessage(null), 3000);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -457,12 +506,26 @@ export default function Jobs() {
                   {j.jobType && <span className="rounded-md bg-gray-100 px-2 py-1">{j.jobType}</span>}
                   {j.industry && <span className="rounded-md bg-gray-100 px-2 py-1">{j.industry}</span>}
                 </div>
-                {j.postingUrl && (
-                  <a className="mt-3 inline-block text-sm font-medium text-[var(--primary-color)]"
-                     href={j.postingUrl} target="_blank" rel="noreferrer">
-                    View posting →
-                  </a>
-                )}
+                <div className="mt-3 flex items-center gap-3">
+                  {j.postingUrl && (
+                    <a className="inline-block text-sm font-medium text-[var(--primary-color)]"
+                       href={j.postingUrl} target="_blank" rel="noreferrer">
+                      View posting →
+                    </a>
+                  )}
+                  {teams.length > 0 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setJobToShare(j);
+                        setShowShareModal(true);
+                      }}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      Share with Team
+                    </button>
+                  )}
+                </div>
               </div>
             );
             })}
@@ -539,6 +602,48 @@ export default function Jobs() {
           setArchivedJobIds([]);
         }}
       />
+
+      {/* Share with Team Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4">Share Job with Team</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Select a team to share "{jobToShare?.title}" with:
+            </p>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {teams.map(team => (
+                <button
+                  key={team.id}
+                  onClick={() => handleShareJob(team.id)}
+                  className="w-full text-left px-4 py-3 border rounded-lg hover:bg-blue-50 hover:border-blue-500"
+                >
+                  <div className="font-medium">{team.name}</div>
+                  <div className="text-sm text-gray-500">{team.description}</div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                setShowShareModal(false);
+                setJobToShare(null);
+              }}
+              className="mt-4 w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Share Success/Error Message */}
+      {shareMessage && (
+        <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+          shareMessage.type === 'error' ? 'bg-red-500' : 'bg-green-500'
+        } text-white`}>
+          {shareMessage.text}
+        </div>
+      )}
     </div>
   );
 }

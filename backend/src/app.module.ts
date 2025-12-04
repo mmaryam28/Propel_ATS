@@ -33,6 +33,8 @@ import { NetworkingEventsModule } from './networking-events/networking-events.mo
 import { InformationalInterviewsModule } from './informational-interviews/informational-interviews.module';
 import { ReferencesModule } from './references/references.module';
 import { RelationshipMaintenanceModule } from './relationship-maintenance/relationship-maintenance.module';
+import { TeamsModule } from './teams/teams.module';
+import { MentorsModule } from './mentors/mentors.module';
 
 @Module({
   imports: [
@@ -71,6 +73,8 @@ import { RelationshipMaintenanceModule } from './relationship-maintenance/relati
   InformationalInterviewsModule,
   ReferencesModule,
   RelationshipMaintenanceModule,
+  TeamsModule,
+  MentorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

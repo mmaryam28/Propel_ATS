@@ -14,7 +14,8 @@ export class MailService implements OnModuleInit {
     const port = Number(portStr);
     const user = String(this.config.get('SMTP_USER') ?? '').trim();
     const pass = String(this.config.get('SMTP_PASS') ?? '').trim();
-    const secure = port === 465; // SSL
+    const secureEnv = this.config.get('SMTP_SECURE');
+    const secure = secureEnv !== undefined ? secureEnv === 'true' : port === 465; // SSL
 
     // Log what we actually loaded (never log the password)
     this.logger.log(
