@@ -407,6 +407,54 @@ export async function getInterviews(jobId?: string) {
   return data;
 }
 
+export type InterviewPrep = {
+  companyResearch: string;
+  questionBank: {
+    behavioral: string[];
+    technical: string[];
+    situational: string[];
+    companySpecific: string[];
+  };
+  mockInterview: {
+    intro: string;
+    questions: { id: string; type: string; text: string }[];
+    summary: string;
+  };
+  technicalPrep: {
+    overview: string;
+    codingChallenge: { prompt: string; hint: string; solutionOutline: string };
+    systemDesign: { prompt: string; keyPoints: string[] };
+  };
+  checklist: {
+    items: { id: string; label: string; category: string; suggestedTime?: string }[];
+  };
+};
+
+export async function getInterviewPrep(interviewId: string): Promise<InterviewPrep> {
+  const { data } = await api.get(`/interview/${interviewId}/prep`, { withCredentials: true });
+  return data;
+}
+
+export async function generateInterviewSection(interviewId: string, section: string) {
+  const { data } = await api.post(
+    `/interview/${interviewId}/generate-section`,
+    {},
+    { withCredentials: true, params: { section } }
+  );
+  return data;
+}
+
+export async function generateInterviewAll(interviewId: string) {
+  const { data } = await api.post(
+    `/interview/${interviewId}/generate-all`,
+    {},
+    { withCredentials: true }
+  );
+  return data;
+}
+
+
+
 export async function updateInterview(id: string, data: Partial<Interview>): Promise<Interview> {
   const { data: interview } = await api.patch(`/jobs/interviews/${id}`, data, { withCredentials: true });
   return interview;

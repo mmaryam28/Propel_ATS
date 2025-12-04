@@ -147,7 +147,8 @@ const router = createBrowserRouter([
       { path: '/networking/interviews', element: <InformationalInterviewsPage /> },
       { path: '/networking/maintenance', element: <MaintenancePage /> },
 
-      // ✅ New Cover Letter Templates route
+
+      //New Cover Letter Templates route
       {
         path: '/coverletters',
         element: (
@@ -167,6 +168,8 @@ const router = createBrowserRouter([
     ],
   },
 ]);
+
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
