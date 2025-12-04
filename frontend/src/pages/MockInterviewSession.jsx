@@ -119,55 +119,195 @@ export default function MockInterviewSession() {
     };
   };
 
+  const analyzeResponseQuality = (response, questionType) => {
+    if (!response) return { quality: 'no-response', issues: [], strengths: [] };
+    
+    const text = response.trim().toLowerCase();
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const issues = [];
+    const strengths = [];
+
+    // Check for vague language
+    const vagueWords = ['thing', 'stuff', 'good', 'bad', 'nice', 'okay', 'fine', 'some', 'maybe', 'kind of', 'sort of'];
+    const vagueCount = vagueWords.filter(word => text.includes(word)).length;
+    if (vagueCount > 2) {
+      issues.push('Uses vague language - be more specific with examples and details');
+    }
+
+    // Check for first-person perspective
+    const hasFirstPerson = text.includes('i ') || text.includes("i'm") || text.includes('my ') || text.includes('me ');
+    if (!hasFirstPerson && questionType.toLowerCase() === 'behavioral') {
+      issues.push('Missing personal examples - behavioral questions should highlight YOUR specific experiences');
+    } else if (hasFirstPerson) {
+      strengths.push('Uses personal examples effectively');
+    }
+
+    // Check for STAR method indicators in behavioral questions
+    if (questionType.toLowerCase() === 'behavioral') {
+      const hasSituation = text.includes('when') || text.includes('situation') || text.includes('time') || text.includes('project');
+      const hasAction = text.includes('i did') || text.includes('i created') || text.includes('i developed') || text.includes('i led') || text.includes('i worked');
+      const hasResult = text.includes('result') || text.includes('outcome') || text.includes('achieved') || text.includes('success') || text.includes('improved');
+      
+      if (!hasSituation && !hasAction && !hasResult) {
+        issues.push('Lacks STAR structure - include Situation, Task, Action, and Result');
+      } else if (hasSituation && hasAction && hasResult) {
+        strengths.push('Follows STAR method structure');
+      }
+    }
+
+    // Check for technical depth in technical questions
+    if (questionType.toLowerCase() === 'technical') {
+      const technicalTerms = text.match(/\b[a-z]+\.(js|py|java|sql)\b|\b(api|database|framework|library|algorithm|function|class|method)\b/gi);
+      if (!technicalTerms || technicalTerms.length < 2) {
+        issues.push('Lacks technical specificity - mention specific technologies, tools, or concepts');
+      } else {
+        strengths.push('Demonstrates technical knowledge with specific terms');
+      }
+    }
+
+    // Check for quantifiable results
+    const hasNumbers = /\d+/.test(text);
+    const hasPercentage = text.includes('%') || text.includes('percent');
+    if ((hasNumbers || hasPercentage) && (text.includes('improve') || text.includes('increase') || text.includes('reduce') || text.includes('save'))) {
+      strengths.push('Includes quantifiable achievements');
+    }
+
+    // Check length appropriateness
+    if (wordCount < 50) {
+      issues.push('Response is too brief - add more context and details');
+    } else if (wordCount > 300) {
+      issues.push('Response may be too long - practice being more concise');
+    } else {
+      strengths.push('Appropriate response length');
+    }
+
+    // Check for enthusiasm/engagement indicators
+    const enthusiasmWords = ['excited', 'passionate', 'love', 'enjoy', 'interested', 'eager', 'motivated'];
+    if (enthusiasmWords.some(word => text.includes(word))) {
+      strengths.push('Shows enthusiasm and engagement');
+    }
+
+    return {
+      quality: issues.length === 0 ? 'excellent' : issues.length <= 2 ? 'good' : 'needs-improvement',
+      issues,
+      strengths,
+      wordCount,
+    };
+  };
+
   const getImprovementAreas = (performance) => {
     const areas = [];
+    const responseAnalysis = {};
     
+    // Analyze each response
+    sessionData.questions.forEach((question, idx) => {
+      const response = responses[idx]?.text || '';
+      responseAnalysis[idx] = analyzeResponseQuality(response, question.type);
+    });
+
+    // Check completion rate
     if (performance.completionRate < 100) {
       areas.push({
         area: 'Question Coverage',
         issue: 'Some questions were skipped or left incomplete',
-        recommendation: 'Practice answering all questions, even if briefly',
-      });
-    }
-    
-    if (performance.avgWordsPerQuestion < 75) {
-      areas.push({
-        area: 'Response Depth',
-        issue: 'Responses are quite brief',
-        recommendation: 'Use the STAR method to provide more detailed, structured answers',
-      });
-    }
-    
-    if (performance.avgWordsPerQuestion > 250) {
-      areas.push({
-        area: 'Response Conciseness',
-        issue: 'Responses may be too lengthy',
-        recommendation: 'Practice being more concise while maintaining key points',
+        recommendation: 'Practice answering all questions, even if briefly. Skipping questions in a real interview leaves a negative impression.',
+        priority: 'high',
       });
     }
 
-    const behavioralQs = sessionData.questions.filter(q => q.type.toLowerCase() === 'behavioral');
-    const behavioralResponses = behavioralQs.filter(
-      (q, i) => responses[sessionData.questions.indexOf(q)]?.text?.trim()
+    // Analyze response quality patterns
+    const allIssues = Object.values(responseAnalysis).flatMap(r => r.issues);
+    const issueFrequency = {};
+    allIssues.forEach(issue => {
+      const key = issue.split(' - ')[0];
+      issueFrequency[key] = (issueFrequency[key] || 0) + 1;
+    });
+
+    // Most common issues become improvement areas
+    Object.entries(issueFrequency)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .forEach(([issue, count]) => {
+        const fullIssue = allIssues.find(i => i.startsWith(issue));
+        areas.push({
+          area: issue,
+          issue: `Found in ${count} of ${sessionData.questions.length} responses`,
+          recommendation: fullIssue.split(' - ')[1] || 'Review and improve this aspect',
+          priority: count > sessionData.questions.length / 2 ? 'high' : 'medium',
+        });
+      });
+
+    // Check for behavioral question quality
+    const behavioralQs = sessionData.questions
+      .map((q, idx) => ({ ...q, idx }))
+      .filter(q => q.type.toLowerCase() === 'behavioral');
+    
+    if (behavioralQs.length > 0) {
+      const behavioralWithoutStar = behavioralQs.filter(
+        q => responseAnalysis[q.idx]?.issues.some(i => i.includes('STAR'))
+      );
+      
+      if (behavioralWithoutStar.length > 0) {
+        areas.push({
+          area: 'STAR Method Application',
+          issue: `${behavioralWithoutStar.length} behavioral response(s) lack clear STAR structure`,
+          recommendation: 'Structure each behavioral answer: Situation (context), Task (challenge), Action (what YOU did), Result (outcome with metrics)',
+          priority: 'high',
+        });
+      }
+    }
+
+    // Check for technical depth
+    const technicalQs = sessionData.questions
+      .map((q, idx) => ({ ...q, idx }))
+      .filter(q => q.type.toLowerCase() === 'technical');
+    
+    if (technicalQs.length > 0) {
+      const technicalLackingDepth = technicalQs.filter(
+        q => responseAnalysis[q.idx]?.issues.some(i => i.includes('technical specificity'))
+      );
+      
+      if (technicalLackingDepth.length > 0) {
+        areas.push({
+          area: 'Technical Depth',
+          issue: `${technicalLackingDepth.length} technical response(s) need more specific details`,
+          recommendation: 'Name specific technologies, frameworks, tools, and methodologies. Explain HOW you approached technical challenges.',
+          priority: 'medium',
+        });
+      }
+    }
+
+    // Check for quantifiable results
+    const responsesWithoutMetrics = Object.values(responseAnalysis).filter(
+      r => !r.strengths.includes('Includes quantifiable achievements') && r.wordCount > 0
     );
     
-    if (behavioralQs.length > 0 && behavioralResponses.length < behavioralQs.length) {
+    if (responsesWithoutMetrics.length > sessionData.questions.length / 2) {
       areas.push({
-        area: 'Behavioral Questions',
-        issue: 'Not all behavioral questions were answered',
-        recommendation: 'Prepare STAR method examples from your past experience',
+        area: 'Quantifiable Impact',
+        issue: 'Most responses lack measurable results',
+        recommendation: 'Add numbers and metrics: "increased by 30%", "reduced time by 2 hours", "managed team of 5". Concrete results are memorable.',
+        priority: 'medium',
       });
     }
 
-    if (areas.length === 0) {
+    // Positive feedback if quality is high
+    const excellentResponses = Object.values(responseAnalysis).filter(r => r.quality === 'excellent').length;
+    if (excellentResponses > sessionData.questions.length / 2 && areas.length < 2) {
       areas.push({
-        area: 'Overall Performance',
+        area: 'Overall Quality',
         issue: null,
-        recommendation: 'Great job! Continue practicing to maintain consistency',
+        recommendation: `${excellentResponses} responses were excellent! Focus on maintaining this quality and refining the remaining answers.`,
+        priority: 'low',
       });
     }
 
-    return areas;
+    // Sort by priority
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    areas.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+    return { areas, responseAnalysis };
   };
 
   // Intro Phase
@@ -408,7 +548,7 @@ export default function MockInterviewSession() {
   // Summary Phase
   if (phase === 'summary') {
     const performance = calculatePerformance();
-    const improvementAreas = getImprovementAreas(performance);
+    const { areas: improvementAreas, responseAnalysis } = getImprovementAreas(performance);
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -461,16 +601,100 @@ export default function MockInterviewSession() {
               </h2>
               <div className="space-y-4">
                 {improvementAreas.map((item, idx) => (
-                  <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-1">{item.area}</h3>
-                    {item.issue && (
-                      <p className="text-sm text-gray-600 mb-2">Issue: {item.issue}</p>
-                    )}
-                    <p className="text-sm text-gray-700">
-                      <strong>Recommendation:</strong> {item.recommendation}
-                    </p>
+                  <div 
+                    key={idx} 
+                    className={`rounded-lg p-4 ${
+                      item.priority === 'high' 
+                        ? 'bg-red-50 border border-red-200' 
+                        : item.priority === 'medium'
+                        ? 'bg-amber-50 border border-amber-200'
+                        : 'bg-green-50 border border-green-200'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className={`text-sm font-semibold px-2 py-0.5 rounded ${
+                        item.priority === 'high'
+                          ? 'bg-red-100 text-red-700'
+                          : item.priority === 'medium'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {item.priority === 'high' ? 'High Priority' : item.priority === 'medium' ? 'Medium' : 'Good'}
+                      </span>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-1">{item.area}</h3>
+                        {item.issue && (
+                          <p className="text-sm text-gray-600 mb-2">Issue: {item.issue}</p>
+                        )}
+                        <p className="text-sm text-gray-700">
+                          <strong>Recommendation:</strong> {item.recommendation}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Response Quality Analysis */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Response Quality Breakdown
+              </h2>
+              <div className="space-y-3">
+                {sessionData.questions.map((question, idx) => {
+                  const analysis = responseAnalysis[idx];
+                  if (!analysis || !responses[idx]?.text) return null;
+                  
+                  return (
+                    <div key={idx} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">
+                              Q{idx + 1}: {question.type}
+                            </span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              analysis.quality === 'excellent'
+                                ? 'bg-green-100 text-green-700'
+                                : analysis.quality === 'good'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {analysis.quality === 'excellent' ? '✓ Excellent' : analysis.quality === 'good' ? 'Good' : 'Needs Work'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 line-clamp-1">{question.text}</p>
+                        </div>
+                        <div className="text-sm text-gray-500 ml-4">
+                          {analysis.wordCount} words
+                        </div>
+                      </div>
+
+                      {analysis.strengths.length > 0 && (
+                        <div className="mb-2">
+                          <div className="text-xs font-semibold text-green-700 mb-1">✓ Strengths:</div>
+                          <ul className="text-xs text-green-600 space-y-0.5">
+                            {analysis.strengths.map((strength, i) => (
+                              <li key={i}>• {strength}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {analysis.issues.length > 0 && (
+                        <div>
+                          <div className="text-xs font-semibold text-amber-700 mb-1">⚠ Areas to Improve:</div>
+                          <ul className="text-xs text-amber-600 space-y-0.5">
+                            {analysis.issues.map((issue, i) => (
+                              <li key={i}>• {issue}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
