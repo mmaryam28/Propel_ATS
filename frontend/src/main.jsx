@@ -13,6 +13,7 @@ import JobCalendar from './pages/JobCalendar';
 import ArchivedJobs from './pages/ArchivedJobs';
 import StatisticsPage from './pages/StatisticsPage';
 import Applications from './pages/Applications';
+import MockInterviewSession from './pages/MockInterviewSession';
 
 // import Documents from './pages/Documents';
 import Profile from './pages/Profile';
@@ -106,6 +107,7 @@ const router = createBrowserRouter([
       { path: '/jobs/statistics', element: <StatisticsPage /> },
       { path: '/jobs/:jobId', element: <JobDetails /> },
       { path: '/applications', element: <Applications /> },
+      { path: '/mock-interview/:interviewId', element: <MockInterviewSession /> },
       // { path: '/documents', element: <Documents /> },
       { path: '/profile', element: <Profile /> },
       { path: '/education', element: <EducationPage /> },
