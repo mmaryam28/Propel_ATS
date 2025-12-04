@@ -166,6 +166,8 @@ const SalaryAnalysis: React.FC = () => {
             }),
           ]);
 
+          console.log('📊 Negotiation advice:', negotiationRes.data);
+          console.log('📊 Salary comparison:', comparisonRes.data);
           setNegotiationAdvice(negotiationRes.data);
           setSalaryComparison(comparisonRes.data);
         } catch (err) {
@@ -229,6 +231,7 @@ const SalaryAnalysis: React.FC = () => {
         userCurrentSalary: Number(currentSalary),
         userBonusPercentage: bonusPercentage ? Number(bonusPercentage) : undefined,
       });
+      console.log('📊 Salary comparison (standalone):', response.data);
       setSalaryComparison(response.data);
     } catch (err) {
       console.error("Error comparing salary:", err);
@@ -432,8 +435,11 @@ const SalaryAnalysis: React.FC = () => {
   };
 
     const renderNegotiationPrep = () => {
-    // Only show this if we have some negotiation-related data
-    if (!negotiationAdvice && !salaryComparison && !userAnalytics) return null;
+    // Show if we have negotiation data OR if we have salary ranges + current salary
+    const hasNegotiationData = negotiationAdvice || salaryComparison || userAnalytics;
+    const hasSalaryData = salaryRanges && currentSalary !== "";
+    
+    if (!hasNegotiationData && !hasSalaryData) return null;
 
     const roleLabel = title || "this role";
     const locationLabel = location || "your location";
@@ -441,6 +447,7 @@ const SalaryAnalysis: React.FC = () => {
     const marketAvg =
       negotiationAdvice?.marketAverage ??
       salaryComparison?.marketComparison?.total ??
+      salaryRanges?.range?.avg ??
       null;
 
     const userTotalComp =
@@ -564,26 +571,26 @@ const SalaryAnalysis: React.FC = () => {
             Use these data-backed points when discussing compensation:
           </p>
           <ul style={{ paddingLeft: "1.1rem", fontSize: "13px", color: "#333" }}>
-            {negotiationAdvice?.percentageDifference !== undefined && (
+            {negotiationAdvice?.percentageDifference !== undefined && negotiationAdvice?.percentageDifference !== null && (
               <li style={{ marginBottom: "4px" }}>
                 Your current pay is{" "}
                 <strong>
-                  {negotiationAdvice.percentageDifference >= 0 ? "+" : ""}
-                  {negotiationAdvice.percentageDifference}%
+                  {Number(negotiationAdvice.percentageDifference) >= 0 ? "+" : ""}
+                  {Number(negotiationAdvice.percentageDifference)}%
                 </strong>{" "}
-                {negotiationAdvice.percentageDifference >= 0
+                {Number(negotiationAdvice.percentageDifference) >= 0
                   ? "above"
                   : "below"}{" "}
                 the market average for {roleLabel} in {locationLabel}.
               </li>
             )}
-            {salaryComparison?.differences?.totalDiff !== undefined && (
+            {salaryComparison?.differences?.totalDiff !== undefined && salaryComparison?.differences?.totalDiff !== null && (
               <li style={{ marginBottom: "4px" }}>
                 The market total compensation is{" "}
                 <strong>
                   {salaryComparison.differences.totalDiff >= 0 ? "+" : ""}
                   $
-                  {salaryComparison.differences.totalDiff.toLocaleString()}
+                  {Number(salaryComparison.differences.totalDiff).toLocaleString()}
                 </strong>{" "}
                 {salaryComparison.differences.totalDiff >= 0
                   ? "higher than"
@@ -1404,33 +1411,6 @@ const SalaryAnalysis: React.FC = () => {
                       {userAnalytics.negotiationSuccess.totalNegotiated}/{userAnalytics.negotiationSuccess.totalOffers}
                     </div>
                     <div style={{ fontSize: "14px", color: "#666", marginTop: "4px" }}>Negotiated Offers</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Career Progression */}
-            {userAnalytics.careerProgression && (
-              <div style={{ background: "#fff", padding: "1.5rem", borderRadius: "8px", marginBottom: "1.5rem" }}>
-                <h3 style={{ color: "#333", marginBottom: "1rem", fontSize: "18px" }}>📈 Career Progression Impact</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-                  <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Total Offers</div>
-                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#333" }}>
-                      {userAnalytics.careerProgression.totalOffers}
-                    </div>
-                  </div>
-                  <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Avg. Increase</div>
-                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#333" }}>
-                      ${Math.round(userAnalytics.careerProgression.avgIncrease)?.toLocaleString()}
-                    </div>
-                  </div>
-                  <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Trend</div>
-                    <div style={{ fontSize: "24px", fontWeight: "bold", color: userAnalytics.careerProgression.trending === "up" ? "#28a745" : "#6c757d" }}>
-                      {userAnalytics.careerProgression.trending === "up" ? "📈 Up" : userAnalytics.careerProgression.trending === "flat" ? "➡️ Flat" : "📊 N/A"}
-                    </div>
                   </div>
                 </div>
               </div>

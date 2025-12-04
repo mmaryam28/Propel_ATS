@@ -24,27 +24,66 @@ export class SalaryService {
     benefits?: string,
   ): Promise<any> {
     const supabase = this.supabaseService.getClient();
+    
+    // Fix common typos
+    const normalizedTitle = title
+      .replace(/enginer/gi, 'engineer')
+      .replace(/develper/gi, 'developer')
+      .replace(/managr/gi, 'manager');
+    
+    console.log('🔍 getSalaryRanges called with:', { 
+      originalTitle: title,
+      normalizedTitle, 
+      location, 
+      experienceLevel, 
+      benefits 
+    });
 
     let query = supabase
-      .from('salary_data')
-      .select('min_salary, max_salary, avg_salary, benefits')
-      .ilike('title', `%${title}%`);
+      .from('market_salary_data')
+      .select('base_low, base_high, average, median, p25, p75')
+      .ilike('role', `%${normalizedTitle}%`);
 
     if (location) query = query.ilike('location', `%${location}%`);
-    if (experienceLevel) query = query.eq('experience_level', experienceLevel);
-    if (benefits) query = query.ilike('benefits', `%${benefits}%`);
+    if (experienceLevel) query = query.ilike('experience_level', experienceLevel);
 
     const { data, error } = await query;
     if (error) throw error;
 
-    const salaries = (data || []).map((r) => r.avg_salary).filter((s) => s);
+    console.log('📊 getSalaryRanges query results:', data?.length, 'records found');
+    
+    const records = data || [];
+    if (records.length === 0) {
+      return {
+        title,
+        location,
+        experienceLevel,
+        benefits,
+        range: { min: 0, p25: 0, median: 0, p75: 0, max: 0, avg: 0 },
+      };
+    }
+
+    // Use pre-calculated percentiles from level.fyi data and aggregate across records
+    const avgP25 = Math.round(records.reduce((sum, r) => sum + (r.p25 || 0), 0) / records.length);
+    const avgMedian = Math.round(records.reduce((sum, r) => sum + (r.median || 0), 0) / records.length);
+    const avgP75 = Math.round(records.reduce((sum, r) => sum + (r.p75 || 0), 0) / records.length);
+    const avgBase = Math.round(records.reduce((sum, r) => sum + (r.average || 0), 0) / records.length);
+    const minBase = Math.min(...records.map(r => r.base_low || 0).filter(x => x > 0));
+    const maxBase = Math.max(...records.map(r => r.base_high || 0));
 
     return {
       title,
       location,
       experienceLevel,
       benefits,
-      range: this.calculateRange(salaries),
+      range: {
+        min: minBase || 0,
+        p25: avgP25,
+        median: avgMedian,
+        p75: avgP75,
+        max: maxBase || 0,
+        avg: avgBase,
+      },
     };
   }
 
@@ -58,23 +97,52 @@ export class SalaryService {
     benefits?: string,
   ): Promise<any> {
     const supabase = this.supabaseService.getClient();
+    
+    const normalizedTitle = title
+      .replace(/enginer/gi, 'engineer')
+      .replace(/develper/gi, 'developer')
+      .replace(/managr/gi, 'manager');
 
     let query = supabase
-      .from('salary_data')
-      .select('avg_salary, benefits')
-      .ilike('title', `%${title}%`);
+      .from('market_salary_data')
+      .select('average, bonus, equity, total_low, total_high')
+      .ilike('role', `%${normalizedTitle}%`);
 
     if (location) query = query.ilike('location', `%${location}%`);
-    if (experienceLevel) query = query.eq('experience_level', experienceLevel);
-    if (benefits) query = query.ilike('benefits', `%${benefits}%`);
+    if (experienceLevel) query = query.ilike('experience_level', experienceLevel);
 
     const { data, error } = await query;
     if (error) throw error;
 
+    console.log('📊 getTotalCompensation query results:', data?.length, 'records found');
+    
     const records = data || [];
-    const totalComps = records.map(
-      (r) => (r.avg_salary || 0) + (r.benefits || 0),
+    if (records.length === 0) {
+      return {
+        title,
+        location,
+        experienceLevel,
+        benefits,
+        breakdown: { avgBase: 0, avgBonus: 0, avgEquity: 0 },
+        compensation: { min: 0, p25: 0, median: 0, p75: 0, max: 0, avg: 0 },
+      };
+    }
+
+    const avgBase = Math.round(
+      records.reduce((sum, r) => sum + (r.average || 0), 0) / records.length,
     );
+    const avgBonus = Math.round(
+      records.reduce((sum, r) => sum + (r.bonus || 0), 0) / records.length,
+    );
+    const avgEquity = Math.round(
+      records.reduce((sum, r) => sum + (r.equity || 0), 0) / records.length,
+    );
+    
+    const totalComps = records.map(
+      (r) => (r.average || 0) + (r.bonus || 0) + (r.equity || 0),
+    ).filter(x => x > 0);
+
+    console.log('📊 Total comp breakdown:', { avgBase, avgBonus, avgEquity, totalComps: totalComps.length });
 
     return {
       title,
@@ -82,12 +150,9 @@ export class SalaryService {
       experienceLevel,
       benefits,
       breakdown: {
-        avgBase: Math.round(
-          records.reduce((sum, r) => sum + (r.avg_salary || 0), 0) / (records.length || 1),
-        ),
-        avgBenefits: Math.round(
-          records.reduce((sum, r) => sum + (r.benefits || 0), 0) / (records.length || 1),
-        ),
+        avgBase,
+        avgBonus,
+        avgEquity,
       },
       compensation: this.calculateRange(totalComps),
     };
@@ -102,45 +167,41 @@ export class SalaryService {
     benefits?: string,
   ): Promise<any> {
     const supabase = this.supabaseService.getClient();
+    
+    const normalizedTitle = title
+      .replace(/enginer/gi, 'engineer')
+      .replace(/develper/gi, 'developer')
+      .replace(/managr/gi, 'manager');
 
     let query = supabase
-      .from('salary_data')
-      .select('company, avg_salary, benefits')
-      .ilike('title', `%${title}%`);
+      .from('market_salary_data')
+      .select('location, average, bonus, equity')
+      .ilike('role', `%${normalizedTitle}%`);
 
     if (location) query = query.ilike('location', `%${location}%`);
-    if (benefits) query = query.ilike('benefits', `%${benefits}%`);
 
     const { data, error } = await query;
     if (error) throw error;
 
     const grouped: { [key: string]: any[] } = {};
     (data || []).forEach((record) => {
-      const company = record.company || 'Unknown';
-      if (!grouped[company]) grouped[company] = [];
-      grouped[company].push(record);
+      const loc = record.location || 'Unknown';
+      if (!grouped[loc]) grouped[loc] = [];
+      grouped[loc].push(record);
     });
 
-    const companies = Object.entries(grouped).map(([company, records]) => {
-      // Collect all unique benefits across records for this company
-      const allBenefits: string[] = [];
-      records.forEach(r => {
-        if (r.benefits && typeof r.benefits === 'string' && r.benefits.trim() !== '') {
-          allBenefits.push(r.benefits.trim());
-        }
-      });
-      
-      // Get most common benefits string or combine unique ones
-      const benefitsText = allBenefits.length > 0 
-        ? allBenefits[0]  // Use the first record's benefits as representative
-        : '';
-      
+    const companies = Object.entries(grouped).map(([location, records]) => {
       return {
-        company,
+        location,
         avgSalary: Math.round(
-          records.reduce((sum, r) => sum + (r.avg_salary || 0), 0) / records.length,
+          records.reduce((sum, r) => sum + (r.average || 0), 0) / records.length,
         ),
-        benefits: benefitsText,
+        avgBonus: Math.round(
+          records.reduce((sum, r) => sum + (r.bonus || 0), 0) / records.length,
+        ),
+        avgEquity: Math.round(
+          records.reduce((sum, r) => sum + (r.equity || 0), 0) / records.length,
+        ),
         count: records.length,
       };
     });
@@ -148,7 +209,6 @@ export class SalaryService {
     return {
       title,
       location,
-      benefits,
       companies,
     };
   }
@@ -158,11 +218,16 @@ export class SalaryService {
    */
   async getSalaryTrends(title: string, location?: string): Promise<any> {
     const supabase = this.supabaseService.getClient();
+    
+    const normalizedTitle = title
+      .replace(/enginer/gi, 'engineer')
+      .replace(/develper/gi, 'developer')
+      .replace(/managr/gi, 'manager');
 
     let query = supabase
-      .from('salary_data')
-      .select('avg_salary, created_at')
-      .ilike('title', `%${title}%`);
+      .from('market_salary_data')
+      .select('average, updated_at')
+      .ilike('role', `%${normalizedTitle}%`);
 
     if (location) query = query.ilike('location', `%${location}%`);
 
@@ -171,10 +236,10 @@ export class SalaryService {
 
     const monthlyData: { [key: string]: number[] } = {};
     (data || []).forEach((record) => {
-      if (record.created_at) {
-        const month = record.created_at.substring(0, 7); // YYYY-MM
+      if (record.updated_at) {
+        const month = record.updated_at.substring(0, 7); // YYYY-MM
         if (!monthlyData[month]) monthlyData[month] = [];
-        monthlyData[month].push(record.avg_salary || 0);
+        monthlyData[month].push(record.average || 0);
       }
     });
 
@@ -239,27 +304,66 @@ export class SalaryService {
     userBenefitsValue?: number,
   ): Promise<any> {
     const supabase = this.supabaseService.getClient();
+    
+    const normalizedTitle = title
+      .replace(/enginer/gi, 'engineer')
+      .replace(/develper/gi, 'developer')
+      .replace(/managr/gi, 'manager');
 
     let query = supabase
-      .from('salary_data')
-      .select('avg_salary, benefits')
-      .ilike('title', `%${title}%`);
+      .from('market_salary_data')
+      .select('average, bonus, equity')
+      .ilike('role', `%${normalizedTitle}%`);
 
     const { data, error } = await query;
     if (error) throw error;
 
+    console.log('📊 compareSalaryWithCurrent query results:', data?.length, 'records found');
+    console.log('📊 Sample data:', data?.[0]);
+    
     const records = data || [];
     const userBonus = Math.round(userCurrentSalary * ((userBonusPercentage || 0) / 100));
     const userBenefits = userBenefitsValue || 0;
     const userTotal = userCurrentSalary + userBonus + userBenefits;
 
+    if (records.length === 0) {
+      console.log('⚠️ No market data found for role:', title);
+      return {
+        title,
+        userCompensation: {
+          baseSalary: userCurrentSalary,
+          bonus: userBonus,
+          benefits: userBenefits,
+          total: userTotal,
+        },
+        marketComparison: {
+          baseSalary: 0,
+          bonus: 0,
+          equity: 0,
+          total: 0,
+        },
+        differences: {
+          baseSalaryDiff: 0,
+          bonusDiff: 0,
+          equityDiff: 0,
+          totalDiff: 0,
+        },
+        percentageDifference: 0,
+      };
+    }
+
     const marketAvgSalary = Math.round(
-      records.reduce((sum, r) => sum + (r.avg_salary || 0), 0) / (records.length || 1),
+      records.reduce((sum, r) => sum + (r.average || 0), 0) / records.length,
     );
-    const marketAvgBenefits = Math.round(
-      records.reduce((sum, r) => sum + (r.benefits || 0), 0) / (records.length || 1),
+    const marketAvgBonus = Math.round(
+      records.reduce((sum, r) => sum + (r.bonus || 0), 0) / records.length,
     );
-    const marketAvgTotal = marketAvgSalary + marketAvgBenefits;
+    const marketAvgEquity = Math.round(
+      records.reduce((sum, r) => sum + (r.equity || 0), 0) / records.length,
+    );
+    const marketAvgTotal = marketAvgSalary + marketAvgBonus + marketAvgEquity;
+    
+    console.log('📊 Market averages:', { marketAvgSalary, marketAvgBonus, marketAvgEquity, marketAvgTotal });
 
     return {
       title,
@@ -271,12 +375,14 @@ export class SalaryService {
       },
       marketComparison: {
         baseSalary: marketAvgSalary,
-        benefits: marketAvgBenefits,
+        bonus: marketAvgBonus,
+        equity: marketAvgEquity,
         total: marketAvgTotal,
       },
       differences: {
         baseSalaryDiff: marketAvgSalary - userCurrentSalary,
-        benefitsDiff: marketAvgBenefits - userBenefits,
+        bonusDiff: marketAvgBonus - userBonus,
+        equityDiff: marketAvgEquity - userBenefits,
         totalDiff: marketAvgTotal - userTotal,
       },
       percentageDifference: Math.round(((marketAvgTotal - userTotal) / userTotal) * 100),
@@ -315,7 +421,10 @@ export class SalaryService {
 
   // Helper methods
   private calculateRange(values: number[]): SalaryRange {
+    console.log('📊 calculateRange input:', values.length, 'values, sample:', values.slice(0, 3));
+    
     if (values.length === 0) {
+      console.log('⚠️ calculateRange: Empty array, returning zeros');
       return { min: 0, p25: 0, median: 0, p75: 0, max: 0, avg: 0 };
     }
 
@@ -347,6 +456,28 @@ export class SalaryService {
     ];
 
     return [headers, ...rows].map((row) => row.map((cell) => `"${cell || ''}"`).join(',')).join('\n');
+  }
+
+  /**
+   * Debug endpoint to see what roles are available in market_salary_data
+   */
+  async getAvailableRoles(): Promise<any> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('market_salary_data')
+      .select('role, location, experience_level')
+      .limit(20);
+    
+    if (error) {
+      console.error('Error fetching roles:', error);
+      return { error: error.message };
+    }
+    
+    return {
+      count: data?.length || 0,
+      sample: data,
+      uniqueRoles: [...new Set(data?.map(d => d.role) || [])],
+    };
   }
 
   /**
