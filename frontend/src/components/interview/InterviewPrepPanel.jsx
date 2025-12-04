@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useNavigate } from 'react-router-dom';
 
 const TABS = [
   'Overview',
   'Company Research',
   'Question Bank',
-  'Mock Interview',
   'Technical Prep',
-  'Checklist',
 ];
 
 export default function InterviewPrepPanel({
@@ -19,6 +18,7 @@ export default function InterviewPrepPanel({
   error,
 }) {
   const [activeTab, setActiveTab] = useState('Overview');
+  const navigate = useNavigate();
 
   if (!open || !interview) return null;
 
@@ -105,7 +105,6 @@ export default function InterviewPrepPanel({
                     <li>Role specific interview questions</li>
                     <li>Mock interview question flow</li>
                     <li>Technical prep prompts and frameworks</li>
-                    <li>A practical checklist to skim before the interview</li>
                   </ul>
 
                   <div className="mt-4 p-3 border rounded-md bg-gray-50">
@@ -192,6 +191,30 @@ export default function InterviewPrepPanel({
                 </div>
               )}
 
+              {/* MOCK INTERVIEW */}
+              {activeTab === 'Mock Interview' && prep.mockInterview && (
+                <div className="space-y-3">
+                  <div className="border rounded-lg bg-gray-50 p-3">
+                    <p className="text-gray-700 mb-2">
+                      {prep.mockInterview.intro}
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 text-gray-800">
+                      {Array.isArray(prep.mockInterview.questions) && prep.mockInterview.questions.map((q) => (
+                        <li key={q.id}>
+                          <span className="font-medium text-gray-900">
+                            [{q.type}]&nbsp;
+                          </span>
+                          {q.text}
+                        </li>
+                      ))}
+                    </ol>
+                    <p className="text-gray-700 mt-3">
+                      {prep.mockInterview.summary}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* TECHNICAL PREP */}
               {activeTab === 'Technical Prep' && prep.technicalPrep && (
                 <div className="space-y-4">
@@ -240,34 +263,32 @@ export default function InterviewPrepPanel({
                 </div>
               )}
 
-              {/* CHECKLIST */}
-              {activeTab === 'Checklist' && prep.checklist && (
-                <div className="space-y-3">
-                  <p className="text-gray-700">
-                    Use this checklist the day before and the day of the
-                    interview.
-                  </p>
-                  <ul className="space-y-2">
-                    {Array.isArray(prep.checklist.items) && prep.checklist.items.map((item) => (
-                      <li
-                        key={item.id}
-                        className="flex items-start gap-2 p-2 border rounded-md bg-gray-50"
-                      >
-                        <input type="checkbox" className="mt-1 h-4 w-4" />
-                        <div>
-                          <div className="text-gray-800">{item.label}</div>
-                          <div className="text-xs text-gray-500">
-                            {item.category}
-                            {item.suggestedTime &&
-                              ` • ${item.suggestedTime}`}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </>
+          )}
+
+          {/* MOCK INTERVIEW SECTION - Always at bottom */}
+          {!loading && !error && prep?.mockInterview && (
+            <div className="mt-6 pt-6 border-t">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Mock Interview Practice
+                </h3>
+                <p className="text-sm text-gray-700 mb-3">
+                  Practice with a full interview simulation. Answer questions, get timed,
+                  and receive performance feedback to build confidence.
+                </p>
+                <button
+                  onClick={() => {
+                    navigate(`/mock-interview/${interview.id}`, {
+                      state: { interview, prep }
+                    });
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
+                >
+                  Start Mock Interview
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
