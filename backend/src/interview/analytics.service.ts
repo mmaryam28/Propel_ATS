@@ -18,8 +18,8 @@ export class AnalyticsService {
     if (!interviews) return this.getEmptyConversionRates();
 
     const totalInterviews = interviews.length;
-    const offersReceived = interviews.filter(i => i.offerReceived).length;
-    const offersAccepted = interviews.filter(i => i.offerAccepted).length;
+    const offersReceived = interviews.filter(i => i.offer_received).length;
+    const offersAccepted = interviews.filter(i => i.offer_accepted).length;
     const passedInterviews = interviews.filter(i => i.outcome === 'Passed' || i.outcome === 'Offer').length;
     const rejectedInterviews = interviews.filter(i => i.outcome === 'Rejected').length;
 
@@ -109,12 +109,19 @@ export class AnalyticsService {
     const weaknessesCount = {};
 
     interviews.forEach(interview => {
-      interview.strengths?.forEach(strength => {
-        strengthsCount[strength] = (strengthsCount[strength] || 0) + 1;
-      });
-      interview.weaknesses?.forEach(weakness => {
-        weaknessesCount[weakness] = (weaknessesCount[weakness] || 0) + 1;
-      });
+      // Handle strengths as array (already stored as array in database)
+      if (interview.strengths && Array.isArray(interview.strengths)) {
+        interview.strengths.forEach(strength => {
+          strengthsCount[strength] = (strengthsCount[strength] || 0) + 1;
+        });
+      }
+
+      // Handle weaknesses as array (already stored as array in database)
+      if (interview.weaknesses && Array.isArray(interview.weaknesses)) {
+        interview.weaknesses.forEach(weakness => {
+          weaknessesCount[weakness] = (weaknessesCount[weakness] || 0) + 1;
+        });
+      }
     });
 
     const topStrengths = Object.entries(strengthsCount)
@@ -189,21 +196,17 @@ export class AnalyticsService {
       .eq('user_id', userId)
       .order('interview_date', { ascending: true });
 
-    const { data: practiceInterviews, error: practiceError } = await this.supabase.getClient()
-      .from('practice_interviews')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
-
     if (interviewsError) throw interviewsError;
-    if (practiceError) throw practiceError;
     if (!interviews) return this.getEmptyTrends();
 
     // Calculate monthly trends
     const monthlyData = {};
 
     interviews.forEach(interview => {
-      const monthKey = new Date(interview.interview_date).toISOString().substring(0, 7); // YYYY-MM
+      const date = interview.interview_date || interview.scheduled_at;
+      if (!date) return; // Skip if no date available
+      
+      const monthKey = new Date(date).toISOString().substring(0, 7); // YYYY-MM
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = {
           interviews: 0,
@@ -233,24 +236,28 @@ export class AnalyticsService {
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
-    // Practice session impact
-    const practiceTrends = (practiceInterviews || []).map(practice => ({
-      date: new Date(practice.created_at).toISOString().substring(0, 10),
-      type: practice.practice_type,
-      score: practice.performance_score,
-      duration: practice.duration,
-    }));
+    // Practice session impact - use practice_sessions_used from interviews
+    const totalPracticeSessions = interviews
+      .filter(i => i.practice_sessions_used)
+      .reduce((sum, i) => sum + (i.practice_sessions_used || 0), 0);
+
+    const interviewsWithPractice = interviews.filter(i => i.practice_sessions_used && i.practice_sessions_used > 0);
+    const avgPracticeScore = interviewsWithPractice.length > 0
+      ? (interviewsWithPractice
+          .filter(i => i.performance_rating)
+          .reduce((sum, i) => sum + (i.performance_rating || 0), 0) / 
+         interviewsWithPractice.filter(i => i.performance_rating).length).toFixed(1)
+      : '0';
 
     return {
       monthlyTrends: trends,
-      practiceHistory: practiceTrends,
-      totalPracticeSessions: (practiceInterviews || []).length,
-      avgPracticeScore: (practiceInterviews || []).length > 0
-        ? ((practiceInterviews || [])
-            .filter(p => p.performance_score)
-            .reduce((sum, p) => sum + p.performance_score, 0) / 
-           (practiceInterviews || []).filter(p => p.performance_score).length).toFixed(1)
-        : '0',
+      practiceHistory: interviewsWithPractice.map(i => ({
+        date: new Date(i.interview_date || i.scheduled_at).toISOString().substring(0, 10),
+        sessions: i.practice_sessions_used,
+        rating: i.performance_rating,
+      })),
+      totalPracticeSessions,
+      avgPracticeScore,
     };
   }
 

@@ -71,4 +71,62 @@ export class UpdateInterviewDto {
   @IsOptional()
   @IsString()
   status?: string; // 'scheduled', 'completed', 'cancelled'
+
+  // Outcome tracking fields
+  @IsOptional()
+  @IsBoolean()
+  offerReceived?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  offerAccepted?: boolean;
+
+  @IsOptional()
+  performanceRating?: number; // 1-5
+
+  @IsOptional()
+  prepTimeHours?: number;
+
+  @IsOptional()
+  practiceSessionsUsed?: number;
+
+  @IsOptional()
+  @IsString()
+  strengths?: string;
+
+  @IsOptional()
+  @IsString()
+  weaknesses?: string;
+
+  @IsOptional()
+  @IsString()
+  feedback?: string;
+
+  @IsOptional()
+  @IsString()
+  interviewStage?: string;
+
+  @IsOptional()
+  @IsString()
+  interviewFormat?: string;
+
+  @IsOptional()
+  @IsDateString()
+  interviewDate?: string;
+
+  @IsOptional()
+  @IsString()
+  companyName?: string;
+
+  @IsOptional()
+  @IsString()
+  companyType?: string;
+
+  @IsOptional()
+  @IsString()
+  companyIndustry?: string;
+
+  @IsOptional()
+  @IsString()
+  jobTitle?: string;
 }
