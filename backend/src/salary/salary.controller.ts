@@ -86,10 +86,28 @@ export class SalaryController {
 
   @Post('analysis')
   async generateSalaryAnalytics(@Body() body: any, @Req() req: any) {
+    // Try to get userId from JWT token or body
     const userId = req.user?.userId || body.userId;
+    
+    // If no userId, return basic analysis without user-specific data
     if (!userId) {
-      return { error: 'User ID is required' };
+      return {
+        userOffers: [],
+        salaryProgression: [],
+        negotiationStats: {
+          successRate: 0,
+          avgIncrease: 0,
+          totalNegotiated: 0,
+        },
+        careerProgression: {
+          totalOffers: 0,
+          avgIncrease: 0,
+          trending: 'insufficient_data',
+        },
+        message: 'Login to see personalized analytics',
+      };
     }
+    
     const { title, location, experienceLevel, currentSalary } = body;
     return await this.salaryService.generateSalaryAnalytics(
       userId,
@@ -98,5 +116,10 @@ export class SalaryController {
       experienceLevel,
       currentSalary,
     );
+  }
+
+  @Get('debug/roles')
+  async getAvailableRoles() {
+    return await this.salaryService.getAvailableRoles();
   }
 }

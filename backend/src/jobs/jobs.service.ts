@@ -1373,6 +1373,38 @@ export class JobsService {
     }
     if (dto.status) updateData.status = dto.status;
 
+    // Outcome tracking fields
+    if (dto.offerReceived !== undefined) updateData.offer_received = dto.offerReceived;
+    if (dto.offerAccepted !== undefined) updateData.offer_accepted = dto.offerAccepted;
+    if (dto.performanceRating !== undefined) updateData.performance_rating = dto.performanceRating;
+    if (dto.prepTimeHours !== undefined) updateData.prep_time_hours = dto.prepTimeHours;
+    if (dto.practiceSessionsUsed !== undefined) updateData.practice_sessions_used = dto.practiceSessionsUsed;
+    
+    // Convert strengths/weaknesses text to arrays for PostgreSQL
+    if (dto.strengths) {
+      const strengthsArray = dto.strengths
+        .split(/[,\n•\-\*]/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+      updateData.strengths = strengthsArray;
+    }
+    if (dto.weaknesses) {
+      const weaknessesArray = dto.weaknesses
+        .split(/[,\n•\-\*]/)
+        .map(w => w.trim())
+        .filter(w => w.length > 0);
+      updateData.weaknesses = weaknessesArray;
+    }
+    
+    if (dto.feedback) updateData.feedback = dto.feedback;
+    if (dto.interviewStage) updateData.interview_stage = dto.interviewStage;
+    if (dto.interviewFormat) updateData.interview_format = dto.interviewFormat;
+    if (dto.interviewDate) updateData.interview_date = dto.interviewDate;
+    if (dto.companyName) updateData.company_name = dto.companyName;
+    if (dto.companyType) updateData.company_type = dto.companyType;
+    if (dto.companyIndustry) updateData.company_industry = dto.companyIndustry;
+    if (dto.jobTitle) updateData.job_title = dto.jobTitle;
+
     const { data: interview, error } = await client
       .from('interviews')
       .update(updateData)

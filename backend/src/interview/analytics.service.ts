@@ -18,8 +18,8 @@ export class AnalyticsService {
     if (!interviews) return this.getEmptyConversionRates();
 
     const totalInterviews = interviews.length;
-    const offersReceived = interviews.filter(i => i.offerReceived).length;
-    const offersAccepted = interviews.filter(i => i.offerAccepted).length;
+    const offersReceived = interviews.filter(i => i.offer_received).length;
+    const offersAccepted = interviews.filter(i => i.offer_accepted).length;
     const passedInterviews = interviews.filter(i => i.outcome === 'Passed' || i.outcome === 'Offer').length;
     const rejectedInterviews = interviews.filter(i => i.outcome === 'Rejected').length;
 
@@ -109,12 +109,19 @@ export class AnalyticsService {
     const weaknessesCount = {};
 
     interviews.forEach(interview => {
-      interview.strengths?.forEach(strength => {
-        strengthsCount[strength] = (strengthsCount[strength] || 0) + 1;
-      });
-      interview.weaknesses?.forEach(weakness => {
-        weaknessesCount[weakness] = (weaknessesCount[weakness] || 0) + 1;
-      });
+      // Handle strengths as array (already stored as array in database)
+      if (interview.strengths && Array.isArray(interview.strengths)) {
+        interview.strengths.forEach(strength => {
+          strengthsCount[strength] = (strengthsCount[strength] || 0) + 1;
+        });
+      }
+
+      // Handle weaknesses as array (already stored as array in database)
+      if (interview.weaknesses && Array.isArray(interview.weaknesses)) {
+        interview.weaknesses.forEach(weakness => {
+          weaknessesCount[weakness] = (weaknessesCount[weakness] || 0) + 1;
+        });
+      }
     });
 
     const topStrengths = Object.entries(strengthsCount)
@@ -189,21 +196,17 @@ export class AnalyticsService {
       .eq('user_id', userId)
       .order('interview_date', { ascending: true });
 
-    const { data: practiceInterviews, error: practiceError } = await this.supabase.getClient()
-      .from('practice_interviews')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
-
     if (interviewsError) throw interviewsError;
-    if (practiceError) throw practiceError;
     if (!interviews) return this.getEmptyTrends();
 
     // Calculate monthly trends
     const monthlyData = {};
 
     interviews.forEach(interview => {
-      const monthKey = new Date(interview.interview_date).toISOString().substring(0, 7); // YYYY-MM
+      const date = interview.interview_date || interview.scheduled_at;
+      if (!date) return; // Skip if no date available
+      
+      const monthKey = new Date(date).toISOString().substring(0, 7); // YYYY-MM
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = {
           interviews: 0,
@@ -233,24 +236,28 @@ export class AnalyticsService {
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
-    // Practice session impact
-    const practiceTrends = (practiceInterviews || []).map(practice => ({
-      date: new Date(practice.created_at).toISOString().substring(0, 10),
-      type: practice.practice_type,
-      score: practice.performance_score,
-      duration: practice.duration,
-    }));
+    // Practice session impact - use practice_sessions_used from interviews
+    const totalPracticeSessions = interviews
+      .filter(i => i.practice_sessions_used)
+      .reduce((sum, i) => sum + (i.practice_sessions_used || 0), 0);
+
+    const interviewsWithPractice = interviews.filter(i => i.practice_sessions_used && i.practice_sessions_used > 0);
+    const avgPracticeScore = interviewsWithPractice.length > 0
+      ? (interviewsWithPractice
+          .filter(i => i.performance_rating)
+          .reduce((sum, i) => sum + (i.performance_rating || 0), 0) / 
+         interviewsWithPractice.filter(i => i.performance_rating).length).toFixed(1)
+      : '0';
 
     return {
       monthlyTrends: trends,
-      practiceHistory: practiceTrends,
-      totalPracticeSessions: (practiceInterviews || []).length,
-      avgPracticeScore: (practiceInterviews || []).length > 0
-        ? ((practiceInterviews || [])
-            .filter(p => p.performance_score)
-            .reduce((sum, p) => sum + p.performance_score, 0) / 
-           (practiceInterviews || []).filter(p => p.performance_score).length).toFixed(1)
-        : '0',
+      practiceHistory: interviewsWithPractice.map(i => ({
+        date: new Date(i.interview_date || i.scheduled_at).toISOString().substring(0, 10),
+        sessions: i.practice_sessions_used,
+        rating: i.performance_rating,
+      })),
+      totalPracticeSessions,
+      avgPracticeScore,
     };
   }
 
@@ -488,6 +495,139 @@ export class AnalyticsService {
       nextSteps: strategies.recommendations,
     };
   }
+
+    /**
+   * UC-082: Log a follow-up event (send, complete, respond)
+   */
+  async logFollowUpEvent(payload: {
+    userId: string;
+    interviewId?: string;
+    company?: string;
+    role?: string;
+    interviewerName?: string;
+    type: 'thank_you' | 'status_inquiry' | 'feedback_request' | 'networking';
+    status?: 'pending' | 'sent' | 'completed' | 'responded';
+    channel?: string;
+    suggestedSendAt?: string; // ISO
+    sentAt?: string;          // ISO
+    respondedAt?: string;     // ISO
+  }) {
+    const {
+      userId,
+      interviewId,
+      company,
+      role,
+      interviewerName,
+      type,
+      status = 'sent',
+      channel,
+      suggestedSendAt,
+      sentAt,
+      respondedAt,
+    } = payload;
+
+    const { data, error } = await this.supabase.getClient()
+      .from('interview_followups')
+      .insert({
+        user_id: userId,
+        interview_id: interviewId || null,
+        company,
+        role,
+        interviewer_name: interviewerName,
+        type,
+        status,
+        channel,
+        suggested_send_at: suggestedSendAt || null,
+        sent_at: sentAt || null,
+        responded_at: respondedAt || null,
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * UC-082: Update follow-up status (e.g., when response is received)
+   */
+  async updateFollowUpStatus(id: string, status: 'pending' | 'sent' | 'completed' | 'responded', respondedAt?: string) {
+    const update: any = { status };
+    if (respondedAt) {
+      update.responded_at = respondedAt;
+    }
+
+    const { data, error } = await this.supabase.getClient()
+      .from('interview_followups')
+      .update(update)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * UC-082: Track follow-up completion and response rates
+   */
+  async getFollowUpStats(userId: string) {
+    const { data: followups, error } = await this.supabase.getClient()
+      .from('interview_followups')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    if (!followups || followups.length === 0) {
+      return {
+        totalFollowUps: 0,
+        sentCount: 0,
+        respondedCount: 0,
+        completedCount: 0,
+        completionRate: '0',
+        responseRate: '0',
+        byType: {},
+      };
+    }
+
+    const byType: Record<string, { total: number; responded: number; completed: number }> = {};
+
+    followups.forEach(f => {
+      const type = f.type || 'unknown';
+      if (!byType[type]) {
+        byType[type] = { total: 0, responded: 0, completed: 0 };
+      }
+      byType[type].total += 1;
+
+      const responded = f.status === 'responded' || !!f.responded_at;
+      const completed = f.status === 'completed' || f.status === 'responded';
+
+      if (responded) byType[type].responded += 1;
+      if (completed) byType[type].completed += 1;
+    });
+
+    const totalFollowUps = followups.length;
+    const sentCount = followups.filter(
+      f => f.status === 'sent' || f.status === 'completed' || f.status === 'responded',
+    ).length;
+    const respondedCount = followups.filter(
+      f => f.status === 'responded' || !!f.responded_at,
+    ).length;
+    const completedCount = followups.filter(
+      f => f.status === 'completed' || f.status === 'responded',
+    ).length;
+
+    return {
+      totalFollowUps,
+      sentCount,
+      respondedCount,
+      completedCount,
+      completionRate: sentCount > 0 ? ((completedCount / sentCount) * 100).toFixed(1) : '0',
+      responseRate: sentCount > 0 ? ((respondedCount / sentCount) * 100).toFixed(1) : '0',
+      byType,
+    };
+  }
+
 
   // Helper methods
   private generateRecommendations(interviews: any[]): string[] {

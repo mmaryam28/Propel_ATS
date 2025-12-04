@@ -23,6 +23,9 @@ const InterviewPerformanceAnalytics = () => {
   const [error, setError] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [followUpStats, setFollowUpStats] = useState(null);
+  const [followUpError, setFollowUpError] = useState(null);
+
 
   const userId = localStorage.getItem('userId') || 'demo-user';
 
@@ -33,14 +36,28 @@ const InterviewPerformanceAnalytics = () => {
   const fetchAnalytics = async () => {
     setLoading(true);
     setError(null);
+    setFollowUpError(null);
     try {
-      const response = await axios.get(`http://localhost:3000/interview/analytics/dashboard`, {
-        params: { userId },
-      });
-      setAnalytics(response.data);
+      const [dashboardRes, followUpsRes] = await Promise.all([
+        axios.get(`http://localhost:3000/interview/analytics/dashboard`, {
+          params: { userId },
+        }),
+        axios.get(`http://localhost:3000/interview/analytics/follow-up-stats`, {
+          params: { userId },
+        }),
+      ]);
+
+      setAnalytics(dashboardRes.data);
+      setFollowUpStats(followUpsRes.data);
+
+      if (followUpsRes.data?.error) {
+        setFollowUpError(followUpsRes.data.error);
+      }
     } catch (err) {
-      console.error('Error fetching analytics:', err);
-      setError('Failed to load analytics data. Please ensure you have logged interview data.');
+      console.error("Error fetching analytics:", err);
+      setError(
+        "Failed to load analytics data. Please ensure you have logged interview data."
+      );
     } finally {
       setLoading(false);
     }
@@ -55,6 +72,7 @@ const InterviewPerformanceAnalytics = () => {
     { id: 'companies', label: 'Company Types', icon: 'building' },
     { id: 'skills', label: 'Skills Analysis', icon: 'star' },
     { id: 'recommendations', label: 'Recommendations', icon: 'lightbulb' },
+    { id: 'followups', label: 'Follow-Up Performance', icon: 'mail' },
   ];
 
   if (loading) {
@@ -611,6 +629,188 @@ const InterviewPerformanceAnalytics = () => {
     </div>
   );
 
+  const renderFollowUps = () => {
+    if (followUpError) {
+      return (
+        <Card>
+          <Card.Body>
+            <p className="text-sm text-red-600">{followUpError}</p>
+          </Card.Body>
+        </Card>
+      );
+    }
+
+    if (!followUpStats) {
+      return (
+        <Card>
+          <Card.Body>
+            <p className="text-sm text-gray-500">
+              No follow-up data yet. Use the Follow-Up Templates tab in Interview Insights and mark emails as sent to start tracking.
+            </p>
+          </Card.Body>
+        </Card>
+      );
+    }
+
+    const {
+      totalFollowUps,
+      sentCount,
+      respondedCount,
+      completedCount,
+      completionRate,
+      responseRate,
+      byType,
+    } = followUpStats;
+
+    const byTypeData = Object.entries(byType || {}).map(([type, stats]) => ({
+      type,
+      ...stats,
+    }));
+
+    return (
+      <div className="space-y-6">
+        {/* Top metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <Card.Body>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600">
+                  {totalFollowUps}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Total Follow-Ups Logged
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+
+          <Card>
+            <Card.Body>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-emerald-600">
+                  {completionRate}%
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Completion Rate
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Completed / Sent
+                </p>
+              </div>
+            </Card.Body>
+          </Card>
+
+          <Card>
+            <Card.Body>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-600">
+                  {responseRate}%
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Response Rate
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Responded / Sent
+                </p>
+              </div>
+            </Card.Body>
+          </Card>
+
+          <Card>
+            <Card.Body>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-orange-500">
+                  {respondedCount}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Responses Received
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
+
+        {/* Bar chart by type */}
+        <Card>
+          <Card.Header>
+            <Card.Title className="flex items-center gap-2">
+              <Icon name="bar-chart" size="sm" />
+              Follow-Up Performance by Template Type
+            </Card.Title>
+          </Card.Header>
+          <Card.Body>
+            {byTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={byTypeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="type" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="total" name="Total" fill={COLORS[0]} />
+                  <Bar dataKey="completed" name="Completed" fill={COLORS[1]} />
+                  <Bar dataKey="responded" name="Responded" fill={COLORS[3]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                No follow-up events by type yet.
+              </div>
+            )}
+          </Card.Body>
+        </Card>
+
+        {/* Detail list */}
+        <Card>
+          <Card.Header>
+            <Card.Title>Detail by Follow-Up Type</Card.Title>
+          </Card.Header>
+          <Card.Body>
+            {byTypeData.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                Once you start sending follow-ups (thank-you, status inquiry, feedback requests, networking), you’ll see a breakdown here.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {byTypeData.map((t) => (
+                  <div
+                    key={t.type}
+                    className="flex items-center justify-between border rounded-md px-3 py-2"
+                  >
+                    <div>
+                      <div className="text-sm font-semibold capitalize">
+                        {t.type.replace("_", " ")}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Completed: {t.completed}/{t.total} • Responded:{" "}
+                        {t.responded}/{t.total}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-gray-600">
+                      <div>
+                        Completion:{" "}
+                        {t.total
+                          ? `${((t.completed / t.total) * 100).toFixed(1)}%`
+                          : "0%"}
+                      </div>
+                      <div>
+                        Response:{" "}
+                        {t.total
+                          ? `${((t.responded / t.total) * 100).toFixed(1)}%`
+                          : "0%"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card.Body>
+        </Card>
+      </div>
+    );
+  };
+
+
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
@@ -658,6 +858,8 @@ const InterviewPerformanceAnalytics = () => {
         {activeTab === 'companies' && renderCompanies()}
         {activeTab === 'skills' && renderSkills()}
         {activeTab === 'recommendations' && renderRecommendations()}
+        {activeTab === 'followups' && renderFollowUps()}
+
       </div>
     </div>
   );

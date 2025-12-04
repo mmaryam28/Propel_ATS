@@ -5,6 +5,7 @@ import { Icon } from "../components/ui/Icon";
 import { Toast } from "../components/Toast";
 import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults } from "../lib/api";
 import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
+import InterviewOutcomeModal from "../components/InterviewOutcomeModal";
 import { useAnalytics } from "../contexts/AnalyticsContext";
 
 export default function JobDetails() {
@@ -29,6 +30,8 @@ export default function JobDetails() {
   const [materialsHistory, setMaterialsHistory] = React.useState([]);
   const [defaults, setDefaults] = React.useState({ defaultResumeVersionId: null, defaultCoverLetterVersionId: null });
   const [showScheduleInterview, setShowScheduleInterview] = React.useState(false);
+  const [showOutcomeModal, setShowOutcomeModal] = React.useState(false);
+  const [selectedInterview, setSelectedInterview] = React.useState(null);
   const [interviews, setInterviews] = React.useState([]);
 
   React.useEffect(() => { (async () => {
@@ -624,7 +627,7 @@ export default function JobDetails() {
             <div className="space-y-3">
               {interviews.map(interview => (
                 <div key={interview.id} className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                  <div>
+                  <div className="flex-1">
                     <div className="font-medium">{interview.title}</div>
                     <div className="text-sm text-gray-600">
                       {new Date(interview.scheduled_at).toLocaleString()}
@@ -633,14 +636,28 @@ export default function JobDetails() {
                     {interview.interviewer_name && (
                       <div className="text-xs text-gray-500">with {interview.interviewer_name}</div>
                     )}
+                    {interview.offer_received && (
+                      <div className="text-xs text-green-600 font-medium mt-1">✓ Offer Received</div>
+                    )}
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    interview.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    interview.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                    'bg-blue-100 text-blue-800'
-                  }`}>
-                    {interview.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedInterview(interview);
+                        setShowOutcomeModal(true);
+                      }}
+                      className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Record Outcome
+                    </button>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      interview.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      interview.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {interview.status}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -734,6 +751,23 @@ export default function JobDetails() {
           jobTitle={job.title}
           onClose={() => setShowScheduleInterview(false)}
           onScheduled={handleInterviewScheduled}
+        />
+      )}
+
+      {/* Interview Outcome Modal */}
+      {showOutcomeModal && selectedInterview && (
+        <InterviewOutcomeModal
+          interview={selectedInterview}
+          onClose={() => {
+            setShowOutcomeModal(false);
+            setSelectedInterview(null);
+          }}
+          onUpdated={(updated) => {
+            setShowOutcomeModal(false);
+            setSelectedInterview(null);
+            fetchInterviews();
+            triggerRefresh();
+          }}
         />
       )}
     </div>
