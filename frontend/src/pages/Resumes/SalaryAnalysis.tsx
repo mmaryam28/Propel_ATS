@@ -1113,177 +1113,6 @@ const SalaryAnalysis: React.FC = () => {
             </div>
           </div>
         )}
-
-        {userAnalytics && (
-          <>
-            {/* Salary Progression */}
-            {userAnalytics.salaryProgression && userAnalytics.salaryProgression.length > 0 && (
-              <div style={{ background: "#fff", padding: "1.5rem", borderRadius: "8px", marginBottom: "1.5rem" }}>
-                <h3 style={{ color: "#333", marginBottom: "1rem", fontSize: "18px" }}>💰 Salary Offers Over Time</h3>
-                <div style={{ display: "grid", gap: "12px" }}>
-                  {userAnalytics.salaryProgression.map((offer: any, idx: number) => (
-                    <div key={idx} style={{ padding: "12px", background: "#f9f9f9", borderRadius: "6px", borderLeft: offer.negotiated ? "4px solid #28a745" : "4px solid #6c757d" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                        <div>
-                          <div style={{ fontWeight: "bold", fontSize: "16px", color: "#333" }}>{offer.company}</div>
-                          <div style={{ fontSize: "14px", color: "#666" }}>{offer.title} • {offer.date}</div>
-                        </div>
-                        <div style={{ textAlign: "right" }}>
-                          <div style={{ fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>
-                            ${offer.baseSalary?.toLocaleString()}
-                          </div>
-                          {offer.increase !== 0 && (
-                            <div style={{ fontSize: "12px", color: offer.increase > 0 ? "#28a745" : "#dc3545" }}>
-                              {offer.increase > 0 ? "+" : ""}${offer.increase?.toLocaleString()}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {offer.negotiated && (
-                        <div style={{ fontSize: "12px", color: "#28a745", marginTop: "4px" }}>✓ Negotiated</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Negotiation Success */}
-            {userAnalytics.negotiationSuccess && (
-              <div style={{ background: "#fff", padding: "1.5rem", borderRadius: "8px", marginBottom: "1.5rem" }}>
-                <h3 style={{ color: "#333", marginBottom: "1rem", fontSize: "18px" }}>🤝 Negotiation Success</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-                  <div style={{ padding: "16px", background: "#e7f3ff", borderRadius: "6px", textAlign: "center" }}>
-                    <div style={{ fontSize: "32px", fontWeight: "bold", color: "#007bff" }}>
-                      {userAnalytics.negotiationSuccess.rate}%
-                    </div>
-                    <div style={{ fontSize: "14px", color: "#666", marginTop: "4px" }}>Success Rate</div>
-                  </div>
-                  <div style={{ padding: "16px", background: "#d4edda", borderRadius: "6px", textAlign: "center" }}>
-                    <div style={{ fontSize: "32px", fontWeight: "bold", color: "#28a745" }}>
-                      ${userAnalytics.negotiationSuccess.avgIncrease?.toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: "14px", color: "#666", marginTop: "4px" }}>Avg. Increase</div>
-                  </div>
-                  <div style={{ padding: "16px", background: "#fff3cd", borderRadius: "6px", textAlign: "center" }}>
-                    <div style={{ fontSize: "32px", fontWeight: "bold", color: "#856404" }}>
-                      {userAnalytics.negotiationSuccess.totalNegotiated}/{userAnalytics.negotiationSuccess.totalOffers}
-                    </div>
-                    <div style={{ fontSize: "14px", color: "#666", marginTop: "4px" }}>Negotiated Offers</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Career Progression */}
-            {userAnalytics.careerProgression && (
-              <div style={{ background: "#fff", padding: "1.5rem", borderRadius: "8px", marginBottom: "1.5rem" }}>
-                <h3 style={{ color: "#333", marginBottom: "1rem", fontSize: "18px" }}>📈 Career Progression Impact</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-                  <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Total Offers</div>
-                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#333" }}>
-                      {userAnalytics.careerProgression.totalOffers}
-                    </div>
-                  </div>
-                  <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Avg. Increase</div>
-                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#333" }}>
-                      ${Math.round(userAnalytics.careerProgression.avgIncrease)?.toLocaleString()}
-                    </div>
-                  </div>
-                  <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Trend</div>
-                    <div style={{ fontSize: "24px", fontWeight: "bold", color: userAnalytics.careerProgression.trending === "up" ? "#28a745" : "#6c757d" }}>
-                      {userAnalytics.careerProgression.trending === "up" ? "📈 Up" : userAnalytics.careerProgression.trending === "flat" ? "➡️ Flat" : "📊 N/A"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Market Positioning */}
-            {userAnalytics.marketPositioning && (
-              <div style={{ background: "#fff", padding: "1.5rem", borderRadius: "8px", marginBottom: "1.5rem" }}>
-                <h3 style={{ color: "#333", marginBottom: "1rem", fontSize: "18px" }}>🎯 Market Positioning</h3>
-                <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
-                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#007bff", marginBottom: "12px" }}>
-                    You are in the{" "}
-                    {userAnalytics.marketPositioning.status === "top_25" && "top 25%"}
-                    {userAnalytics.marketPositioning.status === "above_average" && "above average range"}
-                    {userAnalytics.marketPositioning.status === "average" && "average range"}
-                    {userAnalytics.marketPositioning.status === "below_average" && "below average range"}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div>
-                      <div style={{ fontSize: "14px", color: "#666" }}>Your Average</div>
-                      <div style={{ fontSize: "18px", fontWeight: "bold", color: "#333" }}>
-                        ${userAnalytics.marketPositioning.userAvg?.toLocaleString()}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "14px", color: "#666" }}>Market Average</div>
-                      <div style={{ fontSize: "18px", fontWeight: "bold", color: "#333" }}>
-                        ${userAnalytics.marketPositioning.marketAvg?.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: "12px", padding: "12px", background: userAnalytics.marketPositioning.percentDifference >= 0 ? "#d4edda" : "#f8d7da", borderRadius: "6px" }}>
-                    <div style={{ fontSize: "16px", fontWeight: "bold", color: userAnalytics.marketPositioning.percentDifference >= 0 ? "#155724" : "#721c24" }}>
-                      {userAnalytics.marketPositioning.percentDifference >= 0 ? "+" : ""}
-                      {userAnalytics.marketPositioning.percentDifference}% {userAnalytics.marketPositioning.percentDifference >= 0 ? "above" : "below"} market
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Timing Insights */}
-            {userAnalytics.timingInsights && userAnalytics.timingInsights.bestQuarter && (
-              <div style={{ background: "#fff", padding: "1.5rem", borderRadius: "8px", marginBottom: "1.5rem" }}>
-                <h3 style={{ color: "#333", marginBottom: "1rem", fontSize: "18px" }}>⏰ Timing Insights</h3>
-                <div style={{ padding: "16px", background: "#fff3cd", borderRadius: "6px" }}>
-                  <div style={{ fontSize: "16px", color: "#856404", marginBottom: "8px" }}>
-                    <strong>Best time for offers:</strong> {userAnalytics.timingInsights.bestQuarter}
-                  </div>
-                  <div style={{ fontSize: "14px", color: "#856404" }}>
-                    Average salary during this period: ${userAnalytics.timingInsights.bestQuarterAvg?.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Recommendations */}
-            {userAnalytics.recommendations && userAnalytics.recommendations.length > 0 && (
-              <div style={{ background: "#fff", padding: "1.5rem", borderRadius: "8px" }}>
-                <h3 style={{ color: "#333", marginBottom: "1rem", fontSize: "18px" }}>💡 Recommendations</h3>
-                <div style={{ display: "grid", gap: "12px" }}>
-                  {userAnalytics.recommendations.map((rec: any, idx: number) => (
-                    <div
-                      key={idx}
-                      style={{
-                        padding: "16px",
-                        background: rec.priority === "high" ? "#fff5f5" : rec.priority === "medium" ? "#fffbf0" : "#f0f8ff",
-                        borderRadius: "6px",
-                        borderLeft: `4px solid ${rec.priority === "high" ? "#dc3545" : rec.priority === "medium" ? "#ffc107" : "#007bff"}`,
-                      }}
-                    >
-                      <div style={{ fontSize: "16px", fontWeight: "bold", color: "#333", marginBottom: "8px" }}>
-                        {rec.title}
-                      </div>
-                      <div style={{ fontSize: "14px", color: "#666", marginBottom: "8px" }}>
-                        {rec.message}
-                      </div>
-                      <div style={{ fontSize: "13px", color: "#007bff", fontStyle: "italic" }}>
-                        💡 {rec.action}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
       </div>
 
       <div style={{ display: "grid", gap: "1.5rem", marginTop: "2rem" }}>
@@ -1544,7 +1373,7 @@ const SalaryAnalysis: React.FC = () => {
         {userAnalytics && (
           <div style={{ background: "#f0f8ff", padding: "1.5rem", borderRadius: "8px", marginTop: "2rem", border: "2px solid #007bff" }}>
             <h2 style={{ color: "#007bff", marginBottom: "1.5rem", fontSize: "24px", fontWeight: "bold" }}>
-              📊 Your Personalized Salary Analytics
+              📊 Personalized Salary Analytics
             </h2>
 
             {/* Salary Progression */}
@@ -1601,6 +1430,33 @@ const SalaryAnalysis: React.FC = () => {
                       {userAnalytics.negotiationSuccess.totalNegotiated}/{userAnalytics.negotiationSuccess.totalOffers}
                     </div>
                     <div style={{ fontSize: "14px", color: "#666", marginTop: "4px" }}>Negotiated Offers</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Career Progression */}
+            {userAnalytics.careerProgression && (
+              <div style={{ background: "#fff", padding: "1.5rem", borderRadius: "8px", marginBottom: "1.5rem" }}>
+                <h3 style={{ color: "#333", marginBottom: "1rem", fontSize: "18px" }}>📈 Career Progression Impact</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+                  <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
+                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Total Offers</div>
+                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#333" }}>
+                      {userAnalytics.careerProgression.totalOffers}
+                    </div>
+                  </div>
+                  <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
+                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Avg. Increase</div>
+                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#333" }}>
+                      ${Math.round(userAnalytics.careerProgression.avgIncrease)?.toLocaleString()}
+                    </div>
+                  </div>
+                  <div style={{ padding: "16px", background: "#f8f9fa", borderRadius: "6px" }}>
+                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Trend</div>
+                    <div style={{ fontSize: "24px", fontWeight: "bold", color: userAnalytics.careerProgression.trending === "up" ? "#28a745" : "#6c757d" }}>
+                      {userAnalytics.careerProgression.trending === "up" ? "📈 Up" : userAnalytics.careerProgression.trending === "flat" ? "➡️ Flat" : "📊 N/A"}
+                    </div>
                   </div>
                 </div>
               </div>
