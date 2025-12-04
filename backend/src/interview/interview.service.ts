@@ -9,9 +9,6 @@ export class InterviewService {
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  
-
-
   /**
    * UC-068 AC1: Research typical interview process and stages
    */
