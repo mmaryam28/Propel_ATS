@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 import { Card } from '../../components/ui/Card';
 import { Icon } from '../../components/ui/Icon';
-import { getCustomReportData, shareReport } from '../../lib/api';
+import { getCustomReportData, shareReport, listJobs } from '../../lib/api';
 import { exportReportToPDF, exportReportToExcel } from '../../lib/reportExport';
 
 // Dummy data for charts
@@ -54,21 +54,21 @@ const reportTemplates = [
     id: 'salary-progression',
     name: 'Salary Progression',
     icon: 'dollar-sign',
-    metrics: ['salaryOffers', 'averageSalary', 'salaryTrend'],
+    metrics: ['offers', 'avgSalary'],
     description: 'Monitor salary offers and compensation trends'
   },
   {
     id: 'company-insights',
     name: 'Company Insights',
     icon: 'building',
-    metrics: ['companiesApplied', 'responseRate', 'topCompanies'],
+    metrics: ['applications', 'responseRate', 'offers'],
     description: 'View application metrics by company'
   },
   {
     id: 'time-analysis',
     name: 'Time Analysis',
     icon: 'clock',
-    metrics: ['timeToInterview', 'timeToOffer', 'applicationVelocity'],
+    metrics: ['timeToInterview', 'timeToResponse'],
     description: 'Understand time metrics in your job search'
   },
 ];
@@ -101,6 +101,31 @@ export default function CustomReports() {
   const [loading, setLoading] = useState(false);
   const [shareEmail, setShareEmail] = useState('');
   const [shareMessage, setShareMessage] = useState('');
+  const [companies, setCompanies] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [industries, setIndustries] = useState([]);
+
+  // Fetch jobs to populate filter dropdowns
+  useEffect(() => {
+    const fetchJobsForFilters = async () => {
+      try {
+        const jobs = await listJobs();
+        
+        // Extract unique companies, roles, and industries
+        const uniqueCompanies = [...new Set(jobs.map(j => j.company).filter(Boolean))];
+        const uniqueRoles = [...new Set(jobs.map(j => j.title).filter(Boolean))];
+        const uniqueIndustries = [...new Set(jobs.map(j => j.industry).filter(Boolean))];
+        
+        setCompanies(uniqueCompanies.sort());
+        setRoles(uniqueRoles.sort());
+        setIndustries(uniqueIndustries.sort());
+      } catch (error) {
+        console.error('Error fetching jobs for filters:', error);
+      }
+    };
+    
+    fetchJobsForFilters();
+  }, []);
 
   const handleTemplateSelect = (template) => {
     setSelectedTemplate(template);
@@ -332,6 +357,7 @@ export default function CustomReports() {
                     type="date"
                     value={dateRange.start}
                     onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                    placeholder="mm/dd/yyyy"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -343,6 +369,7 @@ export default function CustomReports() {
                     type="date"
                     value={dateRange.end}
                     onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                    placeholder="mm/dd/yyyy"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -360,9 +387,9 @@ export default function CustomReports() {
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">All Companies</option>
-                    <option value="google">Google</option>
-                    <option value="microsoft">Microsoft</option>
-                    <option value="amazon">Amazon</option>
+                    {companies.map(company => (
+                      <option key={company} value={company}>{company}</option>
+                    ))}
                   </select>
                   <select
                     value={filters.role}
@@ -370,9 +397,9 @@ export default function CustomReports() {
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">All Roles</option>
-                    <option value="engineer">Software Engineer</option>
-                    <option value="designer">Designer</option>
-                    <option value="manager">Product Manager</option>
+                    {roles.map(role => (
+                      <option key={role} value={role}>{role}</option>
+                    ))}
                   </select>
                   <select
                     value={filters.industry}
@@ -380,9 +407,9 @@ export default function CustomReports() {
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">All Industries</option>
-                    <option value="tech">Technology</option>
-                    <option value="finance">Finance</option>
-                    <option value="healthcare">Healthcare</option>
+                    {industries.map(industry => (
+                      <option key={industry} value={industry}>{industry}</option>
+                    ))}
                   </select>
                 </div>
               </div>

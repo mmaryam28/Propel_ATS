@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Query, Body, Req } from '@nestjs/common';
+import { Controller, Get, Post, Query, Body, Req, UseGuards } from '@nestjs/common';
 import { SalaryService } from './salary.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('salary')
 export class SalaryController {
@@ -85,6 +86,7 @@ export class SalaryController {
   }
 
   @Post('analysis')
+  @UseGuards(JwtAuthGuard)
   async generateSalaryAnalytics(@Body() body: any, @Req() req: any) {
     // Try to get userId from JWT token or body
     const userId = req.user?.userId || body.userId;

@@ -548,11 +548,19 @@ export class SalaryService {
     }
 
     // Career progression impact
+    // Calculate average salary across all offers to avoid negative values
+    const avgSalary = userOffers.length > 0
+      ? userOffers.reduce((sum, o) => sum + o.baseSalary, 0) / userOffers.length
+      : 0;
+    
+    // Calculate overall increase from first to average (more positive metric)
+    const overallGrowth = userOffers.length > 1
+      ? avgSalary - userOffers[0].baseSalary
+      : 0;
+    
     const careerProgression = {
       totalOffers: userOffers.length,
-      avgIncrease: userOffers.length > 1 
-        ? (userOffers[userOffers.length - 1].baseSalary - userOffers[0].baseSalary) / (userOffers.length - 1)
-        : 0,
+      avgIncrease: Math.round(overallGrowth),
       trending: userOffers.length > 1 
         ? userOffers[userOffers.length - 1].baseSalary > userOffers[0].baseSalary ? 'up' : 'flat'
         : 'insufficient_data',
