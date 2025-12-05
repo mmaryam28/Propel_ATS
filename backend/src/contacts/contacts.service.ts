@@ -91,7 +91,115 @@ export class ContactsService {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    // After creating the contact, try to link it to a real user and populate connections
+    await this.resolveContactIdentityAndConnections(userId, data.id, createContactDto);
+
     return data;
+  }
+
+  /**
+   * Resolve if this contact is actually a user in the system and populate connections
+   */
+  private async resolveContactIdentityAndConnections(
+    userId: string,
+    contactId: string,
+    contactDto: CreateContactDto | UpdateContactDto
+  ) {
+    const supabase = this.supabaseService.getClient();
+
+    try {
+      // Try to find a matching user by email or LinkedIn URL
+      let matchedUserId: string | null = null;
+
+      // Match by email first (most reliable)
+      if (contactDto.email) {
+        const { data: userByEmail } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', contactDto.email)
+          .single();
+
+        if (userByEmail) {
+          matchedUserId = userByEmail.id;
+        }
+      }
+
+      // Match by LinkedIn URL if email didn't work
+      if (!matchedUserId && contactDto.linkedinProfileUrl) {
+        const normalizedLinkedIn = this.normalizeLinkedInUrl(contactDto.linkedinProfileUrl);
+        
+        // Find any professional_contact that belongs to a user (user_id matches their own user record)
+        // and has the same LinkedIn URL
+        const { data: matchingContacts } = await supabase
+          .from('professional_contacts')
+          .select('user_id, id')
+          .eq('source', 'self')
+          .ilike('linkedin_profile_url', `%${normalizedLinkedIn}%`)
+          .limit(1);
+
+        if (matchingContacts && matchingContacts.length > 0) {
+          matchedUserId = matchingContacts[0].user_id;
+        }
+      }
+
+      // If we found a matching user, link to their network
+      if (matchedUserId && matchedUserId !== userId) {
+        await this.linkToUserNetwork(userId, contactId, matchedUserId);
+      }
+    } catch (error) {
+      // Don't throw - identity resolution is best-effort
+      console.error('Error resolving contact identity:', error);
+    }
+  }
+
+  /**
+   * Link a contact to a user's network by populating contact_connections
+   */
+  private async linkToUserNetwork(userId: string, contactId: string, targetUserId: string) {
+    const supabase = this.supabaseService.getClient();
+
+    try {
+      // Get all contacts that belong to the target user
+      const { data: targetUserContacts } = await supabase
+        .from('professional_contacts')
+        .select('id')
+        .eq('user_id', targetUserId);
+
+      if (!targetUserContacts || targetUserContacts.length === 0) {
+        return; // Target user has no contacts to link
+      }
+
+      // Create connections: This contact (in my network) is connected to all of target user's contacts
+      const connections = targetUserContacts.map(targetContact => ({
+        contact_id: contactId,
+        connected_contact_id: targetContact.id,
+        connection_strength: 4, // Default medium-high strength
+      }));
+
+      // Batch insert connections
+      const { error } = await supabase
+        .from('contact_connections')
+        .insert(connections);
+
+      if (error) {
+        console.error('Error creating contact connections:', error);
+      } else {
+        console.log(`✅ Linked contact ${contactId} to ${connections.length} contacts from user ${targetUserId}'s network`);
+      }
+    } catch (error) {
+      console.error('Error linking to user network:', error);
+    }
+  }
+
+  /**
+   * Normalize LinkedIn URL for matching
+   */
+  private normalizeLinkedInUrl(url: string): string {
+    if (!url) return '';
+    
+    // Extract the username from various LinkedIn URL formats
+    const match = url.match(/linkedin\.com\/in\/([^\/\?]+)/i);
+    return match ? match[1].toLowerCase() : url.toLowerCase();
   }
 
   /**
@@ -127,6 +235,11 @@ export class ContactsService {
 
     if (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // If email or LinkedIn URL was updated, try to resolve identity again
+    if (updateContactDto.email || updateContactDto.linkedinProfileUrl) {
+      await this.resolveContactIdentityAndConnections(userId, contactId, updateContactDto);
     }
 
     return data;
@@ -297,6 +410,51 @@ export class ContactsService {
       companiesCount,
       industriesCount,
       relationshipTypes,
+    };
+  }
+
+  /**
+   * Sync all contacts - resolve identities and populate connections for existing contacts
+   */
+  async syncAllContacts(userId: string) {
+    const supabase = this.supabaseService.getClient();
+
+    // Get all user's contacts
+    const { data: contacts, error } = await supabase
+      .from('professional_contacts')
+      .select('id, email, linkedin_profile_url')
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    let synced = 0;
+    let skipped = 0;
+
+    // Process each contact
+    for (const contact of contacts) {
+      try {
+        if (contact.email || contact.linkedin_profile_url) {
+          await this.resolveContactIdentityAndConnections(userId, contact.id, {
+            email: contact.email,
+            linkedinProfileUrl: contact.linkedin_profile_url,
+          } as any);
+          synced++;
+        } else {
+          skipped++;
+        }
+      } catch (error) {
+        console.error(`Error syncing contact ${contact.id}:`, error);
+        skipped++;
+      }
+    }
+
+    return {
+      message: 'Contact sync completed',
+      totalContacts: contacts.length,
+      synced,
+      skipped,
     };
   }
 }

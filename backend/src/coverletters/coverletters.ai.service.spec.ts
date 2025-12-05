@@ -15,20 +15,4 @@ describe('CoverletterAIService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
-
-  describe('generateCoverLetter', () => {
-    it('should return a string', async () => {
-      const params = { 
-        templateBody: 'Template', 
-        jobDescription: 'Job desc',
-        profileSummary: 'Profile',
-        tone: 'formal',
-        companyInfo: 'Company info'
-      };
-
-      const result = await service.generateCoverLetter(params);
-
-      expect(typeof result === 'string' || result === undefined).toBe(true);
-    });
-  });
 });

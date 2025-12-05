@@ -134,18 +134,18 @@ export default function InterviewPrepPanel({
               )}
 
               {/* COMPANY RESEARCH */}
-              {activeTab === 'Company Research' && (
+              {activeTab === 'Company Research' && prep.companyResearch && (
                 <div className="space-y-3">
                   <div className="rounded-lg border bg-gray-50 p-3">
-                    <ReactMarkdown className="prose prose-sm max-w-none">
+                    <div className="whitespace-pre-wrap text-gray-700 text-sm">
                       {prep.companyResearch}
-                    </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* QUESTION BANK */}
-              {activeTab === 'Question Bank' && (
+              {activeTab === 'Question Bank' && prep.questionBank && (
                 <div className="space-y-4">
                   {Object.entries(prep.questionBank).map(
                     ([category, questions]) => (
@@ -158,7 +158,7 @@ export default function InterviewPrepPanel({
                             category.slice(1)}
                         </h3>
                         <ul className="list-disc list-inside space-y-1 text-gray-700">
-                          {questions.map((q, idx) => (
+                          {Array.isArray(questions) && questions.map((q, idx) => (
                             <li key={idx}>{q}</li>
                           ))}
                         </ul>
@@ -169,14 +169,14 @@ export default function InterviewPrepPanel({
               )}
 
               {/* MOCK INTERVIEW */}
-              {activeTab === 'Mock Interview' && (
+              {activeTab === 'Mock Interview' && prep.mockInterview && (
                 <div className="space-y-3">
                   <div className="border rounded-lg bg-gray-50 p-3">
                     <p className="text-gray-700 mb-2">
                       {prep.mockInterview.intro}
                     </p>
                     <ol className="list-decimal list-inside space-y-1 text-gray-800">
-                      {prep.mockInterview.questions.map((q) => (
+                      {Array.isArray(prep.mockInterview.questions) && prep.mockInterview.questions.map((q) => (
                         <li key={q.id}>
                           <span className="font-medium text-gray-900">
                             [{q.type}]&nbsp;
@@ -193,7 +193,7 @@ export default function InterviewPrepPanel({
               )}
 
               {/* TECHNICAL PREP */}
-              {activeTab === 'Technical Prep' && (
+              {activeTab === 'Technical Prep' && prep.technicalPrep && (
                 <div className="space-y-4">
                   <div className="border rounded-lg bg-gray-50 p-3">
                     <p className="text-gray-700 mb-2">
@@ -201,50 +201,54 @@ export default function InterviewPrepPanel({
                     </p>
                   </div>
 
-                  <div className="p-3 border rounded-lg bg-gray-50 space-y-1">
-                    <div className="font-semibold text-gray-900">
-                      Coding challenge
+                  {prep.technicalPrep.codingChallenge && (
+                    <div className="p-3 border rounded-lg bg-gray-50 space-y-1">
+                      <div className="font-semibold text-gray-900">
+                        Coding challenge
+                      </div>
+                      <div className="text-gray-800">
+                        {prep.technicalPrep.codingChallenge.prompt}
+                      </div>
+                      <div className="text-gray-700 text-xs">
+                        <span className="font-semibold">Hint:</span>{' '}
+                        {prep.technicalPrep.codingChallenge.hint}
+                      </div>
+                      <div className="text-gray-700 text-xs">
+                        <span className="font-semibold">Solution outline:</span>{' '}
+                        {prep.technicalPrep.codingChallenge.solutionOutline}
+                      </div>
                     </div>
-                    <div className="text-gray-800">
-                      {prep.technicalPrep.codingChallenge.prompt}
-                    </div>
-                    <div className="text-gray-700 text-xs">
-                      <span className="font-semibold">Hint:</span>{' '}
-                      {prep.technicalPrep.codingChallenge.hint}
-                    </div>
-                    <div className="text-gray-700 text-xs">
-                      <span className="font-semibold">Solution outline:</span>{' '}
-                      {prep.technicalPrep.codingChallenge.solutionOutline}
-                    </div>
-                  </div>
+                  )}
 
-                  <div className="p-3 border rounded-lg bg-gray-50 space-y-1">
-                    <div className="font-semibold text-gray-900">
-                      System design
+                  {prep.technicalPrep.systemDesign && (
+                    <div className="p-3 border rounded-lg bg-gray-50 space-y-1">
+                      <div className="font-semibold text-gray-900">
+                        System design
+                      </div>
+                      <div className="text-gray-800">
+                        {prep.technicalPrep.systemDesign.prompt}
+                      </div>
+                      <ul className="list-disc list-inside text-gray-700 text-xs space-y-1 mt-1">
+                        {Array.isArray(prep.technicalPrep.systemDesign.keyPoints) && prep.technicalPrep.systemDesign.keyPoints.map(
+                          (p, idx) => (
+                            <li key={idx}>{p}</li>
+                          ),
+                        )}
+                      </ul>
                     </div>
-                    <div className="text-gray-800">
-                      {prep.technicalPrep.systemDesign.prompt}
-                    </div>
-                    <ul className="list-disc list-inside text-gray-700 text-xs space-y-1 mt-1">
-                      {prep.technicalPrep.systemDesign.keyPoints.map(
-                        (p, idx) => (
-                          <li key={idx}>{p}</li>
-                        ),
-                      )}
-                    </ul>
-                  </div>
+                  )}
                 </div>
               )}
 
               {/* CHECKLIST */}
-              {activeTab === 'Checklist' && (
+              {activeTab === 'Checklist' && prep.checklist && (
                 <div className="space-y-3">
                   <p className="text-gray-700">
                     Use this checklist the day before and the day of the
                     interview.
                   </p>
                   <ul className="space-y-2">
-                    {prep.checklist.items.map((item) => (
+                    {Array.isArray(prep.checklist.items) && prep.checklist.items.map((item) => (
                       <li
                         key={item.id}
                         className="flex items-start gap-2 p-2 border rounded-md bg-gray-50"

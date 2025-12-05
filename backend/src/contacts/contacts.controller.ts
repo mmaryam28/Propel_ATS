@@ -131,4 +131,14 @@ export class ContactsController {
     const userId = req.user.userId;
     return this.contactsService.deleteInteraction(userId, interactionId);
   }
+
+  /**
+   * Sync all contacts - resolve identities and populate connections
+   * POST /contacts/sync-all
+   */
+  @Post('sync-all')
+  async syncAllContacts(@Req() req: any) {
+    const userId = req.user.userId;
+    return this.contactsService.syncAllContacts(userId);
+  }
 }

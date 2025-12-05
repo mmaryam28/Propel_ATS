@@ -407,6 +407,28 @@ export async function getInterviews(jobId?: string) {
   return data;
 }
 
+export async function updateInterviewOutcome(interviewId: string, outcomeData: {
+  offerReceived?: boolean;
+  offerAccepted?: boolean;
+  performanceRating?: number;
+  prepTimeHours?: number;
+  practiceSessionsUsed?: number;
+  strengths?: string;
+  weaknesses?: string;
+  feedback?: string;
+  interviewStage?: string;
+  interviewFormat?: string;
+  interviewDate?: string;
+  companyName?: string;
+  companyType?: string;
+  companyIndustry?: string;
+  jobTitle?: string;
+  status?: string;
+}): Promise<Interview> {
+  const { data } = await api.patch(`/jobs/interviews/${interviewId}`, outcomeData, { withCredentials: true });
+  return data;
+}
+
 export type InterviewPrep = {
   companyResearch: string;
   questionBank: {

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Body,
   Req,
   Param,
   Query,
@@ -70,6 +71,90 @@ export class InterviewController {
       req.query.company,
       req.query.role,
     );
+  }
+
+  @Post('insights/analyze-response')
+  async analyzeResponse(
+    @Body()
+    body: {
+      userId?: string;
+      question?: string;
+      response: string;
+    },
+  ) {
+    if (!body || !body.response || !body.response.trim()) {
+      return { error: 'Response text is required' };
+    }
+
+    return this.interviewService.analyzeResponse(body);
+  }
+
+
+  @Get('follow-up-templates')
+  async getFollowUpTemplates(
+    @Query('company') company: string,
+    @Query('role') role?: string,
+    @Query('interviewerName') interviewerName?: string,
+    @Query('interviewDate') interviewDate?: string,
+    @Query('outcome') outcome?: string,
+    @Query('topics') topics?: string, // comma-separated from FE: "ML system design,team culture"
+  ) {
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+
+    const topicsDiscussed = topics
+      ? topics.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
+
+    return this.interviewService.getFollowUpTemplates({
+      company,
+      role,
+      interviewerName,
+      interviewDate,
+      outcome: (outcome as any) || 'pending',
+      topicsDiscussed,
+    });
+  }
+
+  @Get('prep-checklist')
+  async getPreparationChecklist(
+    @Query('company') company: string,
+    @Query('role') role?: string,
+    @Query('interviewDate') interviewDate?: string,
+    @Query('format') format?: string,
+  ) {
+    if (!company) {
+      return { error: 'Company parameter is required' };
+    }
+
+    return this.interviewService.getPreparationChecklist(
+      company,
+      role,
+      interviewDate,
+      format,
+    );
+  }
+
+  @Get('success-score')
+  async getSuccessScore(
+    @Query('userId') userId: string,
+    @Query('company') company: string,
+    @Query('role') role?: string,
+    @Query('checklistProgress') checklistProgress?: string,
+    @Query('practiceSessions') practiceSessions?: string,
+  ) {
+    if (!userId || !company) {
+      return { error: 'userId and company are required' };
+    }
+
+    return this.interviewService.calculateSuccessScore({
+      userId,
+      company,
+      role,
+      checklistProgress: Number(checklistProgress) || 0,
+      practiceSessions: Number(practiceSessions) || 0,
+    });
   }
 
   // ------------------------------------------------

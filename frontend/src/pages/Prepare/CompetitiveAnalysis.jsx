@@ -405,6 +405,14 @@ export default function CompetitiveAnalysis() {
                   <Legend />
                   <Line
                     type="monotone"
+                    data={careerPatterns.userJourney}
+                    dataKey="week"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    name="Your Journey"
+                  />
+                  <Line
+                    type="monotone"
                     data={careerPatterns.successfulPattern}
                     dataKey="week"
                     stroke="#10b981"
