@@ -1,23 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CertificationService } from './certification.service';
+import { SkillsService } from './skills.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
-describe('CertificationService', () => {
-  let service: CertificationService;
+describe('SkillsService', () => {
+  let service: SkillsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        CertificationService,
+        SkillsService,
         { provide: SupabaseService, useValue: { getClient: jest.fn() } },
       ],
     }).compile();
 
-    service = module.get<CertificationService>(CertificationService);
+    service = module.get<SkillsService>(SkillsService);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 });
-
