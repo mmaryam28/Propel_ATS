@@ -5,12 +5,9 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class InterviewService {
-  constructor(private readonly supabase: SupabaseService) {}
   private readonly serpApiKey = process.env.SERP_API_KEY;
 
   constructor(private readonly supabase: SupabaseService) {}
-
-  
 
 
   /**
@@ -608,7 +605,6 @@ export class InterviewService {
       'Follow up within 24 hours',
     ];
   }
-<<<<<<< HEAD
 
   async getPreparationChecklist(
     company: string,
