@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from '../../lib/api';
 import { Card } from '../../components/ui/Card';
 import { Icon } from '../../components/ui/Icon';
 
@@ -76,7 +76,7 @@ const InterviewInsights = () => {
     setInsights(null);
 
     try {
-      const response = await axios.get(`http://localhost:3000/interview/insights`, {
+      const response = await api.get(`/interview/insights`, {
         params: { 
           company: company.trim(), 
           role: role.trim() || undefined 
@@ -107,8 +107,8 @@ const InterviewInsights = () => {
     setLoadingChecklist(true);
 
     try {
-      const res = await axios.get(
-        "http://localhost:3000/interview/prep-checklist",
+      const res = await api.get(
+        "/interview/prep-checklist",
         {
           params: {
             company: company.trim(),
@@ -141,7 +141,7 @@ const InterviewInsights = () => {
     setFollowUpTemplates(null);
 
     try {
-      const response = await axios.get('http://localhost:3000/interview/follow-up-templates', {
+      const response = await api.get('/interview/follow-up-templates', {
         params: {
           company: company.trim(),
           role: role.trim() || undefined,
@@ -172,7 +172,7 @@ const InterviewInsights = () => {
   const handleLogFollowUpSent = async (type) => {
     try {
       setFollowUpSuccess(null);
-      await axios.post('http://localhost:3000/interview/analytics/follow-up-event', {
+      await api.post('/interview/analytics/follow-up-event', {
         userId,
         company: company || followUpTemplates?.company,
         role: role || followUpTemplates?.role,
@@ -200,8 +200,8 @@ const InterviewInsights = () => {
     };
 
     try {
-      const res = await axios.post(
-        'http://localhost:3000/interview/insights/analyze-response',
+      const res = await api.post(
+        '/interview/insights/analyze-response',
         payload
       );
 
@@ -331,8 +331,8 @@ const InterviewInsights = () => {
     setSuccessError(null);
 
     try {
-      const response = await axios.get(
-        "http://localhost:3000/interview/success-score",
+      const response = await api.get(
+        "/interview/success-score",
         {
           params: {
             userId,
