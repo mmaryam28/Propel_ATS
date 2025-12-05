@@ -26,6 +26,13 @@ import ProjectsPage from "./pages/ProjectsPage";
 import ProfileForm from "./components/ProfileForm";
 import ProfileSummary from "./components/ProfileSummary";
 
+// Networking Pages
+import ContactsPage from "./pages/networking/ContactsPage";
+import ContactDetailPage from "./pages/networking/ContactDetailPage";
+import EventsPage from "./pages/networking/EventsPage";
+import InformationalInterviewsPage from "./pages/networking/InformationalInterviewsPage";
+import MaintenancePage from "./pages/networking/MaintenancePage";
+
 const TemplatesPage = React.lazy(() =>
   import("./coverletters/pages/TemplatesPage")
 );
@@ -65,6 +72,13 @@ export default function App() {
         <Route path="/profile/edit" element={<ProfileForm />} />
         <Route path="/profile/summary" element={<ProfileSummary />} />
         <Route path="/delete-account" element={<DeleteAccount />} />
+
+        {/* Networking */}
+        <Route path="/networking/contacts" element={<ContactsPage />} />
+        <Route path="/networking/contacts/:id" element={<ContactDetailPage />} />
+        <Route path="/networking/events" element={<EventsPage />} />
+        <Route path="/networking/interviews" element={<InformationalInterviewsPage />} />
+        <Route path="/networking/maintenance" element={<MaintenancePage />} />
 
         <Route
           path="/coverletters/templates"

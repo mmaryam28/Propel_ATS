@@ -9,6 +9,7 @@ export class UpdateJobDto {
   @IsOptional() @IsString() description?: string | null;
   @IsOptional() @IsString() industry?: string | null;
   @IsOptional() @IsString() jobType?: string | null;
+  @IsOptional() @IsString() source?: string | null;
   @IsOptional() @IsInt() @Min(0) salaryMin?: number | null;
   @IsOptional() @IsInt() @Min(0) salaryMax?: number | null;
 

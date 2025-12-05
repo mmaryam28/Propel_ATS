@@ -2,8 +2,7 @@
 import ProfileSkills from "../components/profile/ProfileSkills";
 
 export default function Skills() {
-  // TODO: replace with real userId from auth
-  const userId = "demo-user-1";
+  const userId = localStorage.getItem('userId') || '';
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

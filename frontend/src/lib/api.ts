@@ -126,6 +126,7 @@ export async function createJob(payload: NewJobPayload): Promise<Job> {
     description: toStrOrNull((payload.description ?? '').slice(0, 2000)),
     industry: toStrOrNull(payload.industry),
     jobType: toStrOrNull(payload.jobType),
+    source: toStrOrNull((payload as any).source),
     salaryMin: toNum(payload.salaryMin),
     salaryMax: toNum(payload.salaryMax),
     // Optional company profile fields at creation time
@@ -406,6 +407,76 @@ export async function getInterviews(jobId?: string) {
   return data;
 }
 
+export async function updateInterviewOutcome(interviewId: string, outcomeData: {
+  offerReceived?: boolean;
+  offerAccepted?: boolean;
+  performanceRating?: number;
+  prepTimeHours?: number;
+  practiceSessionsUsed?: number;
+  strengths?: string;
+  weaknesses?: string;
+  feedback?: string;
+  interviewStage?: string;
+  interviewFormat?: string;
+  interviewDate?: string;
+  companyName?: string;
+  companyType?: string;
+  companyIndustry?: string;
+  jobTitle?: string;
+  status?: string;
+}): Promise<Interview> {
+  const { data } = await api.patch(`/jobs/interviews/${interviewId}`, outcomeData, { withCredentials: true });
+  return data;
+}
+
+export type InterviewPrep = {
+  companyResearch: string;
+  questionBank: {
+    behavioral: string[];
+    technical: string[];
+    situational: string[];
+    companySpecific: string[];
+  };
+  mockInterview: {
+    intro: string;
+    questions: { id: string; type: string; text: string }[];
+    summary: string;
+  };
+  technicalPrep: {
+    overview: string;
+    codingChallenge: { prompt: string; hint: string; solutionOutline: string };
+    systemDesign: { prompt: string; keyPoints: string[] };
+  };
+  checklist: {
+    items: { id: string; label: string; category: string; suggestedTime?: string }[];
+  };
+};
+
+export async function getInterviewPrep(interviewId: string): Promise<InterviewPrep> {
+  const { data } = await api.get(`/interview/${interviewId}/prep`, { withCredentials: true });
+  return data;
+}
+
+export async function generateInterviewSection(interviewId: string, section: string) {
+  const { data } = await api.post(
+    `/interview/${interviewId}/generate-section`,
+    {},
+    { withCredentials: true, params: { section } }
+  );
+  return data;
+}
+
+export async function generateInterviewAll(interviewId: string) {
+  const { data } = await api.post(
+    `/interview/${interviewId}/generate-all`,
+    {},
+    { withCredentials: true }
+  );
+  return data;
+}
+
+
+
 export async function updateInterview(id: string, data: Partial<Interview>): Promise<Interview> {
   const { data: interview } = await api.patch(`/jobs/interviews/${id}`, data, { withCredentials: true });
   return interview;
@@ -458,5 +529,50 @@ export async function generateSalaryAnalytics(payload: {
   currentSalary?: number;
 }) {
   const { data } = await api.post('/salary/analysis', payload, { withCredentials: true });
+  return data;
+}
+
+// UC-106: Custom Report Generation
+export async function getCustomReportData(
+  metrics: string[],
+  dateRange: { start: string; end: string },
+  filters: { company?: string; role?: string; industry?: string }
+) {
+  const params: any = {
+    metrics: metrics.join(','),
+    ...filters,
+  };
+  if (dateRange.start) params.startDate = dateRange.start;
+  if (dateRange.end) params.endDate = dateRange.end;
+
+  // Fetch data from multiple endpoints
+  const promises = [];
+  
+  // Always fetch basic statistics with date range
+  promises.push(api.get('/statistics/overview', { withCredentials: true, params }));
+  
+  // Always try to fetch networking and application analytics (they'll handle date filtering on backend)
+  promises.push(api.get('/networking/analytics/overview', { withCredentials: true, params }).catch(() => ({ data: {} })));
+  promises.push(api.get('/networking/analytics/roi', { withCredentials: true, params }).catch(() => ({ data: {} })));
+  promises.push(api.get('/application-analytics/dashboard', { withCredentials: true, params }).catch(() => ({ data: {} })));
+  promises.push(api.get('/application-analytics/success-rates', { withCredentials: true, params }).catch(() => ({ data: {} })));
+
+  const results = await Promise.all(promises);
+  
+  return {
+    statistics: results[0]?.data || {},
+    networking: results[1]?.data || {},
+    networkingROI: results[2]?.data || {},
+    applicationAnalytics: results[3]?.data || {},
+    successRates: results[4]?.data || {},
+  };
+}
+
+export async function shareReport(email: string, reportData: any, message?: string) {
+  const { data } = await api.post('/reports/share', {
+    email,
+    reportData,
+    message,
+  }, { withCredentials: true });
   return data;
 }

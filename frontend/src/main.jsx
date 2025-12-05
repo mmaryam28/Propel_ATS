@@ -53,7 +53,21 @@ import ApplicationSuccessAnalytics from './pages/Jobs/ApplicationSuccessAnalytic
 import GoalsDashboard from './pages/Goals/GoalsDashboard';
 import MarketIntelligence from './pages/MarketIntelligence';
 import CompetitiveAnalysis from './pages/Prepare/CompetitiveAnalysis';
+import CustomReports from './pages/Prepare/CustomReports';
+import Forecasting from './pages/Prepare/Forecasting';
 import ProductivityAnalytics from './pages/Jobs/ProductivityAnalytics';
+import NetworkingAnalytics from './pages/Networking/NetworkingAnalytics';
+import SuccessPatterns from './pages/Analytics/SuccessPatterns';
+
+
+// Networking pages
+import ContactsPage from './pages/networking/ContactsPage';
+import ContactDetailPage from './pages/networking/ContactDetailPage';
+import ReferralsPage from './pages/networking/ReferralsPage';
+import ReferencesPage from './pages/networking/ReferencesPage';
+import EventsPage from './pages/networking/EventsPage';
+import InformationalInterviewsPage from './pages/networking/InformationalInterviewsPage';
+import MaintenancePage from './pages/networking/MaintenancePage';
 
 import './index.css';
 import './styles/globals.css';
@@ -117,9 +131,24 @@ const router = createBrowserRouter([
       { path: '/goals', element: <GoalsDashboard /> },
       { path: '/market-intelligence', element: <MarketIntelligence /> },
       { path: '/prepare/competitive-analysis', element: <CompetitiveAnalysis /> },
+      { path: '/prepare/custom-reports', element: <CustomReports /> },
+      { path: '/prepare/forecasting', element: <Forecasting /> },
       { path: '/productivity-tracker', element: <ProductivityAnalytics /> },
+      { path: '/network-analytics', element: <NetworkingAnalytics /> },
+      { path: '/success-patterns', element: <SuccessPatterns /> },
 
-      // ✅ New Cover Letter Templates route
+
+      // Networking routes
+      { path: '/networking/contacts', element: <ContactsPage /> },
+      { path: '/networking/contacts/:id', element: <ContactDetailPage /> },
+      { path: '/networking/referrals', element: <ReferralsPage /> },
+      { path: '/networking/references', element: <ReferencesPage /> },
+      { path: '/networking/events', element: <EventsPage /> },
+      { path: '/networking/interviews', element: <InformationalInterviewsPage /> },
+      { path: '/networking/maintenance', element: <MaintenancePage /> },
+
+
+      //New Cover Letter Templates route
       {
         path: '/coverletters',
         element: (
@@ -139,6 +168,8 @@ const router = createBrowserRouter([
     ],
   },
 ]);
+
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

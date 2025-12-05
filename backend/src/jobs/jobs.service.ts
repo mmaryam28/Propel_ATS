@@ -23,6 +23,7 @@ function toDb(dto: CreateJobDto & { userId: string }) {
     description: toNull(dto.description),
     industry: toNull(dto.industry),
     jobType: toNull(dto.jobType),
+    source: toNull((dto as any).source),
     salaryMin: toInt(dto.salaryMin),
     salaryMax: toInt(dto.salaryMax),
     // Company profile fields
@@ -59,6 +60,7 @@ function toApi(row: any) {
     description: row.description ?? null,
     industry: row.industry ?? null,
     jobType: row.jobType ?? row.job_type ?? null,
+    source: row.source ?? null,
     salaryMin: row.salaryMin ?? row.salary_min ?? null,
     salaryMax: row.salaryMax ?? row.salary_max ?? null,
     // Company profile fields
@@ -173,6 +175,13 @@ export class JobsService {
 
   async create(userId: string, dto: CreateJobDto) {
     const client = this.supabase.getClient();
+    
+    console.log('DEBUG: Creating job with dto:', { 
+      title: dto.title, 
+      company: dto.company, 
+      source: (dto as any).source 
+    });
+    
     // Try applying user defaults for materials if not provided
     let resumeVersionId: string | null | undefined = (dto as any).resumeVersionId;
     let coverLetterVersionId: string | null | undefined = (dto as any).coverLetterVersionId;
@@ -190,6 +199,12 @@ export class JobsService {
       }
     } catch { /* ignore missing table */ }
     const payload = toDb({ ...dto, userId, ...(resumeVersionId !== undefined ? { resumeVersionId } : {}), ...(coverLetterVersionId !== undefined ? { coverLetterVersionId } : {} ) } as any);
+    
+    console.log('DEBUG: toDb payload:', { 
+      title: payload.title, 
+      source: payload.source 
+    });
+    
     const { data, error } = await client
       .from('jobs')
       .insert(payload)
@@ -1357,6 +1372,38 @@ export class JobsService {
       updateData.details = dto.notes;
     }
     if (dto.status) updateData.status = dto.status;
+
+    // Outcome tracking fields
+    if (dto.offerReceived !== undefined) updateData.offer_received = dto.offerReceived;
+    if (dto.offerAccepted !== undefined) updateData.offer_accepted = dto.offerAccepted;
+    if (dto.performanceRating !== undefined) updateData.performance_rating = dto.performanceRating;
+    if (dto.prepTimeHours !== undefined) updateData.prep_time_hours = dto.prepTimeHours;
+    if (dto.practiceSessionsUsed !== undefined) updateData.practice_sessions_used = dto.practiceSessionsUsed;
+    
+    // Convert strengths/weaknesses text to arrays for PostgreSQL
+    if (dto.strengths) {
+      const strengthsArray = dto.strengths
+        .split(/[,\n•\-\*]/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+      updateData.strengths = strengthsArray;
+    }
+    if (dto.weaknesses) {
+      const weaknessesArray = dto.weaknesses
+        .split(/[,\n•\-\*]/)
+        .map(w => w.trim())
+        .filter(w => w.length > 0);
+      updateData.weaknesses = weaknessesArray;
+    }
+    
+    if (dto.feedback) updateData.feedback = dto.feedback;
+    if (dto.interviewStage) updateData.interview_stage = dto.interviewStage;
+    if (dto.interviewFormat) updateData.interview_format = dto.interviewFormat;
+    if (dto.interviewDate) updateData.interview_date = dto.interviewDate;
+    if (dto.companyName) updateData.company_name = dto.companyName;
+    if (dto.companyType) updateData.company_type = dto.companyType;
+    if (dto.companyIndustry) updateData.company_industry = dto.companyIndustry;
+    if (dto.jobTitle) updateData.job_title = dto.jobTitle;
 
     const { data: interview, error } = await client
       .from('interviews')
