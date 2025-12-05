@@ -15,6 +15,8 @@ export default function Mentors() {
 
   // Invite mentor modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
+  const [generatedInviteLink, setGeneratedInviteLink] = useState('');
   const [inviteForm, setInviteForm] = useState({
     mentorEmail: '',
     relationshipType: 'mentor',
@@ -92,12 +94,7 @@ export default function Mentors() {
         // Show success message with invite link
         const inviteLink = response.data.inviteLink || `${window.location.origin}/mentor-dashboard`;
         
-        // Copy link to clipboard if available
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(inviteLink);
-        }
-        
-        showMessage('Invitation sent! Invite link copied to clipboard.', 'success');
+        showMessage('Invitation sent successfully!', 'success');
         setShowInviteModal(false);
         setInviteForm({
           mentorEmail: '',
@@ -110,10 +107,9 @@ export default function Mentors() {
           notes: ''
         });
         
-        // Show an alert with the invite link
-        setTimeout(() => {
-          alert(`Share this link with your mentor:\n\n${inviteLink}\n\nThey should:\n1. Create an account or log in\n2. Visit the link above\n3. Accept your invitation`);
-        }, 500);
+        // Show the invite link modal
+        setGeneratedInviteLink(inviteLink);
+        setShowInviteLinkModal(true);
         
         fetchData();
       } else {
@@ -735,6 +731,68 @@ export default function Mentors() {
                 Create Report
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite Link Modal */}
+      {showInviteLinkModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Invitation Sent!</h3>
+              <button
+                onClick={() => setShowInviteLinkModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-4">
+              Share this link with your mentor. They should create an account or log in, then visit this link to accept your invitation.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Invite Link
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={generatedInviteLink}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm font-mono"
+                  onClick={(e) => e.target.select()}
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedInviteLink);
+                    showMessage('Link copied to clipboard!', 'success');
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                >
+                  <Icon name="copy" size="sm" />
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h4 className="font-medium text-blue-900 mb-2">Instructions for your mentor:</h4>
+              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <li>Create an account or log in at {window.location.origin}</li>
+                <li>Visit the invite link above</li>
+                <li>Accept your invitation from their mentor dashboard</li>
+              </ol>
+            </div>
+
+            <button
+              onClick={() => setShowInviteLinkModal(false)}
+              className="w-full px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
