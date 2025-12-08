@@ -4,13 +4,38 @@ import axios from 'axios';
 const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
 
 export default function Profile() {
-  const [profile, setProfile] = useState({ name: '', bio: '', phone: '' });
+  const [profile, setProfile] = useState({ name: '', bio: '', phone: '', role: '' });
+  const [savedProfile, setSavedProfile] = useState({ name: '', bio: '', phone: '', role: '', email: '' });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch profile data from the database
+    // UC-010: Fetch actual user profile data from the database
     const fetchProfile = async () => {
-      // ...fetch logic...
-      setProfile({ name: 'Joe Doe', bio: 'A short bio…', phone: '(555) 555-5555' }); // Example data
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        if (response.data && response.data.user) {
+          const user = response.data.user;
+          const userData = {
+            name: `${user.firstname || ''} ${user.lastname || ''}`.trim(),
+            bio: user.bio || '',
+            phone: user.phone || '',
+            role: user.role || '',
+            email: user.email || ''
+          };
+          setSavedProfile(userData);
+          setProfile({ name: userData.name, bio: '', phone: '', role: '' });
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchProfile();
   }, []);
@@ -18,14 +43,58 @@ export default function Profile() {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      // Save logic to persist profile
-      await axios.put(`${API}/profile`, profile); // Ensure this endpoint exists in your backend
-      alert('Profile updated successfully!'); // Optional: Notify user of success
+      const token = localStorage.getItem('token');
+      
+      // Send bio, phone, and role to update profile
+      await axios.put(`${API}/auth/me`, {
+        bio: profile.bio,
+        phone: profile.phone,
+        role: profile.role
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      // Refetch user data to update the display section at bottom
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.data && response.data.user) {
+        const user = response.data.user;
+        const userData = {
+          name: `${user.firstname || ''} ${user.lastname || ''}`.trim(),
+          bio: user.bio || '',
+          phone: user.phone || '',
+          role: user.role || '',
+          email: user.email || ''
+        };
+        // Update saved profile display
+        setSavedProfile(userData);
+        // Clear the form fields
+        setProfile({ name: userData.name, bio: '', phone: '', role: '' });
+      }
+      
+      alert('Profile updated successfully!');
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Failed to update profile.'); // Optional: Notify user of failure
+      alert('Failed to update profile.');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">Profile</h1>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-3xl mx-auto">
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -101,9 +170,11 @@ export default function Profile() {
         {/* Display profile information */}
         <div className="mt-6">
           <h2 className="text-xl font-semibold">Profile Information</h2>
-          <p>Name: {profile.name}</p>
-          <p>Bio: {profile.bio}</p>
-          <p>Phone: {profile.phone}</p>
+          <p>Name: {savedProfile.name}</p>
+          <p>Email: {savedProfile.email}</p>
+          <p>Role: {savedProfile.role}</p>
+          <p>Bio: {savedProfile.bio}</p>
+          <p>Phone: {savedProfile.phone}</p>
         </div>
       </div>
     </div>
