@@ -43,8 +43,13 @@ export default function ProfileDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
     axios
-      .get(`${API}/profile/overview?userId=1`)
+      .get(`${API}/profile/overview`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
       .then((res) => setOverview(res.data))
       .catch(() => setOverview({}))
       .finally(() => setLoading(false));

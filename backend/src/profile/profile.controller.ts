@@ -1,15 +1,18 @@
-import { Controller, Get, Put, Body, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Put, Body, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('profile')
+@UseGuards(JwtAuthGuard)
 export class ProfileController {
   constructor(private supabase: SupabaseService) {}
 
   @Get('overview')
   async getProfileOverview(@Req() req) {
-    const userId = req.query.userId ? String(req.query.userId) : null;
+    // Get userId from authenticated user (JWT token)
+    const userId = req.user?.id;
     if (!userId) {
-      return { message: 'provide userId as query param for overview' };
+      throw new UnauthorizedException('User not authenticated');
     }
 
     const client = this.supabase.getClient();
