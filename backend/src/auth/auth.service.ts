@@ -118,7 +118,7 @@ export class AuthService {
   }
 
   async updateUserProfile(userId: string, data: any) {
-    const allowed = ['firstname', 'lastname', 'email'];
+    const allowed = ['firstname', 'lastname', 'email', 'bio', 'phone', 'role'];
     const update: any = {};
     for (const key of allowed) {
       if (data[key] !== undefined) update[key] = data[key];
