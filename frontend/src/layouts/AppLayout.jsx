@@ -296,8 +296,10 @@ function Navbar() {
           <div className="hidden md:flex items-center gap-2">
             <button
               onClick={() => {
+                localStorage.clear();
+                sessionStorage.clear();
                 fetch("/api/auth/logout", { method: "POST", credentials: "include" })
-                  .then(() => (window.location.href = "/login"));
+                  .finally(() => (window.location.href = "/login"));
               }}
               className="px-3 py-2 rounded-xl text-sm bg-gray-900 text-white hover:opacity-90 flex items-center gap-2"
             >
@@ -416,8 +418,10 @@ function Navbar() {
             <div className="mt-2">
               <button
                 onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
                   fetch("/api/auth/logout", { method: "POST", credentials: "include" })
-                    .then(() => (window.location.href = "/login"));
+                    .finally(() => (window.location.href = "/login"));
                 }}
                 className="px-3 py-2 rounded-xl text-sm bg-gray-900 text-white hover:opacity-90 flex items-center justify-center gap-2"
               >
@@ -436,6 +440,7 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Handle OAuth token from URL first
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const token = params.get("token");
@@ -453,8 +458,21 @@ export default function AppLayout() {
               .join("&")
           : "");
       navigate(path || "/dashboard", { replace: true });
+      return;
     }
-  }, [location.search]);
+
+    // UC-008: Check authentication - redirect to login if no token
+    const storedToken = localStorage.getItem('token');
+    if (!storedToken) {
+      navigate('/login', { replace: true });
+    }
+  }, [location.search, location.pathname, navigate]);
+
+  // Don't render protected content if not authenticated
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return null; // or a loading spinner
+  }
 
   return (
     <div className="min-h-screen w-full bg-gray-50">
