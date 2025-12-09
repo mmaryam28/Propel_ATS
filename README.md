@@ -31,6 +31,17 @@
 $ npm install
 ```
 
+### Environment Configuration
+
+1. Copy the example environment file:
+```bash
+$ cp backend/.env.example backend/.env
+```
+
+2. Fill in your environment variables (see `backend/.env.example` for required values)
+
+3. For GitHub OAuth integration setup, see [GITHUB-PRODUCTION-SETUP.md](./GITHUB-PRODUCTION-SETUP.md)
+
 ## Compile and run the project
 
 ```bash

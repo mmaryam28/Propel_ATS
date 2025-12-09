@@ -576,3 +576,55 @@ export async function shareReport(email: string, reportData: any, message?: stri
   }, { withCredentials: true });
   return data;
 }
+
+// ============================================================
+// GitHub Integration API
+// ============================================================
+
+export async function getGitHubAuthUrl() {
+  const { data } = await api.get('/github/auth-url', { withCredentials: true });
+  return data; // { url: string }
+}
+
+export async function getGitHubConnection() {
+  const { data } = await api.get('/github/connection', { withCredentials: true });
+  return data; // GitHubConnection or null
+}
+
+export async function disconnectGitHub() {
+  const { data } = await api.delete('/github/connection', { withCredentials: true });
+  return data;
+}
+
+export async function syncGitHubRepositories() {
+  const { data } = await api.post('/github/sync', {}, { withCredentials: true });
+  return data;
+}
+
+export async function getGitHubRepositories(featured?: boolean, includePrivate: boolean = true) {
+  const params: any = {};
+  if (featured !== undefined) params.featured = featured;
+  if (!includePrivate) params.includePrivate = 'false';
+  const { data } = await api.get('/github/repositories', { withCredentials: true, params });
+  return data; // GitHubRepository[]
+}
+
+export async function getGitHubRepository(id: string) {
+  const { data } = await api.get(`/github/repositories/${id}`, { withCredentials: true });
+  return data; // GitHubRepository with skills
+}
+
+export async function updateGitHubRepository(id: string, updates: { is_featured?: boolean; featured_order?: number }) {
+  const { data } = await api.patch(`/github/repositories/${id}`, updates, { withCredentials: true });
+  return data;
+}
+
+export async function linkRepositoryToSkill(repoId: string, skillId: string) {
+  const { data } = await api.post(`/github/repositories/${repoId}/skills`, { skill_id: skillId }, { withCredentials: true });
+  return data;
+}
+
+export async function unlinkRepositoryFromSkill(repoId: string, skillId: string) {
+  const { data } = await api.delete(`/github/repositories/${repoId}/skills/${skillId}`, { withCredentials: true });
+  return data;
+}

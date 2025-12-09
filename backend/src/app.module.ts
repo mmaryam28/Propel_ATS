@@ -35,6 +35,7 @@ import { ReferencesModule } from './references/references.module';
 import { RelationshipMaintenanceModule } from './relationship-maintenance/relationship-maintenance.module';
 import { TeamsModule } from './teams/teams.module';
 import { MentorsModule } from './mentors/mentors.module';
+import { GitHubModule } from './github/github.module';
 
 @Module({
   imports: [
@@ -53,7 +54,7 @@ import { MentorsModule } from './mentors/mentors.module';
   ProfileModule,
   EmploymentModule,
   JobsModule,
-  ResumeModule,
+  //ResumeModule,
   CoverlettersModule,
   StatisticsModule,
   ResearchModule,
@@ -75,6 +76,7 @@ import { MentorsModule } from './mentors/mentors.module';
   RelationshipMaintenanceModule,
   TeamsModule,
   MentorsModule,
+  GitHubModule,
   ],
   controllers: [AppController],
   providers: [AppService],
