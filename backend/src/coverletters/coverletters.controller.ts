@@ -81,16 +81,20 @@ export class CoverlettersController {
   // ===============================================================
   @Post('save')
   async saveEdits(@Body() body: any) {
-    const { slug, content } = body;
+    const { userId, title, content, company } = body;
 
-    if (!slug || !content) {
-      return { success: false, error: 'Missing slug or content' };
+    if (!userId || !title || !content) {
+      return { success: false, error: 'Missing required fields: userId, title, content' };
     }
 
-    // For now, just pretend we saved to DB successfully.
-    // This avoids schema issues and gives you a clean demo.
-    console.log(`Saved edited cover letter for slug=${slug}`);
-    return { success: true };
+    try {
+      const saved = await this.svc.saveCoverLetter(userId, title, content, company);
+      console.log(`Saved cover letter: ${title} for user ${userId}`);
+      return { success: true, data: saved };
+    } catch (error) {
+      console.error('Error saving cover letter:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   // ===============================================================

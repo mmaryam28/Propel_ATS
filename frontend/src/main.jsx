@@ -48,6 +48,7 @@ import FeedbackPanel from './pages/Resumes/FeedbackPanel.jsx';
 import CompanyResearch from './pages/Resumes/CompanyResearch';
 import JobMatch from './pages/Resumes/JobMatch.jsx';
 import SalaryAnalysis from './pages/Resumes/SalaryAnalysis';
+import QualityCheck from './pages/QualityCheck';
 import InterviewInsights from './pages/Resumes/InterviewInsights';
 import InterviewPerformanceAnalytics from './pages/Prepare/InterviewPerformanceAnalytics';
 import ApplicationSuccessAnalytics from './pages/Jobs/ApplicationSuccessAnalytics';
@@ -117,6 +118,7 @@ const router = createBrowserRouter([
       { path: '/jobs/statistics', element: <StatisticsPage /> },
       { path: '/jobs/:jobId', element: <JobDetails /> },
       { path: '/applications', element: <Applications /> },
+      { path: '/quality-check', element: <QualityCheck /> },
       { path: '/mock-interview/:interviewId', element: <MockInterviewSession /> },
       // { path: '/documents', element: <Documents /> },
       { path: '/profile', element: <Profile /> },
@@ -148,7 +150,6 @@ const router = createBrowserRouter([
       { path: '/productivity-tracker', element: <ProductivityAnalytics /> },
       { path: '/network-analytics', element: <NetworkingAnalytics /> },
       { path: '/success-patterns', element: <SuccessPatterns /> },
-
 
       // Networking routes
       { path: '/networking/contacts', element: <ContactsPage /> },

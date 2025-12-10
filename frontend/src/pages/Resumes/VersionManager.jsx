@@ -1,32 +1,42 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getResumeVersions } from '../../lib/api';
 
 export default function VersionManager() {
-  const [versions, setVersions] = useState([
-    { name: "Test Resume", date: "2025-11-12" },
-  ]);
-  const [newVersion, setNewVersion] = useState("");
+  const [versions, setVersions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const addVersion = () => {
-    if (!newVersion) return;
-    setVersions([...versions, { name: newVersion, date: new Date().toISOString() }]);
-    setNewVersion("");
-  };
+  useEffect(() => {
+    async function fetchVersions() {
+      setLoading(true);
+      try {
+        const data = await getResumeVersions();
+        setVersions(data);
+      } catch (err) {
+        setVersions([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchVersions();
+  }, []);
 
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-xl font-semibold" style={{ color: "#1e88e5" }}>Resume Versions</h1>
-      <div className="flex gap-2">
-        <input placeholder="New version name..." value={newVersion} onChange={e => setNewVersion(e.target.value)} className="border rounded p-2" />
-        <button onClick={addVersion}>Add</button>
-      </div>
-      <ul className="divide-y">
-        {versions.map((v, i) => (
-          <li key={i} className="py-2 flex justify-between">
-            <span>{v.name}</span>
-            <span className="text-sm text-gray-500">{new Date(v.date).toLocaleDateString()}</span>
-          </li>
-        ))}
-      </ul>
+      {loading ? (
+        <div className="text-gray-500">Loading versions...</div>
+      ) : versions.length === 0 ? (
+        <div className="text-gray-500">No resume versions found.</div>
+      ) : (
+        <ul className="divide-y">
+          {versions.map((v, i) => (
+            <li key={v.id || i} className="py-2 flex justify-between">
+              <span>{v.title || 'Untitled Resume'}</span>
+              <span className="text-sm text-gray-500">{v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : ''}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getTemplate, saveEditedCoverLetter, exportCoverLetter, TemplateResponse } from "../api/client";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
+import axios from "axios";
 
 export default function TemplatePreviewModal({
   slug,
@@ -17,6 +18,7 @@ export default function TemplatePreviewModal({
   const [tone, setTone] = useState("formal");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [title, setTitle] = useState("");
 
   useEffect(() => {
     if (slug) {
@@ -75,6 +77,10 @@ export default function TemplatePreviewModal({
       const data = await res.json();
       setAiOutput(data.generated || "No content generated.");
       setEditedOutput(data.generated || "");
+      
+      // Auto-generate title from company name
+      const autoTitle = company ? `${company} - Cover Letter` : `Cover Letter - ${new Date().toLocaleDateString()}`;
+      setTitle(autoTitle);
     } catch (err) {
       console.error("Error generating AI cover letter:", err);
       setAiOutput("Error generating cover letter.");
@@ -83,13 +89,29 @@ export default function TemplatePreviewModal({
   }
 
   async function handleSaveEdits() {
+    if (!title.trim()) {
+      alert('Please provide a title for the cover letter');
+      return;
+    }
+
+    // Strip HTML tags from editedOutput for plain text storage
+    const plainText = editedOutput.replace(/<[^>]*>/g, '').trim();
+    
     setSaving(true);
     try {
-      await saveEditedCoverLetter(slug!, editedOutput);
-      alert("Edits saved successfully!");
-    } catch (err) {
+      const userId = localStorage.getItem('userId');
+      await axios.post('http://localhost:3000/coverletters/save', {
+        userId,
+        title: title.trim(),
+        content: plainText,
+        company: company || null
+      }, { withCredentials: true });
+      
+      alert('Cover letter saved successfully! You can now select it in Quality Check.');
+      onClose();
+    } catch (err: any) {
       console.error("Save error:", err);
-      alert("Failed to save edits.");
+      alert(err?.response?.data?.error || "Failed to save cover letter.");
     }
     setSaving(false);
   }
@@ -152,6 +174,18 @@ export default function TemplatePreviewModal({
         {aiOutput && (
           <div>
             <div className="font-semibold text-sm mb-1 text-gray-900">AI Output (Editable):</div>
+            
+            <div className="mb-2">
+              <label className="text-sm font-medium block mb-1 text-gray-900">Cover Letter Title:</label>
+              <input
+                type="text"
+                placeholder="e.g., Google - Financial Analyst"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="border rounded px-2 py-1 text-sm w-full text-gray-900"
+              />
+            </div>
+
             <ReactQuill
               theme="snow"
               value={editedOutput}
@@ -163,10 +197,10 @@ export default function TemplatePreviewModal({
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleSaveEdits}
-                disabled={saving}
-                className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded"
+                disabled={saving || !title.trim()}
+                className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded disabled:bg-gray-400"
               >
-                {saving ? "Saving..." : "Save Edits"}
+                {saving ? "Saving..." : "Save as Version"}
               </button>
 
               <button

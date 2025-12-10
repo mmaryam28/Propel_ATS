@@ -17,8 +17,18 @@ export default function ResumeDashboard() {
 
   // Fetch resumes
   useEffect(() => {
-    fetch("http://localhost:3000/resume?userId=1")
-      .then((res) => res.json())
+    const userId = localStorage.getItem('userId') || '1';
+    const token = localStorage.getItem('token');
+    
+    fetch(`/resume?userId=${userId}`, {
+      headers: token ? {
+        'Authorization': `Bearer ${token}`
+      } : {}
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch resumes');
+        return res.json();
+      })
       .then((data) => {
         setResumes(Array.isArray(data) ? data : data.resumes || []);
       })
@@ -33,22 +43,49 @@ export default function ResumeDashboard() {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Please upload a PDF, DOCX, or TXT file');
+      return;
+    }
+
+    const userId = localStorage.getItem('userId') || '1';
+    const token = localStorage.getItem('token');
+
     const formData = new FormData();
     formData.append("resumeFile", file);
-    formData.append("userId", "1");
+    formData.append("userId", userId);
 
     try {
-      const uploadRes = await fetch("http://localhost:3000/resume/upload", {
+      const uploadRes = await fetch("/resume/upload", {
         method: "POST",
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {},
         body: formData,
       });
+
+      if (!uploadRes.ok) {
+        throw new Error(`Upload failed: ${uploadRes.statusText}`);
+      }
 
       const data = await uploadRes.json();
       console.log("Uploaded:", data);
 
+      // Add to resumes list
       setResumes((prev) => [...prev, data]);
+      
+      // Show success message
+      alert('Resume uploaded successfully!');
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (err) {
       console.error("Upload failed:", err);
+      alert(`Upload failed: ${err.message}. Please make sure the backend is running.`);
     }
   }
 

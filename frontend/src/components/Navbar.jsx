@@ -54,6 +54,7 @@ export default function Navbar() {
                   { to: '/jobs/calendar', label: 'Calendar' },
                   { to: '/resumes', label: 'Resumes' },
                   { to: '/coverletters', label: 'Cover Letters' },
+                  { to: '/quality-check', label: 'Quality Check' },
                   { to: '/application-quality', label: 'Application Quality Scoring' },
                 ]}
               />

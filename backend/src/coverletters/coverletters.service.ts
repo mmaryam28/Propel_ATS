@@ -83,10 +83,28 @@ export class CoverlettersService {
     const { data, error } = await this.supabase
       .from('cover_letters')
       .select('id, title, created_at')
-      .eq('user_id', userId)
+      .eq('userid', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data || [];
+  }
+
+  // ===============================================================
+  // Save Cover Letter as Version
+  // ===============================================================
+  async saveCoverLetter(userId: string, title: string, content: string, company?: string) {
+    const { data, error } = await this.supabase
+      .from('cover_letters')
+      .insert({
+        userid: userId,
+        title,
+        content: { text: content, company: company || null }
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 }
