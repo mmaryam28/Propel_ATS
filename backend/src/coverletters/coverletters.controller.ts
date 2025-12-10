@@ -38,6 +38,14 @@ export class CoverlettersController {
   }
 
   // ===============================================================
+  // Get User's Cover Letters (for A/B Testing dropdown)
+  // ===============================================================
+  @Get()
+  getUserCoverLetters(@Query('userId') userId: string) {
+    return this.svc.getUserCoverLetters(userId);
+  }
+
+  // ===============================================================
   // UC-056 + UC-057: AI Cover Letter Generation + Company Research
   // ===============================================================
   @Post('generate')

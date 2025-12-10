@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ResumeService } from './resume.service';
 import { ResumeController } from './resume.controller';
-import { PrismaService } from '../prisma/prisma.service';
+// import { PrismaService } from '../prisma/prisma.service';
 import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
@@ -11,6 +11,6 @@ import { MulterModule } from '@nestjs/platform-express';
     }),
   ],
   controllers: [ResumeController],
-  providers: [ResumeService, PrismaService],
+  providers: [ResumeService],
 })
 export class ResumeModule {}

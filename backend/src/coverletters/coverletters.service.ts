@@ -75,4 +75,18 @@ export class CoverlettersService {
 
     return { ...tpl, latest: ver };
   }
+
+  // ===============================================================
+  // Get User's Cover Letters (for A/B Testing dropdown)
+  // ===============================================================
+  async getUserCoverLetters(userId: string) {
+    const { data, error } = await this.supabase
+      .from('cover_letters')
+      .select('id, title, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
 }
