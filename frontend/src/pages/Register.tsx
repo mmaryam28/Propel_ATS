@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api"; // <-- use our axios instance
 import AuthCard from "../components/AuthCard";
+import { trackUserAction, identifyUser } from "../lib/analytics";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -39,6 +40,14 @@ export default function Register() {
       if (res.data && res.data.token && res.data.user && res.data.user.id) {
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('userId', res.data.user.id);
+        
+        // UC-146: Track registration
+        trackUserAction.registration('email');
+        identifyUser(res.data.user.id, {
+          email: res.data.user.email,
+          firstName: res.data.user.firstname,
+          lastName: res.data.user.lastname,
+        });
       }
 
       navigate("/dashboard");

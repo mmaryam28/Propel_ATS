@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "../components/ui/Icon";
+import CookieConsent from "../components/CookieConsent";
 
 const classNames = (...xs) => xs.filter(Boolean).join(" ");
 
@@ -241,6 +242,9 @@ function Navbar() {
                     <Link to="/productivity-tracker" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Productivity Tracker</Link>
                     <Link to="/network-analytics" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Network Analytics</Link>
                     <Link to="/success-patterns" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Success Patterns</Link>
+                    <div className="border-t border-gray-200 my-1"></div>
+                    <Link to="/analytics" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">📊 Platform Analytics</Link>
+                    <div className="border-t border-gray-200 my-1"></div>
                     <Link to="/resumes" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Resumes</Link>
                     <Link to="/coverletters/templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Cover Letters</Link>
                   </div>
@@ -483,6 +487,7 @@ export default function AppLayout() {
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-gray-900">
         <Outlet />
       </main>
+      <CookieConsent />
     </div>
   );
 }

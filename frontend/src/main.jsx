@@ -1,8 +1,9 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppLayout from './layouts/AppLayout';
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
+import { initAnalytics } from './lib/analytics';
 
 // Pages
 import ProfileDashboard from './pages/ProfileDashboard.jsx';
@@ -60,6 +61,7 @@ import Forecasting from './pages/Prepare/Forecasting';
 import ProductivityAnalytics from './pages/Jobs/ProductivityAnalytics';
 import NetworkingAnalytics from './pages/Networking/NetworkingAnalytics';
 import SuccessPatterns from './pages/Analytics/SuccessPatterns';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 
 
 // Networking pages
@@ -150,6 +152,7 @@ const router = createBrowserRouter([
       { path: '/productivity-tracker', element: <ProductivityAnalytics /> },
       { path: '/network-analytics', element: <NetworkingAnalytics /> },
       { path: '/success-patterns', element: <SuccessPatterns /> },
+      { path: '/analytics', element: <AnalyticsDashboard /> },
 
       // Networking routes
       { path: '/networking/contacts', element: <ContactsPage /> },
@@ -192,7 +195,11 @@ const router = createBrowserRouter([
   },
 ]);
 
-
+// Initialize PostHog analytics only if consent given
+const consent = localStorage.getItem('cookie_consent');
+if (consent === 'accepted') {
+  initAnalytics();
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

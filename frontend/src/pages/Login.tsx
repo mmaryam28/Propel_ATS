@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import AuthCard from "../components/AuthCard";
+import { identifyUser } from "../lib/analytics";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -42,6 +43,12 @@ export default function Login() {
       if (res.data && res.data.token && res.data.user && res.data.user.id) {
         window.localStorage.setItem('token', res.data.token);
         window.localStorage.setItem('userId', res.data.user.id);
+        
+        // UC-146: Identify user in analytics
+        identifyUser(res.data.user.id, {
+          email: res.data.user.email,
+        });
+        
         navigate("/dashboard");
       } else {
         setError("Login response missing token or user id");

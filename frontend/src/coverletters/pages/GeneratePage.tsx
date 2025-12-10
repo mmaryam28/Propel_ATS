@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { generateCoverLetter, listTemplates } from '../api/client';
 import axios from 'axios';
+import { trackUserAction, trackFunnel } from '../../lib/analytics';
 
 export default function GeneratePage() {
   const [templateSlug, setTemplateSlug] = useState('');
@@ -27,14 +28,25 @@ export default function GeneratePage() {
     e.preventDefault();
     setLoading(true);
     setOutput('');
+    
+    // UC-146: Track AI generation funnel
+    trackFunnel.aiInputProvided('cover_letter');
+    
     try {
       const res = await generateCoverLetter({ templateSlug, jobDescription, profileSummary, tone, company });
       setOutput(res.generated || '');
       // Auto-generate title from company name
       const autoTitle = company ? `${company} - Cover Letter` : `Cover Letter - ${new Date().toLocaleDateString()}`;
       setTitle(autoTitle);
+      
+      // UC-146: Track successful AI generation
+      trackUserAction.coverLetterGenerated(templateSlug, true);
+      trackFunnel.aiGenerated('cover_letter', true);
     } catch (e: any) {
       alert(e?.message || 'Failed to generate');
+      // UC-146: Track failed generation
+      trackUserAction.coverLetterGenerated(templateSlug, false);
+      trackFunnel.aiGenerated('cover_letter', false);
     } finally {
       setLoading(false);
     }
@@ -55,6 +67,10 @@ export default function GeneratePage() {
         content: output,
         company: company || null
       }, { withCredentials: true });
+      
+      // UC-146: Track cover letter save
+      trackUserAction.coverLetterSaved(title.trim());
+      trackFunnel.aiContentSaved('cover_letter');
       
       alert('Cover letter saved successfully! You can now select it in Quality Check.');
       // Optionally clear the form
