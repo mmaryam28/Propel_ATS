@@ -195,12 +195,13 @@ export default function ProjectsPage() {
 
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <div className="grid gap-2">
-            <label className="text-sm text-gray-600">Name</label>
+            <label className="text-sm text-gray-600">Name <span className="text-red-500">*</span></label>
             <input
               placeholder="Name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="input"
+              required
             />
           </div>
           <div className="grid gap-2">
@@ -223,12 +224,13 @@ export default function ProjectsPage() {
           </div>
 
           <div className="grid gap-2">
-            <label className="text-sm text-gray-600">Start date</label>
+            <label className="text-sm text-gray-600">Start date <span className="text-red-500">*</span></label>
             <input
               type="date"
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
               className="input"
+              required
             />
           </div>
           <div className="grid gap-2">
@@ -315,6 +317,14 @@ export default function ProjectsPage() {
         <div className="mt-4">
           <button
             onClick={async () => {
+              if (!form.name || form.name.trim().length === 0) {
+                alert('Project name is required');
+                return;
+              }
+              if (!form.startDate) {
+                alert('Start date is required');
+                return;
+              }
               const payload = {
                 ...form,
                 technologies: form.technologies

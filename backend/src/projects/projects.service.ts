@@ -5,8 +5,19 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class ProjectsService {
   constructor(private supabase: SupabaseService) {}
 
+  private toIsoOrNull(value: any): string | null {
+    if (value === undefined || value === null || value === '') return null;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
   async create(data: any) {
     const client = this.supabase.getClient();
+    
+    // Validate required fields
+    if (!data.name || data.name.trim().length === 0) {
+      throw new Error('Project name is required');
+    }
     
     // Map status string to ProjectStatus enum value
     let statusEnum = 'COMPLETED';
@@ -19,16 +30,22 @@ export class ProjectsService {
       statusEnum = statusMap[data.status] || 'COMPLETED';
     }
     
+    // Handle start_date - required field, use current date if not provided
+    const startDate = this.toIsoOrNull(data.startDate);
+    if (!startDate) {
+      throw new Error('Start date is required for projects');
+    }
+    
     const payload: any = {
       user_id: String(data.userId),
       name: data.name,
       description: data.description,
       role: data.role,
-      start_date: new Date(data.startDate).toISOString(),
-      end_date: data.endDate ? new Date(data.endDate).toISOString() : null,
+      start_date: startDate,
+      end_date: this.toIsoOrNull(data.endDate),
       technologies: data.technologies ?? [],
-      url: data.url,
-      team_size: data.teamSize,
+      url: data.url || null,
+      team_size: data.teamSize || null,
       outcomes: data.outcomes,
       industry: data.industry,
       status: statusEnum,
