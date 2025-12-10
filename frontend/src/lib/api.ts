@@ -279,6 +279,20 @@ export async function setUserMaterialDefaults(payload: { defaultResumeVersionId?
   return data as { defaultResumeVersionId: string | null; defaultCoverLetterVersionId: string | null };
 }
 
+// Fetch all resume versions for the user
+export async function getResumeVersions(): Promise<Array<{ id: string; title: string; updatedAt: string }>> {
+  const userId = localStorage.getItem('userId');
+  const { data } = await api.get(`/resume?userId=${userId}`, { withCredentials: true });
+  return Array.isArray(data) ? data : data.resumes || [];
+}
+
+// Fetch all cover letters for the user
+export async function getCoverLetters(): Promise<Array<{ id: string; title: string; created_at: string }>> {
+  const userId = localStorage.getItem('userId');
+  const { data } = await api.get(`/coverletters?userId=${userId}`, { withCredentials: true });
+  return Array.isArray(data) ? data : data.coverLetters || [];
+}
+
 // ========== Statistics API ==========
 
 export interface JobStatistics {
@@ -626,5 +640,91 @@ export async function linkRepositoryToSkill(repoId: string, skillId: string) {
 
 export async function unlinkRepositoryFromSkill(repoId: string, skillId: string) {
   const { data } = await api.delete(`/github/repositories/${repoId}/skills/${skillId}`, { withCredentials: true });
+  return data;
+}
+
+// ==================== A/B Testing (UC-120) ====================
+
+export async function createExperiment(experimentData: {
+  experiment_name: string;
+  material_type: 'resume' | 'cover_letter' | 'both';
+  minimum_sample_size?: number;
+  notes?: string;
+}) {
+  const { data } = await api.post('/ab-testing/experiments', experimentData);
+  return data;
+}
+
+export async function getExperiments() {
+  const { data } = await api.get('/ab-testing/experiments');
+  return data;
+}
+
+export async function getExperiment(experimentId: string) {
+  const { data } = await api.get(`/ab-testing/experiments/${experimentId}`);
+  return data;
+}
+
+export async function updateExperimentStatus(experimentId: string, status: string) {
+  const { data } = await api.put(`/ab-testing/experiments/${experimentId}/status`, { status });
+  return data;
+}
+
+export async function addVariant(experimentId: string, variantData: {
+  variant_name: string;
+  resume_version_id?: string;
+  cover_letter_version_id?: string;
+  description?: string;
+  format_type?: string;
+  length_pages?: number;
+  word_count?: number;
+  design_style?: string;
+  has_photo?: boolean;
+  has_color?: boolean;
+}) {
+  const { data } = await api.post(`/ab-testing/experiments/${experimentId}/variants`, variantData);
+  return data;
+}
+
+export async function getVariants(experimentId: string) {
+  const { data } = await api.get(`/ab-testing/experiments/${experimentId}/variants`);
+  return data;
+}
+
+export async function archiveVariant(variantId: string) {
+  const { data } = await api.delete(`/ab-testing/variants/${variantId}`);
+  return data;
+}
+
+export async function assignVariantToJob(experimentId: string, jobId: number, jobDetails?: any) {
+  const { data } = await api.post(`/ab-testing/experiments/${experimentId}/assign-job`, {
+    job_id: jobId,
+    job_details: jobDetails
+  });
+  return data;
+}
+
+export async function trackResponse(jobId: number, responseData: {
+  response_type: 'interview_invite' | 'rejection' | 'phone_screen' | 'no_response';
+  response_received_at?: Date;
+  reached_interview?: boolean;
+  interview_date?: Date;
+  reached_offer?: boolean;
+  offer_date?: Date;
+}) {
+  const { data } = await api.post('/ab-testing/track-response', {
+    job_id: jobId,
+    response_data: responseData
+  });
+  return data;
+}
+
+export async function calculateResults(experimentId: string) {
+  const { data } = await api.post(`/ab-testing/experiments/${experimentId}/calculate`);
+  return data;
+}
+
+export async function getExperimentDashboard(experimentId: string) {
+  const { data } = await api.get(`/ab-testing/experiments/${experimentId}/dashboard`);
   return data;
 }

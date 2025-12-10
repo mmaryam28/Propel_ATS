@@ -36,6 +36,7 @@ import { RelationshipMaintenanceModule } from './relationship-maintenance/relati
 import { TeamsModule } from './teams/teams.module';
 import { MentorsModule } from './mentors/mentors.module';
 import { GitHubModule } from './github/github.module';
+import { AbTestingModule } from './ab-testing/ab-testing.module';
 
 @Module({
   imports: [
@@ -54,7 +55,7 @@ import { GitHubModule } from './github/github.module';
   ProfileModule,
   EmploymentModule,
   JobsModule,
-  //ResumeModule,
+  ResumeModule,
   CoverlettersModule,
   StatisticsModule,
   ResearchModule,
@@ -77,6 +78,7 @@ import { GitHubModule } from './github/github.module';
   TeamsModule,
   MentorsModule,
   GitHubModule,
+  AbTestingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
