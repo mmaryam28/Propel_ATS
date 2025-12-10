@@ -28,7 +28,8 @@ export default function Navbar() {
 
             {/* Main Navigation */}
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <NavLink to="/dashboard">Dashboard</NavLink>
+
+                <NavLink to="/dashboard">Dashboard</NavLink>
 
               {/* Profile dropdown */}
               <NavDropdown 
@@ -53,6 +54,7 @@ export default function Navbar() {
                   { to: '/jobs/calendar', label: 'Calendar' },
                   { to: '/resumes', label: 'Resumes' },
                   { to: '/coverletters', label: 'Cover Letters' },
+                  { to: '/application-quality', label: 'Application Quality Scoring' },
                 ]}
               />
 

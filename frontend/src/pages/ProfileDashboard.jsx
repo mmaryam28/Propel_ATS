@@ -6,6 +6,7 @@ import { Icon } from "../components/ui/Icon";
 import UpcomingDeadlinesWidget from '../components/UpcomingDeadlinesWidget';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import ProfileCompletenessWidget from '../components/profile/ProfileCompletenessWidget';
+import ProfileExternalCertifications from '../components/profile/ProfileExternalCertifications';
 
 const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
 
@@ -42,9 +43,21 @@ const EmptyLine = ({ text }) => <li className="text-gray-500">— {text}</li>;
 export default function ProfileDashboard() {
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    
+    // Extract userId from JWT token (it's stored as 'sub' in the JWT)
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserId(payload.sub || payload.userId); // Try 'sub' first, fallback to 'userId'
+      } catch (err) {
+        console.error('Failed to parse JWT token:', err);
+      }
+    }
+
     axios
       .get(`${API}/profile/overview`, {
         headers: {
@@ -174,6 +187,11 @@ export default function ProfileDashboard() {
             </Card.Footer>
           </Card>
         </div>
+      </Section>
+
+      {/* External Certifications */}
+      <Section className="pt-0">
+        <ProfileExternalCertifications userId={userId} />
       </Section>
 
       {/* Profile strength */}
