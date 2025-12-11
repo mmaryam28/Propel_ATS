@@ -119,12 +119,11 @@ export default function Jobs() {
   async function fetchAvailableSkills() {
     try {
       const token = localStorage.getItem('token');
-      const userId = localStorage.getItem('userId');
-      console.log('Fetching skills for userId:', userId);
-      const response = await axios.get(`${API}/skills?userId=${userId}`, {
+      // Fetch ALL skills from the skills table, not just user's skills
+      const response = await axios.get(`${API}/skills`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('Skills response:', response.data);
+      console.log('All skills response:', response.data);
       setAvailableSkills(response.data || []);
     } catch (e) {
       console.error('Error fetching skills:', e);
