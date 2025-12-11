@@ -32,6 +32,10 @@ export default function TeamDashboard() {
   const [message, setMessage] = useState(null);
   const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
   const [selectedJobDetails, setSelectedJobDetails] = useState(null);
+  const [showTeamResumeModal, setShowTeamResumeModal] = useState(false);
+  const [showTeamCoverLetterModal, setShowTeamCoverLetterModal] = useState(false);
+  const [teamResumeForm, setTeamResumeForm] = useState({ title: '', content: '' });
+  const [teamCoverLetterForm, setTeamCoverLetterForm] = useState({ company: '', position: '', content: '' });
   
   const [jobForm, setJobForm] = useState({
     company: '',
@@ -366,6 +370,78 @@ export default function TeamDashboard() {
     }
   };
 
+  const handleCreateTeamResume = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+      // First create the resume
+      const resumeResponse = await axios.post(`${API}/resume`, {
+        userId,
+        title: teamResumeForm.title,
+        sections: { content: teamResumeForm.content }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const resumeId = resumeResponse.data.id;
+      if (!resumeId) {
+        throw new Error('Failed to create resume - no ID returned');
+      }
+      
+      // Then share it with the team
+      await axios.post(`${API}/teams/${teamId}/share-resume/${resumeId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      showMessage('Team resume created and shared successfully!');
+      setShowTeamResumeModal(false);
+      setTeamResumeForm({ title: '', content: '' });
+      fetchResources();
+      fetchMyResumes();
+    } catch (err) {
+      console.error('Error creating team resume:', err);
+      showMessage(err.response?.data?.message || 'Failed to create team resume', 'error');
+    }
+  };
+
+  const handleCreateTeamCoverLetter = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+      // First create the cover letter
+      const letterResponse = await axios.post(`${API}/coverletters/save`, {
+        userId,
+        title: `${teamCoverLetterForm.position} at ${teamCoverLetterForm.company}`,
+        company: teamCoverLetterForm.company,
+        content: teamCoverLetterForm.content
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Extract ID from wrapped response {success: true, data: {...}}
+      const letterId = letterResponse.data?.data?.id || letterResponse.data?.id;
+      if (!letterId) {
+        throw new Error('Failed to create cover letter - no ID returned');
+      }
+      
+      // Then share it with the team
+      await axios.post(`${API}/teams/${teamId}/share-cover-letter/${letterId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      showMessage('Team cover letter created and shared successfully!');
+      setShowTeamCoverLetterModal(false);
+      setTeamCoverLetterForm({ company: '', position: '', content: '' });
+      fetchResources();
+      fetchMyCoverLetters();
+    } catch (err) {
+      console.error('Error creating team cover letter:', err);
+      showMessage(err.response?.data?.message || 'Failed to create team cover letter', 'error');
+    }
+  };
+
   const formatActivityType = (type) => {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -625,8 +701,14 @@ export default function TeamDashboard() {
         <div className="space-y-6">
           {/* Shared Resumes */}
           <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b">
+            <div className="p-6 border-b flex justify-between items-center">
               <h2 className="text-xl font-semibold">Shared Team Resumes</h2>
+              <button
+                onClick={() => setShowTeamResumeModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                + Create Team Resume
+              </button>
             </div>
             <div className="divide-y">
               {resources.resumes.length === 0 ? (
@@ -730,8 +812,14 @@ export default function TeamDashboard() {
         <div className="space-y-6">
           {/* Shared Cover Letters */}
           <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b">
+            <div className="p-6 border-b flex justify-between items-center">
               <h2 className="text-xl font-semibold">Shared Team Cover Letters</h2>
+              <button
+                onClick={() => setShowTeamCoverLetterModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                + Create Team Cover Letter
+              </button>
             </div>
             <div className="divide-y">
               {resources.coverLetters.length === 0 ? (
@@ -1473,6 +1561,123 @@ export default function TeamDashboard() {
                 💬 View Comments
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Resume Modal */}
+      {showTeamResumeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Create Team Resume</h2>
+            <form onSubmit={handleCreateTeamResume}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Resume Title *</label>
+                  <input
+                    type="text"
+                    value={teamResumeForm.title}
+                    onChange={(e) => setTeamResumeForm({ ...teamResumeForm, title: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="e.g., Software Engineer Resume"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Resume Content *</label>
+                  <textarea
+                    value={teamResumeForm.content}
+                    onChange={(e) => setTeamResumeForm({ ...teamResumeForm, content: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    rows="10"
+                    placeholder="Enter resume content in markdown format..."
+                    required
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    You can use markdown formatting. Team members can collaborate on this resume.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowTeamResumeModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create & Share with Team
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Team Cover Letter Modal */}
+      {showTeamCoverLetterModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Create Team Cover Letter</h2>
+            <form onSubmit={handleCreateTeamCoverLetter}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Company Name *</label>
+                  <input
+                    type="text"
+                    value={teamCoverLetterForm.company}
+                    onChange={(e) => setTeamCoverLetterForm({ ...teamCoverLetterForm, company: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="e.g., Google"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Position *</label>
+                  <input
+                    type="text"
+                    value={teamCoverLetterForm.position}
+                    onChange={(e) => setTeamCoverLetterForm({ ...teamCoverLetterForm, position: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="e.g., Senior Software Engineer"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Cover Letter Content *</label>
+                  <textarea
+                    value={teamCoverLetterForm.content}
+                    onChange={(e) => setTeamCoverLetterForm({ ...teamCoverLetterForm, content: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    rows="12"
+                    placeholder="Enter cover letter content..."
+                    required
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Team members can collaborate on this cover letter.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowTeamCoverLetterModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create & Share with Team
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

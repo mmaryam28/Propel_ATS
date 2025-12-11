@@ -26,14 +26,16 @@ export class SkillsService {
     return name.trim().toLowerCase();
   }
 
-  async findAll(userId: string, search?: string): Promise<Skill[]> {
-    if (!userId) throw new BadRequestException('userId is required');
+  async findAll(userId?: string, search?: string): Promise<Skill[]> {
     const supabase = this.supabaseService.getClient();
     
     let query = supabase
       .from('skills')
-      .select('*')
-      .eq('userId', userId);
+      .select('*');
+    
+    if (userId) {
+      query = query.eq('"userId"', userId);
+    }
     
     if (search) {
       query = query.ilike('name', `%${search}%`);
@@ -58,7 +60,7 @@ export class SkillsService {
     const { data: existing, error: checkError } = await supabase
       .from('skills')
       .select('id')
-      .eq('userId', userId)
+      .eq('"userId"', userId)
       .ilike('name', name.trim());
     
     console.log('DEBUG: Duplicate check:', { existing, checkError });
@@ -71,7 +73,7 @@ export class SkillsService {
     const { data: categorySkills } = await supabase
       .from('skills')
       .select('order')
-      .eq('userId', userId)
+      .eq('"userId"', userId)
       .eq('category', category)
       .order('order', { ascending: false })
       .limit(1);
@@ -112,7 +114,7 @@ export class SkillsService {
       .from('skills')
       .select('*')
       .eq('id', id)
-      .eq('userId', userId)
+      .eq('"userId"', userId)
       .single();
     
     if (fetchError || !existing) throw new NotFoundException('Skill not found');
@@ -122,7 +124,7 @@ export class SkillsService {
       const { data: dup } = await supabase
         .from('skills')
         .select('id')
-        .eq('userId', userId)
+        .eq('"userId"', userId)
         .ilike('name', dto.name.trim())
         .neq('id', id);
       
@@ -137,7 +139,7 @@ export class SkillsService {
       const { data: categorySkills } = await supabase
         .from('skills')
         .select('order')
-        .eq('userId', userId)
+        .eq('"userId"', userId)
         .eq('category', dto.category)
         .order('order', { ascending: false })
         .limit(1);
@@ -149,7 +151,7 @@ export class SkillsService {
       .from('skills')
       .update(updates)
       .eq('id', id)
-      .eq('userId', userId)
+      .eq('"userId"', userId)
       .select()
       .single();
     
@@ -178,7 +180,7 @@ export class SkillsService {
     const { data: target } = await supabase
       .from('skills')
       .select('*')
-      .eq('userId', userId)
+      .eq('"userId"', userId)
       .eq('category', category);
 
     if (!target || target.length !== orderedIds.length || new Set(orderedIds).size !== orderedIds.length) {
@@ -191,7 +193,7 @@ export class SkillsService {
         .from('skills')
         .update({ order: index + 1 })
         .eq('id', id)
-        .eq('userId', userId)
+        .eq('"userId"', userId)
     );
     
     await Promise.all(updates);

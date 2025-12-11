@@ -217,4 +217,42 @@ export class JobsController {
     const userId = req.user.userId;
     return this.jobs.delete(userId, id);
   }
+
+  // Job Skills Management
+  @Get(':id/skills')
+  async getJobSkills(@Req() req: any, @Param('id') jobId: string) {
+    const userId = req.user.userId;
+    return this.jobs.getJobSkills(userId, jobId);
+  }
+
+  @Post(':id/skills')
+  async addJobSkill(
+    @Req() req: any,
+    @Param('id') jobId: string,
+    @Body() body: { skillId: string; reqLevel?: number; weight?: number }
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.addJobSkill(userId, jobId, body.skillId, body.reqLevel, body.weight);
+  }
+
+  @Delete(':id/skills/:skillName')
+  async removeJobSkill(
+    @Req() req: any,
+    @Param('id') jobId: string,
+    @Param('skillName') skillName: string
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.removeJobSkill(userId, jobId, decodeURIComponent(skillName));
+  }
+
+  @Patch(':id/skills/:skillName')
+  async updateJobSkill(
+    @Req() req: any,
+    @Param('id') jobId: string,
+    @Param('skillName') skillName: string,
+    @Body() body: { reqLevel?: number; weight?: number }
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.updateJobSkill(userId, jobId, decodeURIComponent(skillName), body.reqLevel, body.weight);
+  }
 }

@@ -864,10 +864,10 @@ export class TeamsService {
     let resumes: any[] = [];
     if (resumeIds.length > 0) {
       const { data: resumeData } = await supabase
-        .from('resume')
+        .from('Resume')
         .select('*')
         .in('id', resumeIds)
-        .order('created_at', { ascending: false });
+        .order('createdat', { ascending: false });
       resumes = resumeData || [];
     }
 
@@ -1108,10 +1108,10 @@ export class TeamsService {
 
     // Verify the resume belongs to the user
     const { data: resume, error: resumeError } = await supabase
-      .from('resume')
+      .from('Resume')
       .select('*')
       .eq('id', resumeId)
-      .eq('user_id', userId)
+      .eq('userid', userId)
       .single();
 
     if (resumeError || !resume) {
@@ -1151,7 +1151,7 @@ export class TeamsService {
       .from('cover_letters')
       .select('*')
       .eq('id', letterId)
-      .eq('user_id', userId)
+      .eq('userid', userId)
       .single();
 
     if (letterError || !letter) {
