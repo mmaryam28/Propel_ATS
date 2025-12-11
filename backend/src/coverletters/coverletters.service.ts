@@ -90,6 +90,19 @@ export class CoverlettersService {
     return data || [];
   }
 
+  // Get specific cover letter by ID
+  // ===============================================================
+  async getCoverLetterById(id: string) {
+    const { data, error } = await this.supabase
+      .from('cover_letters')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
   // ===============================================================
   // Save Cover Letter as Version
   // ===============================================================

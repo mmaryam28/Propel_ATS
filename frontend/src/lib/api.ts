@@ -306,6 +306,54 @@ export async function getCoverLetters(): Promise<Array<{ id: string; title: stri
   return Array.isArray(data) ? data : data.coverLetters || [];
 }
 
+// Download resume as PDF
+export async function downloadResumePDF(resumeId: string): Promise<void> {
+  const response = await api.get(`/resume/${resumeId}/export/pdf`, {
+    responseType: 'blob',
+    withCredentials: true,
+  });
+  
+  // Create a download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `resume-${resumeId}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+// View resume details
+export async function getResumeDetails(resumeId: string): Promise<any> {
+  const { data } = await api.get(`/resume/${resumeId}`, { withCredentials: true });
+  return data;
+}
+
+// View cover letter details
+export async function getCoverLetterDetails(coverLetterId: string): Promise<any> {
+  const { data } = await api.get(`/coverletters/${coverLetterId}`, { withCredentials: true });
+  return data;
+}
+
+// Download cover letter as PDF
+export async function downloadCoverLetterPDF(coverLetterId: string, title?: string): Promise<void> {
+  const response = await api.get(`/coverletters/${coverLetterId}/export/pdf`, {
+    responseType: 'blob',
+    withCredentials: true,
+  });
+  
+  // Create a download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${title || 'cover-letter'}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
 // ========== Statistics API ==========
 
 export interface JobStatistics {

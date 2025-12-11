@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
 import { Toast } from "../components/Toast";
-import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults } from "../lib/api";
+import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults, getResumeVersions, getCoverLetters, downloadResumePDF, getResumeDetails, getCoverLetterDetails, downloadCoverLetterPDF } from "../lib/api";
 import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
 import InterviewOutcomeModal from "../components/InterviewOutcomeModal";
 import { useAnalytics } from "../contexts/AnalyticsContext";
@@ -33,18 +33,26 @@ export default function JobDetails() {
   const [showOutcomeModal, setShowOutcomeModal] = React.useState(false);
   const [selectedInterview, setSelectedInterview] = React.useState(null);
   const [interviews, setInterviews] = React.useState([]);
+  const [resumeVersions, setResumeVersions] = React.useState([]);
+  const [coverLetters, setCoverLetters] = React.useState([]);
+  const [showDocumentModal, setShowDocumentModal] = React.useState(false);
+  const [documentModalContent, setDocumentModalContent] = React.useState(null);
+  const [loadingDocument, setLoadingDocument] = React.useState(false);
 
   React.useEffect(() => { (async () => {
     try {
-      const [j, h, n, mh, defs, ints] = await Promise.all([
+      const [j, h, n, mh, defs, ints, resumes, letters] = await Promise.all([
         getJob(jobId),
         listJobHistory(jobId).catch(() => []),
         getCompanyNews(jobId).catch(() => ({ company: '', articles: [] })),
         listJobMaterialsHistory(jobId).catch(() => []),
         getUserMaterialDefaults().catch(() => ({ defaultResumeVersionId: null, defaultCoverLetterVersionId: null })),
         (async () => { const { getInterviews } = await import('../lib/api'); return getInterviews(jobId); })().catch(() => []),
+        getResumeVersions().catch(() => []),
+        getCoverLetters().catch(() => []),
       ]);
       setJob(j); setHistory(h); setNews(n); setMaterialsHistory(mh); setDefaults(defs); setInterviews(ints);
+      setResumeVersions(resumes); setCoverLetters(letters);
     } catch { setError("Failed to load job"); }
   })(); }, [jobId]);
 
@@ -92,6 +100,9 @@ export default function JobDetails() {
       }
       
       console.log('JobDetails - Saving with source:', job.source);
+      console.log('JobDetails - resumeVersionId before payload:', job.resumeVersionId, typeof job.resumeVersionId);
+      console.log('JobDetails - coverLetterVersionId before payload:', job.coverLetterVersionId, typeof job.coverLetterVersionId);
+      
       const payload = {
         title: job.title,
         company: job.company,
@@ -126,6 +137,7 @@ export default function JobDetails() {
         resumeVersionId: job.resumeVersionId ?? null,
         coverLetterVersionId: job.coverLetterVersionId ?? null,
       };
+      console.log('JobDetails - Final payload:', payload);
       const updated = await updateJob(jobId, payload);
       setJob(updated);
       setEdit(false);
@@ -139,6 +151,32 @@ export default function JobDetails() {
       const msg = e?.response?.data?.message || e?.message || "Failed to save";
       setError(Array.isArray(msg) ? msg.join("; ") : msg);
     } finally { setSaving(false); }
+  }
+
+  async function viewResumeDetails(resumeId) {
+    setLoadingDocument(true);
+    setShowDocumentModal(true);
+    try {
+      const details = await getResumeDetails(resumeId);
+      setDocumentModalContent({ type: 'resume', data: details });
+    } catch (e) {
+      setDocumentModalContent({ type: 'error', message: 'Failed to load resume details' });
+    } finally {
+      setLoadingDocument(false);
+    }
+  }
+
+  async function viewCoverLetterDetails(coverLetterId) {
+    setLoadingDocument(true);
+    setShowDocumentModal(true);
+    try {
+      const details = await getCoverLetterDetails(coverLetterId);
+      setDocumentModalContent({ type: 'coverletter', data: details });
+    } catch (e) {
+      setDocumentModalContent({ type: 'error', message: 'Failed to load cover letter details' });
+    } finally {
+      setLoadingDocument(false);
+    }
   }
 
   async function onArchive() {
@@ -253,29 +291,67 @@ export default function JobDetails() {
         <Card.Body>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <div className="form-label">Resume Version ID</div>
+              <div className="form-label">Resume Version</div>
               {edit ? (
-                <input className="input font-mono" value={job.resumeVersionId || ""} onChange={e=>setField('resumeVersionId', e.target.value)} placeholder="UUID provided by Materials feature" />
+                <select 
+                  className="input w-full" 
+                  value={job.resumeVersionId || ""} 
+                  onChange={e=>setField('resumeVersionId', e.target.value || null)}
+                >
+                  <option value="">Select a resume...</option>
+                  {resumeVersions.map(resume => (
+                    <option key={resume.id} value={resume.id}>
+                      {resume.title}
+                    </option>
+                  ))}
+                </select>
               ) : (
-                <div className="text-sm font-mono">{job.resumeVersionId || '—'}</div>
+                <div className="text-sm">
+                  {resumeVersions.find(r => r.id === job.resumeVersionId)?.title || job.resumeVersionId || '—'}
+                </div>
               )}
-              {job.resumeVersionId && /^https?:\/\//i.test(job.resumeVersionId) ? (
-                <a href={job.resumeVersionId} target="_blank" rel="noreferrer" className="text-sm text-[var(--primary-color)] mt-1 inline-block">View Resume</a>
-              ) : (
-                <div className="text-xs text-gray-500 mt-1">Viewing will work when document service provides a URL for this version.</div>
+              {job.resumeVersionId && !edit && (
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => viewResumeDetails(job.resumeVersionId)}
+                    className="text-xs text-[var(--primary-color)] hover:underline flex items-center gap-1"
+                  >
+                    <Icon name="eye" size={14} />
+                    View Details
+                  </button>
+                </div>
               )}
             </div>
             <div>
-              <div className="form-label">Cover Letter Version ID</div>
+              <div className="form-label">Cover Letter Version</div>
               {edit ? (
-                <input className="input font-mono" value={job.coverLetterVersionId || ""} onChange={e=>setField('coverLetterVersionId', e.target.value)} placeholder="UUID provided by Materials feature" />
+                <select 
+                  className="input w-full" 
+                  value={job.coverLetterVersionId || ""} 
+                  onChange={e=>setField('coverLetterVersionId', e.target.value || null)}
+                >
+                  <option value="">Select a cover letter...</option>
+                  {coverLetters.map(letter => (
+                    <option key={letter.id} value={letter.id}>
+                      {letter.title}
+                    </option>
+                  ))}
+                </select>
               ) : (
-                <div className="text-sm font-mono">{job.coverLetterVersionId || '—'}</div>
+                <div className="text-sm">
+                  {coverLetters.find(c => c.id === job.coverLetterVersionId)?.title || job.coverLetterVersionId || '—'}
+                </div>
               )}
-              {job.coverLetterVersionId && /^https?:\/\//i.test(job.coverLetterVersionId) ? (
-                <a href={job.coverLetterVersionId} target="_blank" rel="noreferrer" className="text-sm text-[var(--primary-color)] mt-1 inline-block">View Cover Letter</a>
-              ) : (
-                <div className="text-xs text-gray-500 mt-1">Viewing will work when document service provides a URL for this version.</div>
+              {job.coverLetterVersionId && !edit && (
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => viewCoverLetterDetails(job.coverLetterVersionId)}
+                    className="text-xs text-[var(--primary-color)] hover:underline flex items-center gap-1"
+                  >
+                    <Icon name="eye" size={14} />
+                    View Details
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -769,6 +845,136 @@ export default function JobDetails() {
             triggerRefresh();
           }}
         />
+      )}
+
+      {/* Document Details Modal */}
+      {showDocumentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDocumentModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold">
+                {documentModalContent?.type === 'resume' ? 'Resume Details' : 
+                 documentModalContent?.type === 'coverletter' ? 'Cover Letter Details' : 
+                 'Document Details'}
+              </h2>
+              <button onClick={() => setShowDocumentModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <Icon name="x" size={24} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              {loadingDocument ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary-color)]"></div>
+                </div>
+              ) : documentModalContent?.type === 'error' ? (
+                <div className="text-center py-12 text-red-600">
+                  {documentModalContent.message}
+                </div>
+              ) : documentModalContent?.type === 'resume' ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">{documentModalContent.data?.title || 'Untitled Resume'}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Last updated: {documentModalContent.data?.updatedAt ? new Date(documentModalContent.data.updatedAt).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  
+                  {documentModalContent.data?.summary && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Professional Summary</h4>
+                      <p className="text-sm whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 p-3 rounded">{documentModalContent.data.summary}</p>
+                    </div>
+                  )}
+                  
+                  {documentModalContent.data?.skills && documentModalContent.data.skills.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Skills</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {documentModalContent.data.skills.map((skill, i) => (
+                          <span key={i} className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-sm">
+                            {skill.name || skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {documentModalContent.data?.experience && documentModalContent.data.experience.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Experience</h4>
+                      <div className="space-y-3">
+                        {documentModalContent.data.experience.map((exp, i) => (
+                          <div key={i} className="bg-gray-50 dark:bg-gray-900 p-3 rounded">
+                            <div className="font-medium">{exp.title || exp.position}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">{exp.company}</div>
+                            {exp.description && <p className="text-sm mt-1">{exp.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {documentModalContent.data?.education && documentModalContent.data.education.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Education</h4>
+                      <div className="space-y-2">
+                        {documentModalContent.data.education.map((edu, i) => (
+                          <div key={i} className="bg-gray-50 dark:bg-gray-900 p-3 rounded">
+                            <div className="font-medium">{edu.degree}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">{edu.institution}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 pt-4 border-t">
+                    <button
+                      onClick={() => downloadResumePDF(documentModalContent.data.id)}
+                      className="btn btn-primary flex items-center gap-2"
+                    >
+                      <Icon name="download" size={16} />
+                      Download PDF
+                    </button>
+                  </div>
+                </div>
+              ) : documentModalContent?.type === 'coverletter' ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">{documentModalContent.data?.title || 'Untitled Cover Letter'}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Created: {documentModalContent.data?.created_at ? new Date(documentModalContent.data.created_at).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  
+                  {documentModalContent.data?.content && (
+                    <div>
+                      <div className="text-sm whitespace-pre-wrap bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 rounded leading-relaxed max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700">
+                        {typeof documentModalContent.data.content === 'string' 
+                          ? documentModalContent.data.content 
+                          : documentModalContent.data.content.text || JSON.stringify(documentModalContent.data.content)}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 pt-4 border-t">
+                    <button
+                      onClick={() => downloadCoverLetterPDF(documentModalContent.data.id, documentModalContent.data.title)}
+                      className="btn btn-primary flex items-center gap-2"
+                    >
+                      <Icon name="download" size={16} />
+                      Download PDF
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  No document data available
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
