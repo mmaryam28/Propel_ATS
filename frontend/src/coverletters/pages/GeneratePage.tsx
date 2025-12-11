@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { generateCoverLetter, listTemplates } from '../api/client';
+import axios from 'axios';
+import { trackUserAction, trackFunnel } from '../../lib/analytics';
 
 export default function GeneratePage() {
   const [templateSlug, setTemplateSlug] = useState('');
@@ -9,7 +11,9 @@ export default function GeneratePage() {
   const [company, setCompany] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [title, setTitle] = useState('');
 
   async function loadTemplates() {
     try {
@@ -24,13 +28,62 @@ export default function GeneratePage() {
     e.preventDefault();
     setLoading(true);
     setOutput('');
+    
+    // UC-146: Track AI generation funnel
+    trackFunnel.aiInputProvided('cover_letter');
+    
     try {
       const res = await generateCoverLetter({ templateSlug, jobDescription, profileSummary, tone, company });
       setOutput(res.generated || '');
+      // Auto-generate title from company name
+      const autoTitle = company ? `${company} - Cover Letter` : `Cover Letter - ${new Date().toLocaleDateString()}`;
+      setTitle(autoTitle);
+      
+      // UC-146: Track successful AI generation
+      trackUserAction.coverLetterGenerated(templateSlug, true);
+      trackFunnel.aiGenerated('cover_letter', true);
     } catch (e: any) {
       alert(e?.message || 'Failed to generate');
+      // UC-146: Track failed generation
+      trackUserAction.coverLetterGenerated(templateSlug, false);
+      trackFunnel.aiGenerated('cover_letter', false);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onSave() {
+    if (!output || !title.trim()) {
+      alert('Please provide a title for the cover letter');
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      const userId = localStorage.getItem('userId');
+      await axios.post('http://localhost:3000/coverletters/save', {
+        userId,
+        title: title.trim(),
+        content: output,
+        company: company || null
+      }, { withCredentials: true });
+      
+      // UC-146: Track cover letter save
+      trackUserAction.coverLetterSaved(title.trim());
+      trackFunnel.aiContentSaved('cover_letter');
+      
+      alert('Cover letter saved successfully! You can now select it in Quality Check.');
+      // Optionally clear the form
+      setOutput('');
+      setTitle('');
+      setTemplateSlug('');
+      setJobDescription('');
+      setProfileSummary('');
+      setCompany('');
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Failed to save cover letter');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -81,9 +134,33 @@ export default function GeneratePage() {
       {output && (
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-2">Result</h2>
-          <pre className="whitespace-pre-wrap bg-white rounded-md border p-4">
+          <div className="mb-4">
+            <label className="form-label">Cover Letter Title</label>
+            <input 
+              className="input" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+              placeholder="e.g., Acme Corp - Software Engineer"
+            />
+          </div>
+          <pre className="whitespace-pre-wrap bg-white rounded-md border p-4 mb-4">
             {output}
           </pre>
+          <div className="flex gap-3">
+            <button 
+              className="btn btn-primary" 
+              onClick={onSave}
+              disabled={saving || !title.trim()}
+            >
+              {saving ? 'Saving...' : 'Save as Version'}
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => navigator.clipboard.writeText(output)}
+            >
+              Copy to Clipboard
+            </button>
+          </div>
         </div>
       )}
     </div>

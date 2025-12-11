@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Icon } from '../../components/ui/Icon';
+import MaterialComparison from './MaterialComparison';
 import {
   LineChart,
   Line,
@@ -23,32 +24,114 @@ import {
   ScatterChart,
   Scatter,
 } from 'recharts';
+import * as api from '../../lib/api';
+// ...existing code...
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 function SuccessPatterns() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [predictionInput, setPredictionInput] = useState('');
-  const [prediction, setPrediction] = useState(null);
-  const [jobsList, setJobsList] = useState([]);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [loading, setLoading] = useState(false);
+    const [dashboardData, setDashboardData] = useState(null);
+    const [showTrackResponseModal, setShowTrackResponseModal] = useState(false);
+    const [trackResponseLoading, setTrackResponseLoading] = useState(false);
+    const [selectedResponseJobId, setSelectedResponseJobId] = useState('');
+    const [responseType, setResponseType] = useState('interview_invite');
+    const [responseDate, setResponseDate] = useState('');
+    const [trackResponseError, setTrackResponseError] = useState('');
 
-  const tabs = [
-    { id: 'overview', name: 'Overview', icon: 'ChartBarIcon' },
-    { id: 'applications', name: 'Applications', icon: 'DocumentTextIcon' },
-    { id: 'preparation', name: 'Preparation', icon: 'AcademicCapIcon' },
-    { id: 'timing', name: 'Timing', icon: 'ClockIcon' },
-    { id: 'strategies', name: 'Strategies', icon: 'LightBulbIcon' },
-    { id: 'factors', name: 'Success Factors', icon: 'StarIcon' },
-    { id: 'predictions', name: 'Predictions', icon: 'SparklesIcon' },
-    { id: 'evolution', name: 'Evolution', icon: 'TrendingUpIcon' },
-  ];
+    // Quality Scoring state
+    const [userId, setUserId] = useState('');
+    const [jobId, setJobId] = useState('');
+    const [resume, setResume] = useState('');
+    const [coverLetter, setCoverLetter] = useState('');
+    const [linkedIn, setLinkedIn] = useState('');
+    const [jobDescription, setJobDescription] = useState('');
+    const [score, setScore] = useState(null);
+    const [suggestions, setSuggestions] = useState([]);
+    const [qualityLoading, setQualityLoading] = useState(false);
+    const [qualityError, setQualityError] = useState('');
+
+    // A/B Testing state
+    const [jobsList, setJobsList] = useState([]);
+    const [selectedJobId, setSelectedJobId] = useState('');
+    const [assignJobLoading, setAssignJobLoading] = useState(false);
+    const [assignJobError, setAssignJobError] = useState('');
+    const [selectedExperiment, setSelectedExperiment] = useState(null);
+    const [abExperiments, setAbExperiments] = useState([]);
+    const [abDashboardData, setAbDashboardData] = useState(null);
+    const [abLoading, setAbLoading] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showAddVariantModal, setShowAddVariantModal] = useState(false);
+    const [showAssignJobModal, setShowAssignJobModal] = useState(false);
+    const [resumeVersions, setResumeVersions] = useState([]);
+    const [showTrackResponseABModal, setShowTrackResponseABModal] = useState(false);
+
+    // ...existing code...
+
+
+    const [coverLetters, setCoverLetters] = useState([]);
+    const [versionsLoading, setVersionsLoading] = useState(false);
+    const [predictionInput, setPredictionInput] = useState('');
+    const [prediction, setPrediction] = useState(null);
+
+    const tabs = [
+      { id: 'overview', name: 'Overview', icon: 'ChartBarIcon' },
+      { id: 'applications', name: 'Applications', icon: 'DocumentTextIcon' },
+      { id: 'preparation', name: 'Preparation', icon: 'AcademicCapIcon' },
+      { id: 'timing', name: 'Timing', icon: 'ClockIcon' },
+      { id: 'strategies', name: 'Strategies', icon: 'LightBulbIcon' },
+      { id: 'factors', name: 'Success Factors', icon: 'StarIcon' },
+      { id: 'predictions', name: 'Predictions', icon: 'SparklesIcon' },
+      { id: 'evolution', name: 'Evolution', icon: 'TrendingUpIcon' },
+      { id: 'abtesting', name: 'Material Comparison', icon: 'BeakerIcon' },
+    ];
+    // ...existing code...
+
+    // ...existing code...
 
   useEffect(() => {
     fetchDashboard();
     fetchJobs();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'abtesting') {
+      fetchAbExperiments();
+    }
+  }, [activeTab]);
+
+  // Fetch resume versions and cover letters when Add Variant modal opens
+  useEffect(() => {
+    if (showAddVariantModal) {
+      fetchVersionsData();
+    }
+  }, [showAddVariantModal]);
+
+  const fetchVersionsData = async () => {
+    setVersionsLoading(true);
+    try {
+      const resumes = await api.getResumeVersions();
+      // Defensive: filter for valid id and title
+      // Map backend fields to expected frontend format
+      const validResumes = Array.isArray(resumes)
+        ? resumes.filter(r => r && r.id && r.title).map(r => ({
+            id: r.id,
+            title: r.title,
+            updatedAt: r.updatedAt || r.createdAt || '',
+          }))
+        : [];
+      setResumeVersions(validResumes);
+      const letters = await api.getCoverLetters();
+      setCoverLetters(Array.isArray(letters) ? letters : []);
+    } catch (error) {
+      console.error('Error fetching versions:', error);
+      setResumeVersions([]);
+      setCoverLetters([]);
+    } finally {
+      setVersionsLoading(false);
+    }
+  };
 
   const fetchDashboard = async () => {
     try {
@@ -82,6 +165,22 @@ function SuccessPatterns() {
       console.error('Error fetching jobs:', error);
     }
   };
+  const handleAssignJob = async () => {
+    if (!selectedExperiment || !selectedJobId) return;
+    setAssignJobLoading(true);
+    setAssignJobError('');
+    try {
+      await api.assignVariantToJob(selectedExperiment.id, selectedJobId, {});
+      setShowAssignJobModal(false);
+      setSelectedJobId('');
+      fetchAbDashboard(selectedExperiment.id);
+    } catch (error) {
+      setAssignJobError('Failed to assign job.');
+      console.error('Error assigning job:', error);
+    } finally {
+      setAssignJobLoading(false);
+    }
+  };
 
   const getPrediction = async () => {
     try {
@@ -100,6 +199,124 @@ function SuccessPatterns() {
       setPrediction(data);
     } catch (error) {
       console.error('Error getting prediction:', error);
+    }
+  };
+
+  // A/B Testing functions
+  const fetchAbExperiments = async () => {
+    try {
+      setAbLoading(true);
+      const data = await api.getExperiments();
+      setAbExperiments(data);
+      if (data.length > 0 && !selectedExperiment) {
+        setSelectedExperiment(data[0]);
+        fetchAbDashboard(data[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching experiments:', error);
+    } finally {
+      setAbLoading(false);
+    }
+  };
+
+  const fetchAbDashboard = async (experimentId) => {
+    try {
+      const data = await api.getExperimentDashboard(experimentId);
+      setAbDashboardData(data);
+    } catch (error) {
+      console.error('Error fetching dashboard:', error);
+    }
+  };
+
+  const handleCreateExperiment = async (experimentData) => {
+    try {
+      await api.createExperiment(experimentData);
+      setShowCreateModal(false);
+      fetchAbExperiments();
+    } catch (error) {
+      console.error('Error creating experiment:', error);
+    }
+  };
+
+  const handleAddVariant = async (variantData) => {
+    try {
+      await api.addVariant(selectedExperiment.id, variantData);
+      setShowAddVariantModal(false);
+      fetchAbDashboard(selectedExperiment.id);
+    } catch (error) {
+      console.error('Error adding variant:', error);
+    }
+  };
+
+  const handleArchiveVariant = async (variantId) => {
+    if (window.confirm('Are you sure you want to archive this variant?')) {
+      try {
+        await api.archiveVariant(variantId);
+        fetchAbDashboard(selectedExperiment.id);
+      } catch (error) {
+        console.error('Error archiving variant:', error);
+      }
+    }
+  };
+
+  const handleUpdateStatus = async (experimentId, status) => {
+    try {
+      await api.updateExperimentStatus(experimentId, status);
+      fetchAbExperiments();
+      if (selectedExperiment?.id === experimentId) {
+        fetchAbDashboard(experimentId);
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
+
+  const handleCalculateResults = async (experimentId) => {
+    try {
+      await api.calculateResults(experimentId);
+      fetchAbDashboard(experimentId);
+    } catch (error) {
+      console.error('Error calculating results:', error);
+    }
+  };
+
+  const handleQualitySubmit = async (e) => {
+    e.preventDefault();
+    setQualityLoading(true);
+    setQualityError('');
+    setScore(null);
+    setSuggestions([]);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3000/application-quality/score', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          jobId: jobId || undefined,
+          resume,
+          coverLetter,
+          linkedIn,
+          jobDescription,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to calculate quality score');
+      }
+
+      const data = await response.json();
+      setScore(data.score);
+      setSuggestions(data.suggestions || []);
+    } catch (error) {
+      console.error('Error calculating quality score:', error);
+      setQualityError(error.message || 'Failed to calculate quality score');
+    } finally {
+      setQualityLoading(false);
     }
   };
 
@@ -224,16 +441,16 @@ function SuccessPatterns() {
         </p>
       </div>
 
-      {/* Tabs */}
+      {/* Tab Navigation */}
       <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-4 overflow-x-auto">
+        <nav className="-mb-px flex space-x-8 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -243,9 +460,10 @@ function SuccessPatterns() {
         </nav>
       </div>
 
-      {/* Overview Tab */}
+            {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Additional Overview Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <Card.Header>
@@ -1207,6 +1425,9 @@ function SuccessPatterns() {
           </Card>
         </div>
       )}
+
+      {/* Material Comparison Tab */}
+      {activeTab === 'abtesting' && <MaterialComparison />}
     </div>
   );
 }

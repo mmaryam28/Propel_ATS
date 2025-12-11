@@ -156,6 +156,41 @@ export default function ContactsPage() {
     }).catch(err => console.error('Error tracking accept:', err));
   };
 
+  const handleAddSuggestionDirectly = async (suggestion) => {
+    try {
+      // Create contact directly from suggestion data
+      const contactData = {
+        first_name: suggestion.full_name.split(' ')[0] || '',
+        last_name: suggestion.full_name.split(' ').slice(1).join(' ') || '',
+        email: suggestion.email || '',
+        company: suggestion.company || '',
+        role: suggestion.role || '',
+        industry: suggestion.industry || '',
+        linkedin_url: suggestion.linkedin_url || '',
+        relationship_type: 'linkedin_connection',
+        notes: `Added from suggested connections. ${suggestion.mutualConnectionsCount} mutual connection(s).`,
+      };
+
+      await contactsAPI.create(contactData);
+
+      // Track accept action
+      await discoveryAPI.trackAction({
+        suggestedContactId: suggestion.id,
+        action: 'accepted',
+      });
+
+      // Remove from suggestions and refresh
+      setSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
+      fetchContacts();
+      fetchStats();
+      
+      alert(`${suggestion.full_name} has been added to your contacts!`);
+    } catch (error) {
+      console.error('Error adding suggested contact:', error);
+      alert('Failed to add contact. Please try again.');
+    }
+  };
+
   const handleIgnoreSuggestion = async (suggestion) => {
     if (window.confirm('Hide this suggestion?')) {
       try {
@@ -258,6 +293,7 @@ export default function ContactsPage() {
                   suggestion={suggestion}
                   onViewDetails={handleViewSuggestionDetails}
                   onConnect={handleConnectSuggestion}
+                  onAddDirectly={handleAddSuggestionDirectly}
                   onIgnore={handleIgnoreSuggestion}
                 />
               ))}

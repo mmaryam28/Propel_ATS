@@ -30,16 +30,11 @@ export type TechnicalPrep = {
   };
 };
 
-export type Checklist = {
-  items: { id: string; label: string; category: string; suggestedTime?: string }[];
-};
-
 export type InterviewPrepData = {
   companyResearch: string;
   questionBank: QuestionBank;
   mockInterview: MockInterview;
   technicalPrep: TechnicalPrep;
-  checklist: Checklist;
 };
 
 // ------------ Ollama config ------------
@@ -77,9 +72,6 @@ export class InterviewPrepService {
       case 'technical_prep':
         return { section, data: { technicalPrep: await this.generateTechnicalPrep(companyName, roleTitle) } };
 
-      case 'checklist':
-        return { section, data: { checklist: await this.generateChecklist(companyName, roleTitle) } };
-
       default:
         return await this.generateAllSections(userId, interviewId);
     }
@@ -94,7 +86,6 @@ export class InterviewPrepService {
       questionBank: await this.generateQuestionBank(companyName, roleTitle),
       mockInterview: await this.generateMockInterview(companyName, roleTitle),
       technicalPrep: await this.generateTechnicalPrep(companyName, roleTitle),
-      checklist: await this.generateChecklist(companyName, roleTitle),
     };
   }
 
@@ -505,65 +496,6 @@ Key points:
     };
   }
 
-  private async generateChecklist(company: string, role: string): Promise<Checklist> {
-    const prompt = `Create interview prep checklist for ${role} at ${company}.
-
-List 8 tasks. Format each as:
-[category] task description (when to do it)
-
-Categories: research, practice, logistics, materials
-Example:
-[research] Research company mission (1 week before)
-[practice] Practice STAR method (3 days before)`;
-
-    try {
-      const text = await this.callOllamaText(prompt);
-      return this.parseChecklist(text, company);
-    } catch (err) {
-      console.error('⚠️ Checklist failed, using fallback');
-      return this.getFallbackChecklist(company);
-    }
-  }
-
-  private parseChecklist(text: string, company: string): Checklist {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-    const items: Checklist['items'] = [];
-
-    for (const line of lines) {
-      // Match: [category] task (time)
-      const match = line.match(/\[([^\]]+)\]\s*([^(]+)\s*\(([^)]+)\)/);
-      if (match) {
-        items.push({
-          id: String(items.length + 1),
-          label: match[2].trim(),
-          category: match[1].trim().toLowerCase(),
-          suggestedTime: match[3].trim(),
-        });
-      }
-    }
-
-    if (items.length < 5) {
-      return this.getFallbackChecklist(company);
-    }
-
-    return { items };
-  }
-
-  private getFallbackChecklist(company: string): Checklist {
-    return {
-      items: [
-        { id: "1", label: `Research ${company}'s mission and values`, category: "research", suggestedTime: "1 week before" },
-        { id: "2", label: "Review job description thoroughly", category: "research", suggestedTime: "1 week before" },
-        { id: "3", label: "Practice common interview questions", category: "practice", suggestedTime: "3 days before" },
-        { id: "4", label: "Prepare STAR method examples", category: "practice", suggestedTime: "3 days before" },
-        { id: "5", label: "Research interviewers on LinkedIn", category: "research", suggestedTime: "2 days before" },
-        { id: "6", label: "Prepare questions to ask", category: "research", suggestedTime: "2 days before" },
-        { id: "7", label: "Plan route and transportation", category: "logistics", suggestedTime: "1 day before" },
-        { id: "8", label: "Print resume copies", category: "materials", suggestedTime: "1 day before" },
-      ],
-    };
-  }
-
   // ---------------- Ollama Helpers -----------------
 
   private async callOllamaText(prompt: string): Promise<string> {
@@ -795,21 +727,6 @@ Example:
           return { id: String(q.id), type: String(q.type), text: String(q.text) };
         }
         return q;
-      });
-    }
-
-    // Fix Checklist items if needed
-    if (data.items && Array.isArray(data.items)) {
-      data.items = data.items.map(item => {
-        if (item && typeof item === 'object') {
-          return {
-            id: String(item.id || ''),
-            label: String(item.label || ''),
-            category: String(item.category || ''),
-            suggestedTime: item.suggestedTime ? String(item.suggestedTime) : undefined,
-          };
-        }
-        return item;
       });
     }
 

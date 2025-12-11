@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import GitHubConnect from '../components/github/GitHubConnect';
+import RepositoryCard from '../components/github/RepositoryCard';
+import { getGitHubRepositories, updateGitHubRepository } from '../lib/api';
 
 // Helper to get JWT token from localStorage
 function getToken() {
@@ -17,6 +20,14 @@ export default function ProjectsPage() {
 
   // Use the actual user UUID from localStorage (fallback demo)
   const currentUserId = window.localStorage.getItem('userId') || 'demo-user-uuid';
+  
+  // GitHub Integration State
+  const [activeTab, setActiveTab] = useState<'manual' | 'github'>('manual');
+  const [gitHubConnected, setGitHubConnected] = useState(false);
+  const [repositories, setRepositories] = useState<any[]>([]);
+  const [loadingRepos, setLoadingRepos] = useState(false);
+  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
+  const [showPrivateRepos, setShowPrivateRepos] = useState(true);
 
   // Auth check
   useEffect(() => {
@@ -76,6 +87,42 @@ export default function ProjectsPage() {
       .catch(() => {});
   }, [currentUserId]);
 
+  // GitHub Repositories Effect
+  useEffect(() => {
+    if (gitHubConnected && activeTab === 'github') {
+      loadRepositories();
+    }
+  }, [gitHubConnected, showFeaturedOnly, showPrivateRepos, activeTab]);
+
+  async function loadRepositories() {
+    try {
+      setLoadingRepos(true);
+      const repos = await getGitHubRepositories(showFeaturedOnly ? true : undefined, showPrivateRepos);
+      setRepositories(repos);
+    } catch (error) {
+      console.error('Failed to load repositories:', error);
+    } finally {
+      setLoadingRepos(false);
+    }
+  }
+
+  async function handleFeatureToggle(repoId: string, isFeatured: boolean) {
+    try {
+      await updateGitHubRepository(repoId, { is_featured: isFeatured });
+      await loadRepositories();
+    } catch (error) {
+      console.error('Failed to update repository:', error);
+      alert('Failed to update repository. Please try again.');
+    }
+  }
+
+  function handleConnectionChange(connection: any) {
+    setGitHubConnected(!!connection);
+    if (!connection) {
+      setRepositories([]);
+    }
+  }
+
   const filtered = useMemo(() => {
     let list = [...items];
     if (filters.tech)
@@ -112,21 +159,49 @@ export default function ProjectsPage() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-gray-900">Projects</h2>
-        <p className="text-sm text-gray-600">Showcase what you’ve built and how you worked.</p>
+        <p className="text-sm text-gray-600">Showcase what you've built and how you worked.</p>
       </div>
 
-      {/* Add form */}
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('manual')}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === 'manual'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Manual Projects
+        </button>
+        <button
+          onClick={() => setActiveTab('github')}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === 'github'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          GitHub Repositories
+        </button>
+      </div>
+
+      {/* Manual Projects Tab */}
+      {activeTab === 'manual' && (
+        <>
+          {/* Add form */}
       <div className="rounded-xl border border-[var(--border-color)] bg-[var(--panel-bg)] p-4 sm:p-6">
         <h3 className="mb-4 text-lg font-semibold text-gray-900">Add project</h3>
 
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <div className="grid gap-2">
-            <label className="text-sm text-gray-600">Name</label>
+            <label className="text-sm text-gray-600">Name <span className="text-red-500">*</span></label>
             <input
               placeholder="Name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="input"
+              required
             />
           </div>
           <div className="grid gap-2">
@@ -149,12 +224,13 @@ export default function ProjectsPage() {
           </div>
 
           <div className="grid gap-2">
-            <label className="text-sm text-gray-600">Start date</label>
+            <label className="text-sm text-gray-600">Start date <span className="text-red-500">*</span></label>
             <input
               type="date"
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
               className="input"
+              required
             />
           </div>
           <div className="grid gap-2">
@@ -241,6 +317,14 @@ export default function ProjectsPage() {
         <div className="mt-4">
           <button
             onClick={async () => {
+              if (!form.name || form.name.trim().length === 0) {
+                alert('Project name is required');
+                return;
+              }
+              if (!form.startDate) {
+                alert('Start date is required');
+                return;
+              }
               const payload = {
                 ...form,
                 technologies: form.technologies
@@ -435,6 +519,83 @@ export default function ProjectsPage() {
           </div>
         ))}
       </div>
+        </>
+      )}
+
+      {/* GitHub Tab */}
+      {activeTab === 'github' && (
+        <>
+          <div className="rounded-xl border border-[var(--border-color)] bg-[var(--panel-bg)] p-4 sm:p-6">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900">GitHub Connection</h3>
+            <GitHubConnect onConnectionChange={handleConnectionChange} />
+          </div>
+
+          {gitHubConnected && (
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--panel-bg)] p-4 sm:p-6">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">Your Repositories</h3>
+              
+              {/* Filter Toggles */}
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowFeaturedOnly(false)}
+                    className={`px-3 py-1 rounded-lg transition-colors ${
+                      !showFeaturedOnly
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    All Repositories
+                  </button>
+                  <button
+                    onClick={() => setShowFeaturedOnly(true)}
+                    className={`px-3 py-1 rounded-lg transition-colors ${
+                      showFeaturedOnly
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Featured Only
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showPrivateRepos}
+                      onChange={(e) => setShowPrivateRepos(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    />
+                    <span>Show Private Repos</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Repository List */}
+              {loadingRepos ? (
+                <div className="text-center py-8 text-gray-600">Loading repositories...</div>
+              ) : repositories.length > 0 ? (
+                <div className="grid gap-4">
+                  {repositories.map((repo: any) => (
+                    <RepositoryCard
+                      key={repo.id}
+                      repo={repo}
+                      onFeatureToggle={handleFeatureToggle}
+                      skills={repo.skills || []}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600 text-center py-8">
+                  {showFeaturedOnly 
+                    ? 'No featured repositories yet. Feature some repositories to showcase them!' 
+                    : 'No repositories found. Click "Sync" to import your GitHub repositories.'}
+                </p>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

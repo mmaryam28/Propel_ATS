@@ -209,11 +209,11 @@ export default function TeamMembers() {
                       {initial.toUpperCase()}
                     </div>
                     <div>
-                      <div className="font-medium">
+                      <div className="font-medium text-gray-900">
                         {fullName}
                       </div>
-                      <div className="text-sm text-gray-500">{member.users?.email}</div>
-                      <div className="text-xs text-gray-400 mt-1">
+                      <div className="text-sm text-gray-700">{member.users?.email}</div>
+                      <div className="text-xs text-gray-600 mt-1">
                         Joined {new Date(member.joined_at).toLocaleDateString()}
                       </div>
                     </div>

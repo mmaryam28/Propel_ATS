@@ -5,6 +5,8 @@ import { Card, Container, Section } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
 import UpcomingDeadlinesWidget from '../components/UpcomingDeadlinesWidget';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
+import ProfileCompletenessWidget from '../components/profile/ProfileCompletenessWidget';
+import ProfileExternalCertifications from '../components/profile/ProfileExternalCertifications';
 
 const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
 
@@ -41,10 +43,27 @@ const EmptyLine = ({ text }) => <li className="text-gray-500">— {text}</li>;
 export default function ProfileDashboard() {
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    
+    // Extract userId from JWT token (it's stored as 'sub' in the JWT)
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserId(payload.sub || payload.userId); // Try 'sub' first, fallback to 'userId'
+      } catch (err) {
+        console.error('Failed to parse JWT token:', err);
+      }
+    }
+
     axios
-      .get(`${API}/profile/overview?userId=1`)
+      .get(`${API}/profile/overview`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
       .then((res) => setOverview(res.data))
       .catch(() => setOverview({}))
       .finally(() => setLoading(false));
@@ -76,6 +95,11 @@ export default function ProfileDashboard() {
       <Section className="pb-4">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Profile Overview</h1>
         <p className="mt-1 text-sm text-gray-600">Keep your profile fresh to increase your match quality.</p>
+      </Section>
+
+      {/* Profile Completeness Widget */}
+      <Section className="pt-0">
+        <ProfileCompletenessWidget />
       </Section>
 
       {/* Upcoming Deadlines Widget */}
@@ -163,6 +187,11 @@ export default function ProfileDashboard() {
             </Card.Footer>
           </Card>
         </div>
+      </Section>
+
+      {/* External Certifications */}
+      <Section className="pt-0">
+        <ProfileExternalCertifications userId={userId} />
       </Section>
 
       {/* Profile strength */}

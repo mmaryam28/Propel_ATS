@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
 import { AnalyticsProvider } from "./contexts/AnalyticsContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // UI & Demo Pages
 import TypographyPreview from "./pages/TypographyPreview";
@@ -68,34 +69,37 @@ export default function App() {
         <Route path="/icons" element={<IconDemo />} />
 
         {/* Dashboard + Profile */}
-        <Route path="/dashboard" element={<ProfileDashboard />} />
-        <Route path="/education" element={<EducationPage />} />
-        <Route path="/certifications" element={<CertificationsPage />} />
-        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/dashboard" element={<ProtectedRoute><ProfileDashboard /></ProtectedRoute>} />
+        <Route path="/education" element={<ProtectedRoute><EducationPage /></ProtectedRoute>} />
+        <Route path="/certifications" element={<ProtectedRoute><CertificationsPage /></ProtectedRoute>} />
+        <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
 
         {/* Profile Completion */}
-        <Route path="/profile/edit" element={<ProfileForm />} />
-        <Route path="/profile/summary" element={<ProfileSummary />} />
-        <Route path="/delete-account" element={<DeleteAccount />} />
+        <Route path="/profile" element={<ProtectedRoute><ProfileDashboard /></ProtectedRoute>} />
+        <Route path="/profile/edit" element={<ProtectedRoute><ProfileForm /></ProtectedRoute>} />
+        <Route path="/profile/summary" element={<ProtectedRoute><ProfileSummary /></ProtectedRoute>} />
+        <Route path="/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
 
         {/* Networking */}
-        <Route path="/networking/contacts" element={<ContactsPage />} />
-        <Route path="/networking/contacts/:id" element={<ContactDetailPage />} />
-        <Route path="/networking/events" element={<EventsPage />} />
-        <Route path="/networking/interviews" element={<InformationalInterviewsPage />} />
-        <Route path="/networking/maintenance" element={<MaintenancePage />} />
+        <Route path="/networking/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
+        <Route path="/networking/contacts/:id" element={<ProtectedRoute><ContactDetailPage /></ProtectedRoute>} />
+        <Route path="/networking/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+        <Route path="/networking/interviews" element={<ProtectedRoute><InformationalInterviewsPage /></ProtectedRoute>} />
+        <Route path="/networking/maintenance" element={<ProtectedRoute><MaintenancePage /></ProtectedRoute>} />
 
         {/* Team Management */}
-        <Route path="/teams" element={<TeamManagement />} />
-        <Route path="/teams/:teamId/members" element={<TeamMembers />} />
-        <Route path="/teams/:teamId/dashboard" element={<TeamDashboard />} />
+        <Route path="/teams" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
+        <Route path="/teams/:teamId/members" element={<ProtectedRoute><TeamMembers /></ProtectedRoute>} />
+        <Route path="/teams/:teamId/dashboard" element={<ProtectedRoute><TeamDashboard /></ProtectedRoute>} />
 
         <Route
           path="/coverletters/templates"
           element={
-            <React.Suspense fallback={<div>Loading templates…</div>}>
-              <TemplatesPage />
-            </React.Suspense>
+            <ProtectedRoute>
+              <React.Suspense fallback={<div>Loading templates…</div>}>
+                <TemplatesPage />
+              </React.Suspense>
+            </ProtectedRoute>
           }
         />
 

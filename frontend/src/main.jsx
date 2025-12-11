@@ -1,8 +1,9 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppLayout from './layouts/AppLayout';
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
+import { initAnalytics } from './lib/analytics';
 
 // Pages
 import ProfileDashboard from './pages/ProfileDashboard.jsx';
@@ -13,6 +14,7 @@ import JobCalendar from './pages/JobCalendar';
 import ArchivedJobs from './pages/ArchivedJobs';
 import StatisticsPage from './pages/StatisticsPage';
 import Applications from './pages/Applications';
+import MockInterviewSession from './pages/MockInterviewSession';
 
 // import Documents from './pages/Documents';
 import Profile from './pages/Profile';
@@ -47,6 +49,7 @@ import FeedbackPanel from './pages/Resumes/FeedbackPanel.jsx';
 import CompanyResearch from './pages/Resumes/CompanyResearch';
 import JobMatch from './pages/Resumes/JobMatch.jsx';
 import SalaryAnalysis from './pages/Resumes/SalaryAnalysis';
+import QualityCheck from './pages/QualityCheck';
 import InterviewInsights from './pages/Resumes/InterviewInsights';
 import InterviewPerformanceAnalytics from './pages/Prepare/InterviewPerformanceAnalytics';
 import ApplicationSuccessAnalytics from './pages/Jobs/ApplicationSuccessAnalytics';
@@ -58,6 +61,7 @@ import Forecasting from './pages/Prepare/Forecasting';
 import ProductivityAnalytics from './pages/Jobs/ProductivityAnalytics';
 import NetworkingAnalytics from './pages/Networking/NetworkingAnalytics';
 import SuccessPatterns from './pages/Analytics/SuccessPatterns';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 
 
 // Networking pages
@@ -116,6 +120,8 @@ const router = createBrowserRouter([
       { path: '/jobs/statistics', element: <StatisticsPage /> },
       { path: '/jobs/:jobId', element: <JobDetails /> },
       { path: '/applications', element: <Applications /> },
+      { path: '/quality-check', element: <QualityCheck /> },
+      { path: '/mock-interview/:interviewId', element: <MockInterviewSession /> },
       // { path: '/documents', element: <Documents /> },
       { path: '/profile', element: <Profile /> },
       { path: '/education', element: <EducationPage /> },
@@ -146,7 +152,7 @@ const router = createBrowserRouter([
       { path: '/productivity-tracker', element: <ProductivityAnalytics /> },
       { path: '/network-analytics', element: <NetworkingAnalytics /> },
       { path: '/success-patterns', element: <SuccessPatterns /> },
-
+      { path: '/analytics', element: <AnalyticsDashboard /> },
 
       // Networking routes
       { path: '/networking/contacts', element: <ContactsPage /> },
@@ -189,7 +195,11 @@ const router = createBrowserRouter([
   },
 ]);
 
-
+// Initialize PostHog analytics only if consent given
+const consent = localStorage.getItem('cookie_consent');
+if (consent === 'accepted') {
+  initAnalytics();
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

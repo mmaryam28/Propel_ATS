@@ -38,6 +38,51 @@ export class CoverlettersController {
   }
 
   // ===============================================================
+  // Get User's Cover Letters (for A/B Testing dropdown)
+  // ===============================================================
+  @Get()
+  getUserCoverLetters(@Query('userId') userId: string) {
+    return this.svc.getUserCoverLetters(userId);
+  }
+
+  // Get specific cover letter by ID
+  @Get(':id')
+  async getCoverLetter(@Param('id') id: string) {
+    return this.svc.getCoverLetterById(id);
+  }
+
+  // Export cover letter as PDF
+  @Get(':id/export/pdf')
+  async exportCoverLetterPDF(@Param('id') id: string, @Res() res: Response) {
+    const coverLetter = await this.svc.getCoverLetterById(id);
+    
+    // Extract text from content field
+    let text = '';
+    if (typeof coverLetter.content === 'string') {
+      text = coverLetter.content;
+    } else if (coverLetter.content && coverLetter.content.text) {
+      text = coverLetter.content.text;
+    }
+
+    const doc = new PDFDocument({ margin: 50 });
+    const chunks: Buffer[] = [];
+
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${coverLetter.title || 'cover-letter'}.pdf"`,
+      );
+      res.send(pdfBuffer);
+    });
+
+    doc.fontSize(12).text(text, { align: 'left', lineGap: 5 });
+    doc.end();
+  }
+
+  // ===============================================================
   // UC-056 + UC-057: AI Cover Letter Generation + Company Research
   // ===============================================================
   @Post('generate')
@@ -73,16 +118,20 @@ export class CoverlettersController {
   // ===============================================================
   @Post('save')
   async saveEdits(@Body() body: any) {
-    const { slug, content } = body;
+    const { userId, title, content, company } = body;
 
-    if (!slug || !content) {
-      return { success: false, error: 'Missing slug or content' };
+    if (!userId || !title || !content) {
+      return { success: false, error: 'Missing required fields: userId, title, content' };
     }
 
-    // For now, just pretend we saved to DB successfully.
-    // This avoids schema issues and gives you a clean demo.
-    console.log(`Saved edited cover letter for slug=${slug}`);
-    return { success: true };
+    try {
+      const saved = await this.svc.saveCoverLetter(userId, title, content, company);
+      console.log(`Saved cover letter: ${title} for user ${userId}`);
+      return { success: true, data: saved };
+    } catch (error) {
+      console.error('Error saving cover letter:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   // ===============================================================

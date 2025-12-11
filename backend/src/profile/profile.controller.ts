@@ -1,18 +1,51 @@
-import { Controller, Get, Put, Body, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Put, Body, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ProfileCompletenessService } from './profile-completeness.service';
 
 @Controller('profile')
+@UseGuards(JwtAuthGuard)
 export class ProfileController {
-  constructor(private supabase: SupabaseService) {}
+  constructor(
+    private supabase: SupabaseService,
+    private profileCompletenessService: ProfileCompletenessService
+  ) {}
 
   @Get('overview')
   async getProfileOverview(@Req() req) {
-    const userId = req.query.userId ? String(req.query.userId) : null;
+    // Get userId from authenticated user (JWT token)
+    const userId = req.user?.userId;
     if (!userId) {
-      return { message: 'provide userId as query param for overview' };
+      throw new UnauthorizedException('User not authenticated');
     }
 
     const client = this.supabase.getClient();
+
+    // Fetch user information - table name is lowercase 'users' in database
+    const { data: user, error: userError } = await client
+      .from('users')
+      .select('id, firstname, lastname, email, phone, location, title, bio, role')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      console.error('User fetch error:', userError);
+      throw new UnauthorizedException(`Failed to fetch user information: ${userError.message}`);
+    }
+
+    // Map database fields to expected frontend fields
+    const userData = {
+      id: user.id,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      phone: user.phone || '',
+      location: user.location || '',
+      headline: user.title || '', // 'title' column maps to 'headline'
+      bio: user.bio || '',
+      industry: '', // Not in schema, set empty
+      experience_level: user.role || '' // 'role' column maps to 'experience_level'
+    };
 
     // Fetch recent education, certifications, projects
     const [education, certifications, projects] = await Promise.all([
@@ -32,6 +65,7 @@ export class ProfileController {
     const completion = await this.calculateProfileCompletion(userId);
 
     return {
+      user: userData,
       summary: {
         educationCount: educationCount.count ?? 0,
         certificationCount: certificationCount.count ?? 0,
@@ -65,34 +99,52 @@ export class ProfileController {
     return { score, sections: { education: educCount, certifications: certCount, projects: projectCount, applications: apps } };
   }
 
-  /**
-   * PUT /profile
-   * Updates the user's profile (name, bio, phone) in the User table.
-   * Expects: { name, bio, phone }
-   * Requires: user to be authenticated (userId from req.user or req.body)
-   */
-  @Put()
-  async updateProfile(@Req() req, @Body() body) {
-    // You may need to extract userId from req.user if using JWT auth, or from body for testing
-    const userId = req.user?.id || body.userId;
+  @Get('completeness')
+  async getProfileCompleteness(@Req() req): Promise<any> {
+    const userId = req.user?.userId;
     if (!userId) {
       throw new UnauthorizedException('User not authenticated');
     }
-    const { name, bio, phone } = body;
-    if (!name && !bio && !phone) {
+
+    return this.profileCompletenessService.calculateCompleteness(userId);
+  }
+
+  /**
+   * PUT /profile
+   * Updates the user's profile information in the User table.
+   * Requires: user to be authenticated (userId from req.user)
+   */
+  @Put()
+  async updateProfile(@Req() req, @Body() body) {
+    const userId = req.user?.userId || body.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    
+    const { firstname, lastname, email, phone, location, headline, bio, experience_level } = body;
+    
+    const client = this.supabase.getClient();
+    
+    // Build update object mapping to actual database columns
+    const updateFields: any = {};
+    if (firstname !== undefined) updateFields.firstname = firstname;
+    if (lastname !== undefined) updateFields.lastname = lastname;
+    if (email !== undefined) updateFields.email = email;
+    if (phone !== undefined) updateFields.phone = phone;
+    if (location !== undefined) updateFields.location = location;
+    if (headline !== undefined) updateFields.title = headline; // Map headline to title column
+    if (bio !== undefined) updateFields.bio = bio;
+    if (experience_level !== undefined) updateFields.role = experience_level; // Map experience_level to role column
+    // Note: industry field doesn't exist in database schema
+    
+    if (Object.keys(updateFields).length === 0) {
       return { message: 'No profile fields provided' };
     }
-    const client = this.supabase.getClient();
-    // Update the User table with provided fields
-    const updateFields = {};
-    if (name !== undefined) updateFields['firstname'] = name;
-    if (bio !== undefined) updateFields['bio'] = bio;
-    if (phone !== undefined) updateFields['phone'] = phone;
 
-    // Check if columns exist in User table (bio, phone). If not, you may need to add them in Prisma schema and migrate.
-    const { error } = await client.from('User').update(updateFields).eq('id', userId);
+    const { error } = await client.from('users').update(updateFields).eq('id', userId);
     if (error) {
-      return { message: 'Failed to update profile', error: error.message };
+      console.error('Profile update error:', error);
+      throw new UnauthorizedException(`Failed to update profile: ${error.message}`);
     }
     return { message: 'Profile updated successfully' };
   }

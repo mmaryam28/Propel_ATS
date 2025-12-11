@@ -75,4 +75,49 @@ export class CoverlettersService {
 
     return { ...tpl, latest: ver };
   }
+
+  // ===============================================================
+  // Get User's Cover Letters (for A/B Testing dropdown)
+  // ===============================================================
+  async getUserCoverLetters(userId: string) {
+    const { data, error } = await this.supabase
+      .from('cover_letters')
+      .select('id, title, created_at')
+      .eq('userid', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Get specific cover letter by ID
+  // ===============================================================
+  async getCoverLetterById(id: string) {
+    const { data, error } = await this.supabase
+      .from('cover_letters')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // ===============================================================
+  // Save Cover Letter as Version
+  // ===============================================================
+  async saveCoverLetter(userId: string, title: string, content: string, company?: string) {
+    const { data, error } = await this.supabase
+      .from('cover_letters')
+      .insert({
+        userid: userId,
+        title,
+        content: { text: content, company: company || null }
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
 }

@@ -8,26 +8,65 @@ const API = "http://localhost:3000/resume";
 export default function AIResumeGenerator() {
   const [jobDesc, setJobDesc] = useState("");
   const [templateType, setTemplateType] = useState("chronological");
-  const [profile, setProfile] = useState({
-    userId: null, // Will be set from localStorage
-    email: "user@example.com",
-    phone: "(555) 123-4567",
-    location: "Newark, NJ",
-    skills: ["JavaScript", "React", "Node.js", "SQL"],
-    experience: [
-      {
-        role: "Software Developer Intern",
-        bullets: [
-          "Developed responsive UI components using React",
-          "Improved API response time by 20% through caching"
-        ]
-      }
-    ]
-  });
+    const [profile, setProfile] = useState({
+      userId: null, // Will be set from localStorage
+      email: "user@example.com",
+      phone: "(555) 123-4567",
+      location: "Newark, NJ",
+      skills: ["JavaScript", "React", "Node.js", "SQL"],
+      experience: [
+        {
+          role: "Software Developer Intern",
+          bullets: [
+            "Developed responsive UI components using React",
+            "Improved API response time by 20% through caching"
+          ]
+        }
+      ]
+    });
+    const [resumeTitle, setResumeTitle] = useState("");
 
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [savingResume, setSavingResume] = useState(false);
+    // Save AI-generated resume to backend
+    async function saveResume() {
+      if (!result || !profile.userId) {
+        alert('No resume to save or missing user ID.');
+        return;
+      }
+      if (!resumeTitle.trim()) {
+        alert('Please enter a title for your resume.');
+        return;
+      }
+      setSavingResume(true);
+      try {
+        // Prepare payload for backend
+        const payload = {
+          userId: profile.userId,
+          title: resumeTitle,
+          aiContent: result.aiContent || result,
+          experience: result.experience ?? {},
+          skills: result.skills ?? {},
+          sections: result.sections ?? {},
+        };
+        const res = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          throw new Error('Failed to save resume');
+        }
+        alert('✅ Resume saved successfully!');
+      } catch (error) {
+        console.error('Error saving resume:', error);
+        alert('Failed to save resume. Please try again.');
+      } finally {
+        setSavingResume(false);
+      }
+    }
   const [editableJSON, setEditableJSON] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [jsonError, setJsonError] = useState(null);
@@ -193,8 +232,20 @@ export default function AIResumeGenerator() {
       {/* RESULT DISPLAY */}
       {result && (
         <div className="p-4 bg-gray-100 rounded-lg space-y-4">
-          {/* Download PDF Button */}
-          <div className="flex justify-end">
+          {/* Custom Title Input */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Resume Title</label>
+            <input
+              type="text"
+              value={resumeTitle}
+              onChange={e => setResumeTitle(e.target.value)}
+              className="border rounded-lg p-2 w-full"
+              placeholder="Enter a custom title for your resume"
+              maxLength={100}
+            />
+          </div>
+          {/* Download PDF & Save Resume Buttons */}
+          <div className="flex justify-end gap-3">
             <button
               onClick={downloadPDF}
               disabled={downloadingPDF}
@@ -214,6 +265,28 @@ export default function AIResumeGenerator() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   Download as PDF
+                </>
+              )}
+            </button>
+            <button
+              onClick={saveResume}
+              disabled={savingResume}
+              className="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {savingResume ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Save Resume
                 </>
               )}
             </button>

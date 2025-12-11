@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "../components/ui/Icon";
+import CookieConsent from "../components/CookieConsent";
 
 const classNames = (...xs) => xs.filter(Boolean).join(" ");
 
@@ -236,10 +237,14 @@ function Navbar() {
                   <div className="absolute top-full mt-1 left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
                     <Link to="/jobs" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Tracker</Link>
                     <Link to="/jobs/calendar" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Calendar</Link>
+                    <Link to="/quality-check" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Quality Check</Link>
                     <Link to="/application-success" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Application Analytics</Link>
                     <Link to="/productivity-tracker" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Productivity Tracker</Link>
                     <Link to="/network-analytics" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Network Analytics</Link>
                     <Link to="/success-patterns" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Success Patterns</Link>
+                    <div className="border-t border-gray-200 my-1"></div>
+                    <Link to="/analytics" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">📊 Platform Analytics</Link>
+                    <div className="border-t border-gray-200 my-1"></div>
                     <Link to="/resumes" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Resumes</Link>
                     <Link to="/coverletters/templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Cover Letters</Link>
                   </div>
@@ -296,8 +301,10 @@ function Navbar() {
           <div className="hidden md:flex items-center gap-2">
             <button
               onClick={() => {
+                localStorage.clear();
+                sessionStorage.clear();
                 fetch("/api/auth/logout", { method: "POST", credentials: "include" })
-                  .then(() => (window.location.href = "/login"));
+                  .finally(() => (window.location.href = "/login"));
               }}
               className="px-3 py-2 rounded-xl text-sm bg-gray-900 text-white hover:opacity-90 flex items-center gap-2"
             >
@@ -383,6 +390,7 @@ function Navbar() {
                 <div className="pl-6 flex flex-col">
                   <Link to="/jobs" className="py-1 text-sm text-gray-700 hover:underline">Job Tracker</Link>
                   <Link to="/jobs/calendar" className="py-1 text-sm text-gray-700 hover:underline">Calendar</Link>
+                  <Link to="/quality-check" className="py-1 text-sm text-gray-700 hover:underline">Quality Check</Link>
                   <Link to="/application-success" className="py-1 text-sm text-gray-700 hover:underline">Application Analytics</Link>
                   <Link to="/productivity-tracker" className="py-1 text-sm text-gray-700 hover:underline">Productivity Tracker</Link>
                   <Link to="/network-analytics" className="py-1 text-sm text-gray-700 hover:underline">Network Analytics</Link>
@@ -416,8 +424,10 @@ function Navbar() {
             <div className="mt-2">
               <button
                 onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
                   fetch("/api/auth/logout", { method: "POST", credentials: "include" })
-                    .then(() => (window.location.href = "/login"));
+                    .finally(() => (window.location.href = "/login"));
                 }}
                 className="px-3 py-2 rounded-xl text-sm bg-gray-900 text-white hover:opacity-90 flex items-center justify-center gap-2"
               >
@@ -436,6 +446,7 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Handle OAuth token from URL first
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const token = params.get("token");
@@ -453,8 +464,21 @@ export default function AppLayout() {
               .join("&")
           : "");
       navigate(path || "/dashboard", { replace: true });
+      return;
     }
-  }, [location.search]);
+
+    // UC-008: Check authentication - redirect to login if no token
+    const storedToken = localStorage.getItem('token');
+    if (!storedToken) {
+      navigate('/login', { replace: true });
+    }
+  }, [location.search, location.pathname, navigate]);
+
+  // Don't render protected content if not authenticated
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return null; // or a loading spinner
+  }
 
   return (
     <div className="min-h-screen w-full bg-gray-50">
@@ -463,6 +487,7 @@ export default function AppLayout() {
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-gray-900">
         <Outlet />
       </main>
+      <CookieConsent />
     </div>
   );
 }

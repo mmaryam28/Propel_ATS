@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import ExternalCertificationsTab from '../components/ExternalCertificationsTab';
 
 // Helper to get JWT token from localStorage
 function getToken() {
@@ -66,6 +67,7 @@ export default function CertificationsPage({ userId }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<any | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'traditional' | 'external'>('traditional');
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -156,9 +158,42 @@ export default function CertificationsPage({ userId }: Props) {
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-gray-900">Certifications</h2>
         <p className="text-sm text-gray-600">
-          Track your professional certifications and credentials.
+          Track your professional certifications and external platform achievements.
         </p>
       </div>
+
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="flex gap-4" aria-label="Tabs">
+          <button
+            onClick={() => setActiveTab('traditional')}
+            className={`py-2 px-4 text-sm font-medium border-b-2 transition ${
+              activeTab === 'traditional'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+            }`}
+          >
+            Traditional Certifications
+          </button>
+          <button
+            onClick={() => setActiveTab('external')}
+            className={`py-2 px-4 text-sm font-medium border-b-2 transition ${
+              activeTab === 'external'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+            }`}
+          >
+            External Platforms
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'external' ? (
+        <ExternalCertificationsTab userId={currentUserId || ''} />
+      ) : (
+        <>
+          {/* Traditional Certifications Content */}
 
       {/* Add certification form */}
       <div className="rounded-xl border border-[var(--border-color)] bg-[var(--panel-bg)] p-4 sm:p-6">
@@ -564,6 +599,8 @@ export default function CertificationsPage({ userId }: Props) {
           </ul>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -7,6 +7,12 @@ import { UpdateEducationDto } from './dto/update-education.dto';
 export class EducationService {
   constructor(private supabase: SupabaseService) {}
 
+  private toIsoOrNull(value: any): string | null {
+    if (value === undefined || value === null || value === '') return null;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
   async create(data: CreateEducationDto) {
     const client = this.supabase.getClient();
       const payload: any = {
@@ -14,8 +20,8 @@ export class EducationService {
         degree: data.degree,
         institution: data.institution,
         field_of_study: data.fieldOfStudy,
-        start_date: new Date(data.startDate).toISOString(),
-        end_date: data.endDate ? new Date(data.endDate).toISOString() : null,
+        start_date: this.toIsoOrNull(data.startDate),
+        end_date: this.toIsoOrNull(data.endDate),
         ongoing: !!data.ongoing,
         gpa: data.gpa ?? null,
         show_gpa: data.showGpa ?? true,

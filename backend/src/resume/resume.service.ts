@@ -583,15 +583,23 @@ Provide constructive, actionable feedback. Return ONLY valid JSON.`;
   //----------------------------------------------------
   async generatePDF(resumeData: any): Promise<Buffer> {
     console.log('📄 [PDF Generator] Starting PDF generation...');
-    console.log('📊 Resume data structure:', {
-      hasName: !!resumeData.name,
-      hasContact: !!resumeData.contact,
-      hasSections: !!resumeData.sections,
-      hasSkills: !!resumeData.skills,
-      hasExperience: !!resumeData.experience,
-      sectionKeys: resumeData.sections ? Object.keys(resumeData.sections) : [],
-      experienceCount: Array.isArray(resumeData.experience) ? resumeData.experience.length : 0,
-    });
+    console.log('📊 Resume data structure:', JSON.stringify(resumeData, null, 2));
+    console.log('📊 Resume keys:', Object.keys(resumeData));
+    console.log('📊 Has aiContent?', !!resumeData.aiContent, typeof resumeData.aiContent);
+    
+    // If data is in aiContent field, use that
+    let contentData = resumeData;
+    if (resumeData.aiContent && typeof resumeData.aiContent === 'object') {
+      console.log('📊 Using aiContent as data source');
+      contentData = resumeData.aiContent;
+    } else if (resumeData.aiContent && typeof resumeData.aiContent === 'string') {
+      try {
+        console.log('📊 Parsing aiContent from JSON string');
+        contentData = JSON.parse(resumeData.aiContent);
+      } catch (e) {
+        console.warn('⚠️  Failed to parse aiContent as JSON');
+      }
+    }
     
     return new Promise((resolve, reject) => {
       try {
@@ -605,52 +613,91 @@ Provide constructive, actionable feedback. Return ONLY valid JSON.`;
         });
         doc.on('error', reject);
 
-        // Header - Name and Contact
-        doc.fontSize(24).font('Helvetica-Bold').text(resumeData.name || 'Professional Resume', { align: 'center' });
+        // Header - Name and Contact (try multiple possible field names)
+        const name = contentData.name || contentData.title || resumeData.title || 'Professional Resume';
+        doc.fontSize(24).font('Helvetica-Bold').text(name, { align: 'center' });
         doc.moveDown(0.5);
         
-        if (resumeData.contact) {
+        // Contact info
+        if (contentData.contact) {
           doc.fontSize(10).font('Helvetica');
           const contact = [
-            resumeData.contact.email,
-            resumeData.contact.phone,
-            resumeData.contact.location,
-            resumeData.contact.linkedin,
+            contentData.contact.email,
+            contentData.contact.phone,
+            contentData.contact.location,
+            contentData.contact.linkedin,
           ].filter(Boolean).join(' | ');
-          doc.text(contact, { align: 'center' });
-          doc.moveDown(1);
+          if (contact) {
+            doc.text(contact, { align: 'center' });
+            doc.moveDown(1);
+          }
+        }
+
+        // Check if resume has any actual content
+        const hasContent = Boolean(
+          contentData.summary || contentData.sections?.summary ||
+          contentData.skills || contentData.sections?.skills ||
+          contentData.experience || contentData.sections?.experience ||
+          contentData.education || contentData.sections?.education
+        );
+
+        if (!hasContent) {
+          doc.fontSize(12).font('Helvetica').text('This resume does not have any content yet.', { align: 'center' });
+          doc.moveDown(0.5);
+          doc.fontSize(10).text('Please edit the resume to add your professional information, skills, experience, and education.', { align: 'center' });
+          doc.end();
+          return;
         }
 
         // Professional Summary
-        if (resumeData.sections?.summary) {
-          this.addSection(doc, 'PROFESSIONAL SUMMARY', resumeData.sections.summary);
+        const summary = contentData.sections?.summary || contentData.summary;
+        if (summary) {
+          this.addSection(doc, 'PROFESSIONAL SUMMARY', summary);
         }
 
-        // Skills
-        if (resumeData.skills) {
+        // Skills - handle both array and object formats
+        const skills = contentData.skills || contentData.sections?.skills;
+        if (skills) {
           doc.fontSize(14).font('Helvetica-Bold').text('SKILLS');
           doc.moveDown(0.3);
           
-          Object.entries(resumeData.skills).forEach(([category, skillList]: [string, any]) => {
-            if (Array.isArray(skillList) && skillList.length > 0) {
-              doc.fontSize(10).font('Helvetica-Bold').text(`${category.charAt(0).toUpperCase() + category.slice(1)}:`, { continued: true });
-              doc.font('Helvetica').text(` ${skillList.join(', ')}`);
-              doc.moveDown(0.2);
+          if (Array.isArray(skills)) {
+            // Skills as array of strings or objects
+            const skillNames = skills.map(s => typeof s === 'string' ? s : s.name).filter(Boolean);
+            if (skillNames.length > 0) {
+              doc.fontSize(10).font('Helvetica').text(skillNames.join(', '));
+              doc.moveDown(0.5);
             }
-          });
-          doc.moveDown(0.5);
+          } else if (typeof skills === 'object') {
+            // Skills as categorized object
+            Object.entries(skills).forEach(([category, skillList]: [string, any]) => {
+              if (Array.isArray(skillList) && skillList.length > 0) {
+                doc.fontSize(10).font('Helvetica-Bold').text(`${category.charAt(0).toUpperCase() + category.slice(1)}:`, { continued: true });
+                doc.font('Helvetica').text(` ${skillList.join(', ')}`);
+                doc.moveDown(0.2);
+              }
+            });
+            doc.moveDown(0.5);
+          }
         }
 
         // Education
-        if (resumeData.sections?.education && Array.isArray(resumeData.sections.education)) {
+        const education = contentData.sections?.education || contentData.education;
+        if (education && Array.isArray(education) && education.length > 0) {
           doc.fontSize(14).font('Helvetica-Bold').text('EDUCATION');
           doc.moveDown(0.3);
           
-          resumeData.sections.education.forEach((edu: any) => {
-            doc.fontSize(11).font('Helvetica-Bold').text(edu.degree || edu.title);
-            doc.fontSize(10).font('Helvetica-Oblique').text(`${edu.institution || edu.school}, ${edu.location || ''}`);
-            if (edu.graduationDate || edu.date) {
-              doc.fontSize(9).text(edu.graduationDate || edu.date);
+          education.forEach((edu: any) => {
+            const degree = edu.degree || edu.title || edu.name;
+            const institution = edu.institution || edu.school || edu.university;
+            if (degree) {
+              doc.fontSize(11).font('Helvetica-Bold').text(degree);
+            }
+            if (institution) {
+              doc.fontSize(10).font('Helvetica-Oblique').text(`${institution}${edu.location ? ', ' + edu.location : ''}`);
+            }
+            if (edu.graduationDate || edu.date || edu.year) {
+              doc.fontSize(9).text(edu.graduationDate || edu.date || edu.year);
             }
             if (edu.gpa) {
               doc.text(`GPA: ${edu.gpa}`);
@@ -661,14 +708,24 @@ Provide constructive, actionable feedback. Return ONLY valid JSON.`;
         }
 
         // Experience
-        if (resumeData.experience && Array.isArray(resumeData.experience)) {
+        const experience = contentData.experience || contentData.sections?.experience;
+        if (experience && Array.isArray(experience) && experience.length > 0) {
           doc.fontSize(14).font('Helvetica-Bold').text('PROFESSIONAL EXPERIENCE');
           doc.moveDown(0.3);
           
-          resumeData.experience.forEach((exp: any) => {
-            doc.fontSize(11).font('Helvetica-Bold').text(exp.title || exp.position);
-            doc.fontSize(10).font('Helvetica-Oblique').text(`${exp.company}, ${exp.location || ''}`);
-            doc.fontSize(9).font('Helvetica').text(`${exp.startDate || exp.start} - ${exp.endDate || exp.end || 'Present'}`);
+          experience.forEach((exp: any) => {
+            const title = exp.title || exp.position || exp.role;
+            if (title) {
+              doc.fontSize(11).font('Helvetica-Bold').text(title);
+            }
+            if (exp.company) {
+              doc.fontSize(10).font('Helvetica-Oblique').text(`${exp.company}${exp.location ? ', ' + exp.location : ''}`);
+            }
+            const startDate = exp.startDate || exp.start || exp.from;
+            const endDate = exp.endDate || exp.end || exp.to || 'Present';
+            if (startDate || endDate !== 'Present') {
+              doc.fontSize(9).font('Helvetica').text(`${startDate || ''} - ${endDate}`);
+            }
             doc.moveDown(0.3);
             
             if (exp.achievements && Array.isArray(exp.achievements)) {
@@ -677,6 +734,10 @@ Provide constructive, actionable feedback. Return ONLY valid JSON.`;
               });
             } else if (exp.description) {
               doc.fontSize(10).font('Helvetica').text(`• ${exp.description}`, { indent: 10 });
+            } else if (exp.responsibilities && Array.isArray(exp.responsibilities)) {
+              exp.responsibilities.forEach((resp: string) => {
+                doc.fontSize(10).font('Helvetica').text(`• ${resp}`, { indent: 10 });
+              });
             }
             doc.moveDown(0.5);
           });
@@ -684,11 +745,11 @@ Provide constructive, actionable feedback. Return ONLY valid JSON.`;
         }
 
         // Projects
-        if (resumeData.sections?.projects && Array.isArray(resumeData.sections.projects)) {
+        if (contentData.sections?.projects && Array.isArray(contentData.sections.projects)) {
           doc.fontSize(14).font('Helvetica-Bold').text('PROJECTS');
           doc.moveDown(0.3);
           
-          resumeData.sections.projects.forEach((project: any) => {
+          contentData.sections.projects.forEach((project: any) => {
             doc.fontSize(11).font('Helvetica-Bold').text(project.name || project.title);
             if (project.technologies) {
               doc.fontSize(9).font('Helvetica-Oblique').text(`Technologies: ${Array.isArray(project.technologies) ? project.technologies.join(', ') : project.technologies}`);
@@ -706,11 +767,11 @@ Provide constructive, actionable feedback. Return ONLY valid JSON.`;
         }
 
         // Certifications
-        if (resumeData.sections?.certifications && Array.isArray(resumeData.sections.certifications)) {
+        if (contentData.sections?.certifications && Array.isArray(contentData.sections.certifications)) {
           doc.fontSize(14).font('Helvetica-Bold').text('CERTIFICATIONS');
           doc.moveDown(0.3);
           
-          resumeData.sections.certifications.forEach((cert: any) => {
+          contentData.sections.certifications.forEach((cert: any) => {
             doc.fontSize(10).font('Helvetica').text(`• ${cert.name || cert.title} - ${cert.issuer || cert.organization} (${cert.date || cert.year})`);
           });
           doc.moveDown(0.5);

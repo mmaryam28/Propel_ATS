@@ -35,6 +35,10 @@ import { ReferencesModule } from './references/references.module';
 import { RelationshipMaintenanceModule } from './relationship-maintenance/relationship-maintenance.module';
 import { TeamsModule } from './teams/teams.module';
 import { MentorsModule } from './mentors/mentors.module';
+import { GitHubModule } from './github/github.module';
+import { AbTestingModule } from './ab-testing/ab-testing.module';
+import { ApplicationQualityModule } from './application-quality/application-quality.module';
+import { ExternalCertificationsModule } from './external-certifications/external-certifications.module';
 
 @Module({
   imports: [
@@ -75,6 +79,10 @@ import { MentorsModule } from './mentors/mentors.module';
   RelationshipMaintenanceModule,
   TeamsModule,
   MentorsModule,
+  GitHubModule,
+  AbTestingModule,
+  ApplicationQualityModule,
+  ExternalCertificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
