@@ -65,7 +65,7 @@ export class AbTestingController {
   }
 
   @Post('track-response')
-  async trackResponse(@Req() req, @Body() body: { job_id: number; response_data: any }) {
+  async trackResponse(@Req() req, @Body() body: { job_id: string | number; response_data: any }) {
     const userId = req.user.userId;
     return this.abTestingService.trackResponse(userId, body.job_id, body.response_data);
   }
@@ -74,7 +74,8 @@ export class AbTestingController {
 
   @Post('experiments/:experimentId/calculate')
   async calculateResults(@Param('experimentId') experimentId: string) {
-    return this.abTestingService.calculateResults(experimentId);
+    await this.abTestingService.calculateResults(experimentId);
+    return { success: true, message: 'Results calculated successfully' };
   }
 
   @Get('experiments/:experimentId/dashboard')

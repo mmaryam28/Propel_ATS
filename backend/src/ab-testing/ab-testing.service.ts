@@ -205,23 +205,40 @@ export class AbTestingService {
   /**
    * UC-120 AC2: Randomly assign a variant to a job application
    */
-  async assignVariantToJob(userId: string, experimentId: string, jobId: number, jobDetails?: {
+  async assignVariantToJob(userId: string, experimentId: string, jobId: string | number, jobDetails?: {
     industry?: string;
     level?: string;
     company_size?: string;
+    variant_id?: string;
   }) {
     const supabase = this.supabaseService.getClient();
 
-    // Get all active variants for this experiment
-    const variants = await this.getVariants(experimentId);
+    let selectedVariant;
     
-    if (variants.length === 0) {
-      throw new Error('No variants available for this experiment');
-    }
+    if (jobDetails?.variant_id) {
+      // Manual assignment to specific variant
+      const { data: variant } = await supabase
+        .from('ab_test_variants')
+        .select('*')
+        .eq('id', jobDetails.variant_id)
+        .eq('experiment_id', experimentId)
+        .single();
+      
+      if (!variant) {
+        throw new Error('Variant not found');
+      }
+      selectedVariant = variant;
+    } else {
+      // Random assignment (original behavior)
+      const variants = await this.getVariants(experimentId);
+      
+      if (variants.length === 0) {
+        throw new Error('No variants available for this experiment');
+      }
 
-    // Random assignment
-    const randomIndex = Math.floor(Math.random() * variants.length);
-    const selectedVariant = variants[randomIndex];
+      const randomIndex = Math.floor(Math.random() * variants.length);
+      selectedVariant = variants[randomIndex];
+    }
 
     // Record the assignment
     const { data, error } = await supabase
@@ -245,7 +262,7 @@ export class AbTestingService {
   /**
    * UC-120 AC3: Track response for an application
    */
-  async trackResponse(userId: string, jobId: number, responseData: {
+  async trackResponse(userId: string, jobId: string | number, responseData: {
     response_type: 'interview_invite' | 'rejection' | 'phone_screen' | 'no_response';
     response_received_at?: Date;
     reached_interview?: boolean;
@@ -309,19 +326,26 @@ export class AbTestingService {
   async calculateResults(experimentId: string) {
     const supabase = this.supabaseService.getClient();
 
-    // Get all variants
-    const variants = await this.getVariants(experimentId);
+    try {
+      // Get all variants
+      const variants = await this.getVariants(experimentId);
 
-    for (const variant of variants) {
-      // Get all applications for this variant
-      const { data: applications } = await supabase
-        .from('ab_test_applications')
-        .select('*')
-        .eq('variant_id', variant.id);
-
-      if (!applications || applications.length === 0) {
-        continue;
+      if (!variants || variants.length === 0) {
+        console.log('No variants found for experiment:', experimentId);
+        return;
       }
+
+      for (const variant of variants) {
+        // Get all applications for this variant
+        const { data: applications } = await supabase
+          .from('ab_test_applications')
+          .select('*')
+          .eq('variant_id', variant.id);
+
+        if (!applications || applications.length === 0) {
+          console.log('No applications for variant:', variant.id);
+          continue;
+        }
 
       const totalApps = applications.length;
       const totalResponses = applications.filter(a => a.response_received).length;
@@ -349,29 +373,84 @@ export class AbTestingService {
       );
 
       // Upsert results
-      const { error } = await supabase
-        .from('ab_test_results')
-        .upsert({
-          experiment_id: experimentId,
-          variant_id: variant.id,
-          total_applications: totalApps,
-          total_responses: totalResponses,
-          response_rate: Math.round(responseRate * 100) / 100,
-          avg_time_to_response_hours: avgTimeToResponse ? Math.round(avgTimeToResponse * 100) / 100 : null,
-          total_interviews: totalInterviews,
-          interview_conversion_rate: Math.round(interviewRate * 100) / 100,
-          total_offers: totalOffers,
-          offer_rate: Math.round(offerRate * 100) / 100,
-          is_statistically_significant: isSignificant,
-          p_value: pValue,
-          confidence_level: isSignificant ? 95 : null,
-          last_calculated_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'experiment_id,variant_id'
-        });
+      console.log('Upserting results for variant:', variant.id, 'in experiment:', experimentId);
+      
+      const resultData = {
+        experiment_id: experimentId,
+        variant_id: variant.id,
+        total_applications: totalApps,
+        total_responses: totalResponses,
+        response_rate: Math.round(responseRate * 100) / 100,
+        avg_time_to_response_hours: avgTimeToResponse ? Math.round(avgTimeToResponse * 100) / 100 : null,
+        total_interviews: totalInterviews,
+        interview_conversion_rate: Math.round(interviewRate * 100) / 100,
+        total_offers: totalOffers,
+        offer_rate: Math.round(offerRate * 100) / 100,
+        is_statistically_significant: isSignificant,
+        p_value: pValue,
+        confidence_level: isSignificant ? 95 : null,
+        last_calculated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) throw error;
+      console.log('Result data to save:', resultData);
+
+      // Check if result already exists
+      const { data: existing } = await supabase
+        .from('ab_test_results')
+        .select('id')
+        .eq('experiment_id', experimentId)
+        .eq('variant_id', variant.id)
+        .single();
+
+      let error;
+      let savedData;
+      if (existing) {
+        // Update existing result
+        const result = await supabase
+          .from('ab_test_results')
+          .update(resultData)
+          .eq('experiment_id', experimentId)
+          .eq('variant_id', variant.id)
+          .select('*');
+        error = result.error;
+        savedData = result.data;
+        console.log('Update result - error:', error);
+        console.log('Update result - data returned:', savedData);
+      } else {
+        // Insert new result
+        const result = await supabase
+          .from('ab_test_results')
+          .insert(resultData)
+          .select('*');
+        error = result.error;
+        savedData = result.data;
+        console.log('Insert result - error:', error);
+        console.log('Insert result - data returned:', savedData);
+      }
+
+      if (error) {
+        console.error('Error saving results:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
+      
+      // Verify what was actually saved
+      const { data: verification } = await supabase
+        .from('ab_test_results')
+        .select('*')
+        .eq('experiment_id', experimentId)
+        .eq('variant_id', variant.id)
+        .single();
+      console.log('Verification - what is actually in DB:', verification);
+    }
+    } catch (error) {
+      console.error('Error calculating results for experiment:', experimentId, error);
+      throw error;
     }
   }
 
@@ -457,6 +536,7 @@ export class AbTestingService {
       summary: {
         total_applications: applications?.length || 0,
         total_responses: applications?.filter(a => a.response_received).length || 0,
+        total_variants: experiment?.variants?.length || 0,
         overall_response_rate: applications && applications.length > 0
           ? (applications.filter(a => a.response_received).length / applications.length) * 100
           : 0,

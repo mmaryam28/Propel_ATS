@@ -1,12 +1,15 @@
 // src/lib/api.ts
 import axios from 'axios';
 
-console.log('API base:', import.meta.env.VITE_API_URL);
+// Use Vite's import.meta.env for API base URL, fallback to localhost
+const API_BASE_URL = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL
+  : 'http://localhost:3000';
+console.log('API base:', API_BASE_URL);
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  
 });
 
 // Attach Authorization header from localStorage, if present
@@ -283,8 +286,18 @@ export async function setUserMaterialDefaults(payload: { defaultResumeVersionId?
 export async function getResumeVersions(): Promise<Array<{ id: string; title: string; updatedAt: string }>> {
   const userId = localStorage.getItem('userId');
   const { data } = await api.get(`/resume?userId=${userId}`, { withCredentials: true });
-  return Array.isArray(data) ? data : data.resumes || [];
+  // Defensive mapping for backend response
+  const resumes: Array<{ id?: string; title?: string; updatedAt?: string; createdAt?: string }> =
+    Array.isArray(data) ? data : (data && data.resumes) || [];
+  return resumes
+    .filter(r => r && r.id && r.title)
+    .map(r => ({
+      id: r.id as string,
+      title: r.title as string,
+      updatedAt: r.updatedAt || r.createdAt || '',
+    }));
 }
+
 
 // Fetch all cover letters for the user
 export async function getCoverLetters(): Promise<Array<{ id: string; title: string; created_at: string }>> {
@@ -696,15 +709,15 @@ export async function archiveVariant(variantId: string) {
   return data;
 }
 
-export async function assignVariantToJob(experimentId: string, jobId: number, jobDetails?: any) {
+export async function assignVariantToJob(experimentId: string, jobId: number, variantId?: string, jobDetails?: any) {
   const { data } = await api.post(`/ab-testing/experiments/${experimentId}/assign-job`, {
     job_id: jobId,
-    job_details: jobDetails
+    job_details: { ...jobDetails, variant_id: variantId }
   });
   return data;
 }
 
-export async function trackResponse(jobId: number, responseData: {
+export async function trackResponse(jobId: string | number, responseData: {
   response_type: 'interview_invite' | 'rejection' | 'phone_screen' | 'no_response';
   response_received_at?: Date;
   reached_interview?: boolean;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Icon } from '../../components/ui/Icon';
+import MaterialComparison from './MaterialComparison';
 import {
   LineChart,
   Line,
@@ -24,41 +25,70 @@ import {
   Scatter,
 } from 'recharts';
 import * as api from '../../lib/api';
+// ...existing code...
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 function SuccessPatterns() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [predictionInput, setPredictionInput] = useState('');
-  const [prediction, setPrediction] = useState(null);
-  const [jobsList, setJobsList] = useState([]);
-  
-  // A/B Testing state
-  const [abExperiments, setAbExperiments] = useState([]);
-  const [selectedExperiment, setSelectedExperiment] = useState(null);
-  const [abDashboardData, setAbDashboardData] = useState(null);
-  const [abLoading, setAbLoading] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAddVariantModal, setShowAddVariantModal] = useState(false);
-  
-  // Version selection state for Add Variant modal
-  const [resumeVersions, setResumeVersions] = useState([]);
-  const [coverLetters, setCoverLetters] = useState([]);
-  const [versionsLoading, setVersionsLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [loading, setLoading] = useState(false);
+    const [dashboardData, setDashboardData] = useState(null);
+    const [showTrackResponseModal, setShowTrackResponseModal] = useState(false);
+    const [trackResponseLoading, setTrackResponseLoading] = useState(false);
+    const [selectedResponseJobId, setSelectedResponseJobId] = useState('');
+    const [responseType, setResponseType] = useState('interview_invite');
+    const [responseDate, setResponseDate] = useState('');
+    const [trackResponseError, setTrackResponseError] = useState('');
 
-  const tabs = [
-    { id: 'overview', name: 'Overview', icon: 'ChartBarIcon' },
-    { id: 'applications', name: 'Applications', icon: 'DocumentTextIcon' },
-    { id: 'preparation', name: 'Preparation', icon: 'AcademicCapIcon' },
-    { id: 'timing', name: 'Timing', icon: 'ClockIcon' },
-    { id: 'strategies', name: 'Strategies', icon: 'LightBulbIcon' },
-    { id: 'factors', name: 'Success Factors', icon: 'StarIcon' },
-    { id: 'predictions', name: 'Predictions', icon: 'SparklesIcon' },
-    { id: 'evolution', name: 'Evolution', icon: 'TrendingUpIcon' },
-    { id: 'abtesting', name: 'A/B Testing', icon: 'BeakerIcon' },
-  ];
+    // Quality Scoring state
+    const [userId, setUserId] = useState('');
+    const [jobId, setJobId] = useState('');
+    const [resume, setResume] = useState('');
+    const [coverLetter, setCoverLetter] = useState('');
+    const [linkedIn, setLinkedIn] = useState('');
+    const [jobDescription, setJobDescription] = useState('');
+    const [score, setScore] = useState(null);
+    const [suggestions, setSuggestions] = useState([]);
+    const [qualityLoading, setQualityLoading] = useState(false);
+    const [qualityError, setQualityError] = useState('');
+
+    // A/B Testing state
+    const [jobsList, setJobsList] = useState([]);
+    const [selectedJobId, setSelectedJobId] = useState('');
+    const [assignJobLoading, setAssignJobLoading] = useState(false);
+    const [assignJobError, setAssignJobError] = useState('');
+    const [selectedExperiment, setSelectedExperiment] = useState(null);
+    const [abExperiments, setAbExperiments] = useState([]);
+    const [abDashboardData, setAbDashboardData] = useState(null);
+    const [abLoading, setAbLoading] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showAddVariantModal, setShowAddVariantModal] = useState(false);
+    const [showAssignJobModal, setShowAssignJobModal] = useState(false);
+    const [resumeVersions, setResumeVersions] = useState([]);
+    const [showTrackResponseABModal, setShowTrackResponseABModal] = useState(false);
+
+    // ...existing code...
+
+
+    const [coverLetters, setCoverLetters] = useState([]);
+    const [versionsLoading, setVersionsLoading] = useState(false);
+    const [predictionInput, setPredictionInput] = useState('');
+    const [prediction, setPrediction] = useState(null);
+
+    const tabs = [
+      { id: 'overview', name: 'Overview', icon: 'ChartBarIcon' },
+      { id: 'applications', name: 'Applications', icon: 'DocumentTextIcon' },
+      { id: 'preparation', name: 'Preparation', icon: 'AcademicCapIcon' },
+      { id: 'timing', name: 'Timing', icon: 'ClockIcon' },
+      { id: 'strategies', name: 'Strategies', icon: 'LightBulbIcon' },
+      { id: 'factors', name: 'Success Factors', icon: 'StarIcon' },
+      { id: 'predictions', name: 'Predictions', icon: 'SparklesIcon' },
+      { id: 'evolution', name: 'Evolution', icon: 'TrendingUpIcon' },
+      { id: 'abtesting', name: 'Material Comparison', icon: 'BeakerIcon' },
+    ];
+    // ...existing code...
+
+    // ...existing code...
 
   useEffect(() => {
     fetchDashboard();
@@ -81,14 +111,23 @@ function SuccessPatterns() {
   const fetchVersionsData = async () => {
     setVersionsLoading(true);
     try {
-      const [resumes, letters] = await Promise.all([
-        api.getResumeVersions(),
-        api.getCoverLetters()
-      ]);
-      setResumeVersions(resumes);
-      setCoverLetters(letters);
+      const resumes = await api.getResumeVersions();
+      // Defensive: filter for valid id and title
+      // Map backend fields to expected frontend format
+      const validResumes = Array.isArray(resumes)
+        ? resumes.filter(r => r && r.id && r.title).map(r => ({
+            id: r.id,
+            title: r.title,
+            updatedAt: r.updatedAt || r.createdAt || '',
+          }))
+        : [];
+      setResumeVersions(validResumes);
+      const letters = await api.getCoverLetters();
+      setCoverLetters(Array.isArray(letters) ? letters : []);
     } catch (error) {
       console.error('Error fetching versions:', error);
+      setResumeVersions([]);
+      setCoverLetters([]);
     } finally {
       setVersionsLoading(false);
     }
@@ -124,6 +163,22 @@ function SuccessPatterns() {
       setJobsList(data);
     } catch (error) {
       console.error('Error fetching jobs:', error);
+    }
+  };
+  const handleAssignJob = async () => {
+    if (!selectedExperiment || !selectedJobId) return;
+    setAssignJobLoading(true);
+    setAssignJobError('');
+    try {
+      await api.assignVariantToJob(selectedExperiment.id, selectedJobId, {});
+      setShowAssignJobModal(false);
+      setSelectedJobId('');
+      fetchAbDashboard(selectedExperiment.id);
+    } catch (error) {
+      setAssignJobError('Failed to assign job.');
+      console.error('Error assigning job:', error);
+    } finally {
+      setAssignJobLoading(false);
     }
   };
 
@@ -222,6 +277,46 @@ function SuccessPatterns() {
       fetchAbDashboard(experimentId);
     } catch (error) {
       console.error('Error calculating results:', error);
+    }
+  };
+
+  const handleQualitySubmit = async (e) => {
+    e.preventDefault();
+    setQualityLoading(true);
+    setQualityError('');
+    setScore(null);
+    setSuggestions([]);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3000/application-quality/score', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          jobId: jobId || undefined,
+          resume,
+          coverLetter,
+          linkedIn,
+          jobDescription,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to calculate quality score');
+      }
+
+      const data = await response.json();
+      setScore(data.score);
+      setSuggestions(data.suggestions || []);
+    } catch (error) {
+      console.error('Error calculating quality score:', error);
+      setQualityError(error.message || 'Failed to calculate quality score');
+    } finally {
+      setQualityLoading(false);
     }
   };
 
@@ -346,16 +441,16 @@ function SuccessPatterns() {
         </p>
       </div>
 
-      {/* Tabs */}
+      {/* Tab Navigation */}
       <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-4 overflow-x-auto">
+        <nav className="-mb-px flex space-x-8 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -365,9 +460,10 @@ function SuccessPatterns() {
         </nav>
       </div>
 
-      {/* Overview Tab */}
+            {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Additional Overview Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <Card.Header>
@@ -1330,674 +1426,8 @@ function SuccessPatterns() {
         </div>
       )}
 
-      {/* A/B Testing Tab */}
-      {activeTab === 'abtesting' && (
-        <div className="space-y-6">
-          {abLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          ) : abExperiments.length === 0 ? (
-            <Card>
-              <Card.Body>
-                <div className="text-center py-12">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    No A/B Testing Experiments Yet
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    Create your first experiment to start testing different resume and cover letter versions
-                  </p>
-                  <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    Create Experiment
-                  </button>
-                </div>
-              </Card.Body>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Experiments Sidebar */}
-              <div className="lg:col-span-3">
-                <Card>
-                  <Card.Header className="flex justify-between items-center">
-                    <Card.Title>Experiments</Card.Title>
-                    <button
-                      onClick={() => setShowCreateModal(true)}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 4v16m8-8H4"
-                        />
-                      </svg>
-                    </button>
-                  </Card.Header>
-                  <Card.Body className="p-0">
-                    <div className="divide-y">
-                      {abExperiments.map((exp) => (
-                        <button
-                          key={exp.id}
-                          onClick={() => {
-                            setSelectedExperiment(exp);
-                            fetchAbDashboard(exp.id);
-                          }}
-                          className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${
-                            selectedExperiment?.id === exp.id ? 'bg-blue-50 border-l-4 border-blue-600' : ''
-                          }`}
-                        >
-                          <div className="font-semibold text-gray-900 mb-1">
-                            {exp.experiment_name}
-                          </div>
-                          <div className="text-xs text-gray-500 mb-2">
-                            {exp.material_type}
-                          </div>
-                          <span
-                            className={`inline-block px-2 py-1 text-xs rounded ${
-                              exp.status === 'active'
-                                ? 'bg-green-100 text-green-800'
-                                : exp.status === 'paused'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : exp.status === 'completed'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {exp.status}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </Card.Body>
-                </Card>
-              </div>
-
-              {/* Main Dashboard */}
-              <div className="lg:col-span-9">
-                {selectedExperiment && abDashboardData && (
-                  <>
-                    {/* Experiment Header */}
-                    <Card className="mb-6">
-                      <Card.Body>
-                        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-                          <div>
-                            <h2 className="text-xl lg:text-2xl font-bold text-gray-900">
-                              {selectedExperiment.experiment_name}
-                            </h2>
-                            <p className="text-gray-600 mt-1">{selectedExperiment.notes}</p>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              onClick={() => handleUpdateStatus(selectedExperiment.id, 'active')}
-                              disabled={selectedExperiment.status === 'active'}
-                              className="px-3 py-2 text-xs sm:text-sm border rounded hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
-                            >
-                              Activate
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus(selectedExperiment.id, 'paused')}
-                              disabled={selectedExperiment.status === 'paused'}
-                              className="px-3 py-2 text-xs sm:text-sm border rounded hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
-                            >
-                              Pause
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus(selectedExperiment.id, 'completed')}
-                              className="px-3 py-2 text-xs sm:text-sm border rounded hover:bg-gray-50 whitespace-nowrap"
-                            >
-                              Complete
-                            </button>
-                            <button
-                              onClick={() => setShowAddVariantModal(true)}
-                              className="px-3 py-2 text-xs sm:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
-                            >
-                              Add Variant
-                            </button>
-                            <button
-                              onClick={() => handleCalculateResults(selectedExperiment.id)}
-                              className="px-3 py-2 text-xs sm:text-sm bg-green-600 text-white rounded hover:bg-green-700 whitespace-nowrap"
-                            >
-                              Calculate
-                            </button>
-                          </div>
-                        </div>
-                      </Card.Body>
-                    </Card>
-
-                    {/* Summary Stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                      <Card>
-                        <Card.Body>
-                          <div className="text-sm text-gray-600">Total Applications</div>
-                          <div className="text-2xl font-bold text-gray-900">
-                            {abDashboardData.summary?.total_applications || 0}
-                          </div>
-                        </Card.Body>
-                      </Card>
-                      <Card>
-                        <Card.Body>
-                          <div className="text-sm text-gray-600">Responses</div>
-                          <div className="text-2xl font-bold text-green-600">
-                            {abDashboardData.summary?.total_responses || 0}
-                          </div>
-                        </Card.Body>
-                      </Card>
-                      <Card>
-                        <Card.Body>
-                          <div className="text-sm text-gray-600">Response Rate</div>
-                          <div className="text-2xl font-bold text-blue-600">
-                            {abDashboardData.summary?.overall_response_rate?.toFixed(1) || 0}%
-                          </div>
-                        </Card.Body>
-                      </Card>
-                      <Card>
-                        <Card.Body>
-                          <div className="text-sm text-gray-600">Variants</div>
-                          <div className="text-2xl font-bold text-purple-600">
-                            {abDashboardData.summary?.total_variants || 0}
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    </div>
-
-                    {/* Key Insights */}
-                    {abDashboardData.insights?.length > 0 && (
-                      <Card className="mb-6">
-                        <Card.Header>
-                          <Card.Title>Key Insights</Card.Title>
-                        </Card.Header>
-                        <Card.Body>
-                          <div className="space-y-3">
-                            {abDashboardData.insights.map((insight, idx) => (
-                              <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 rounded">
-                                <svg
-                                  className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
-                                </svg>
-                                <p className="text-sm text-gray-700">{insight}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    )}
-
-                    {/* Winning Variant */}
-                    {abDashboardData.winning_variant && (
-                      <Card className="mb-6 border-green-500">
-                        <Card.Header className="bg-green-50">
-                          <div className="flex items-center gap-2">
-                            <svg
-                              className="w-6 h-6 text-green-600"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-.5a1.5 1.5 0 000 3h.5a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-.5a1.5 1.5 0 00-3 0v.5a1 1 0 01-1 1H6a1 1 0 01-1-1v-3a1 1 0 00-1-1h-.5a1.5 1.5 0 010-3H4a1 1 0 001-1V6a1 1 0 011-1h3a1 1 0 001-1v-.5z" />
-                            </svg>
-                            <Card.Title className="text-green-900">Winning Variant</Card.Title>
-                          </div>
-                        </Card.Header>
-                        <Card.Body>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                            <div>
-                              <div className="text-sm text-gray-600">Variant</div>
-                              <div className="font-semibold text-gray-900">
-                                {abDashboardData.winning_variant.variant_name}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-600">Response Rate</div>
-                              <div className="font-semibold text-green-600">
-                                {abDashboardData.winning_variant.response_rate?.toFixed(1)}%
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-600">Interview Rate</div>
-                              <div className="font-semibold text-blue-600">
-                                {abDashboardData.winning_variant.interview_conversion_rate?.toFixed(1)}%
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-600">Offer Rate</div>
-                              <div className="font-semibold text-purple-600">
-                                {abDashboardData.winning_variant.offer_rate?.toFixed(1)}%
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-600">Significance</div>
-                              <div className="font-semibold text-gray-900">
-                                {abDashboardData.winning_variant.is_significant ? '✓ Significant' : '- Pending'}
-                              </div>
-                            </div>
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    )}
-
-                    {/* Performance Comparison Chart */}
-                    <Card className="mb-6">
-                      <Card.Header>
-                        <Card.Title>Performance Comparison</Card.Title>
-                      </Card.Header>
-                      <Card.Body>
-                        {abDashboardData.results?.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={abDashboardData.results}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="variant_name" />
-                              <YAxis />
-                              <Tooltip />
-                              <Legend />
-                              <Bar dataKey="response_rate" fill="#3b82f6" name="Response Rate %" />
-                              <Bar dataKey="interview_conversion_rate" fill="#10b981" name="Interview Rate %" />
-                              <Bar dataKey="offer_rate" fill="#8b5cf6" name="Offer Rate %" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div className="text-center py-12 text-gray-500">
-                            No data available yet. Add variants and track applications.
-                          </div>
-                        )}
-                      </Card.Body>
-                    </Card>
-
-                    {/* Detailed Results Table */}
-                    <Card>
-                      <Card.Header>
-                        <Card.Title>Detailed Results</Card.Title>
-                      </Card.Header>
-                      <Card.Body className="p-0">
-                        {abDashboardData.results?.length > 0 ? (
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-50">
-                                <tr>
-                                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Variant
-                                  </th>
-                                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Applications
-                                  </th>
-                                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Response Rate
-                                  </th>
-                                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Avg Time to Response
-                                  </th>
-                                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Interview Rate
-                                  </th>
-                                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Offer Rate
-                                  </th>
-                                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Significance
-                                  </th>
-                                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Actions
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {abDashboardData.results.map((result) => (
-                                  <tr key={result.variant_id}>
-                                    <td className="px-2 sm:px-4 py-3 text-sm font-medium text-gray-900">
-                                      {result.variant_name}
-                                    </td>
-                                    <td className="px-2 sm:px-4 py-3 text-sm text-gray-700">
-                                      {result.total_applications}
-                                    </td>
-                                    <td className="px-2 sm:px-4 py-3 text-sm text-gray-700">
-                                      {result.response_rate?.toFixed(1)}%
-                                    </td>
-                                    <td className="px-2 sm:px-4 py-3 text-sm text-gray-700">
-                                      {result.avg_time_to_response
-                                        ? `${result.avg_time_to_response.toFixed(1)}h`
-                                        : '-'}
-                                    </td>
-                                    <td className="px-2 sm:px-4 py-3 text-sm text-gray-700">
-                                      {result.interview_conversion_rate?.toFixed(1)}%
-                                    </td>
-                                    <td className="px-2 sm:px-4 py-3 text-sm text-gray-700">
-                                      {result.offer_rate?.toFixed(1)}%
-                                    </td>
-                                    <td className="px-2 sm:px-4 py-3 text-sm">
-                                      {result.is_significant ? (
-                                        <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800 whitespace-nowrap">
-                                          Significant (p={result.p_value?.toFixed(4)})
-                                        </span>
-                                      ) : result.total_applications < 10 ? (
-                                        <span className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800 whitespace-nowrap">
-                                          Need more data
-                                        </span>
-                                      ) : (
-                                        <span className="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800 whitespace-nowrap">
-                                          Not significant
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="px-2 sm:px-4 py-3 text-sm">
-                                      <button
-                                        onClick={() => handleArchiveVariant(result.variant_id)}
-                                        className="text-red-600 hover:text-red-700"
-                                      >
-                                        Archive
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : (
-                          <div className="text-center py-12 text-gray-500">
-                            No results available yet
-                          </div>
-                        )}
-                      </Card.Body>
-                    </Card>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Create Experiment Modal */}
-          {showCreateModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-semibold mb-4">Create New Experiment</h3>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const formData = new FormData(e.target);
-                    handleCreateExperiment({
-                      experiment_name: formData.get('experiment_name'),
-                      material_type: formData.get('material_type'),
-                      minimum_sample_size: parseInt(formData.get('minimum_sample_size')),
-                      notes: formData.get('notes'),
-                    });
-                  }}
-                >
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Experiment Name
-                      </label>
-                      <input
-                        type="text"
-                        name="experiment_name"
-                        required
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Material Type
-                      </label>
-                      <select
-                        name="material_type"
-                        required
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="resume">Resume</option>
-                        <option value="cover_letter">Cover Letter</option>
-                        <option value="both">Both</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Minimum Sample Size
-                      </label>
-                      <input
-                        type="number"
-                        name="minimum_sample_size"
-                        defaultValue="10"
-                        min="1"
-                        required
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Notes
-                      </label>
-                      <textarea
-                        name="notes"
-                        rows="3"
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-6 flex gap-3 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setShowCreateModal(false)}
-                      className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Create
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Add Variant Modal */}
-          {showAddVariantModal && selectedExperiment && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Variant</h3>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const formData = new FormData(e.target);
-                    handleAddVariant({
-                      variant_name: formData.get('variant_name'),
-                      resume_version_id: formData.get('resume_version_id') || null,
-                      cover_letter_version_id: formData.get('cover_letter_version_id') || null,
-                      description: formData.get('description'),
-                      format_type: formData.get('format_type'),
-                      design_style: formData.get('design_style'),
-                      length_pages: parseInt(formData.get('length_pages')) || null,
-                      word_count: parseInt(formData.get('word_count')) || null,
-                      has_photo: formData.get('has_photo') === 'true',
-                      has_color: formData.get('has_color') === 'true',
-                    });
-                  }}
-                >
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Variant Name
-                      </label>
-                      <input
-                        type="text"
-                        name="variant_name"
-                        required
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      {(selectedExperiment.material_type === 'resume' || selectedExperiment.material_type === 'both') && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Resume Version
-                          </label>
-                          {versionsLoading ? (
-                            <div className="flex items-center justify-center py-2">
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                            </div>
-                          ) : (
-                            <select
-                              name="resume_version_id"
-                              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Select resume version...</option>
-                              {resumeVersions.map((resume) => (
-                                <option key={resume.id} value={resume.id}>
-                                  {resume.title} - {new Date(resume.updatedAt).toLocaleDateString()}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                          {!versionsLoading && resumeVersions.length === 0 && (
-                            <p className="text-sm text-gray-500 mt-1">No resume versions found. Create a resume first.</p>
-                          )}
-                        </div>
-                      )}
-                      {(selectedExperiment.material_type === 'cover_letter' || selectedExperiment.material_type === 'both') && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Cover Letter
-                          </label>
-                          {versionsLoading ? (
-                            <div className="flex items-center justify-center py-2">
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                            </div>
-                          ) : (
-                            <select
-                              name="cover_letter_version_id"
-                              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Select cover letter...</option>
-                              {coverLetters.map((letter) => (
-                                <option key={letter.id} value={letter.id}>
-                                  {letter.title} - {new Date(letter.created_at).toLocaleDateString()}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                          {!versionsLoading && coverLetters.length === 0 && (
-                            <p className="text-sm text-gray-500 mt-1">No cover letters found. Create a cover letter first.</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description
-                      </label>
-                      <textarea
-                        name="description"
-                        rows="2"
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Format Type
-                        </label>
-                        <input
-                          type="text"
-                          name="format_type"
-                          placeholder="e.g., Traditional, Modern, Creative"
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Design Style
-                        </label>
-                        <input
-                          type="text"
-                          name="design_style"
-                          placeholder="e.g., Minimalist, Professional"
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Length (pages)
-                        </label>
-                        <input
-                          type="number"
-                          name="length_pages"
-                          min="1"
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Word Count
-                        </label>
-                        <input
-                          type="number"
-                          name="word_count"
-                          min="1"
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Has Photo
-                        </label>
-                        <select
-                          name="has_photo"
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="false">No</option>
-                          <option value="true">Yes</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Has Color
-                        </label>
-                        <select
-                          name="has_color"
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="false">No</option>
-                          <option value="true">Yes</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-6 flex gap-3 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddVariantModal(false)}
-                      className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Add Variant
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Material Comparison Tab */}
+      {activeTab === 'abtesting' && <MaterialComparison />}
     </div>
   );
 }
