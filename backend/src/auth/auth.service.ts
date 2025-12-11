@@ -77,7 +77,7 @@ export class AuthService {
 
   async loginOrCreateOAuthUser(
     provider: string,
-    profile: { email?: string; firstname?: string; lastname?: string },
+    profile: { email?: string; firstname?: string; lastname?: string; profilePicture?: string },
   ) {
     const email = (profile.email || '').trim().toLowerCase();
     if (!email) throw new UnauthorizedException(`${provider} account does not provide an email`);
@@ -94,14 +94,25 @@ export class AuthService {
       const firstname = profile.firstname || 'User';
       const lastname = profile.lastname || provider;
       
+      const insertData: any = { email, password: hash, firstname, lastname };
+      if (profile.profilePicture) {
+        insertData.profile_picture = profile.profilePicture;
+      }
+      
       const { data: newUser, error } = await client
         .from('users')
-        .insert({ email, password: hash, firstname, lastname })
+        .insert(insertData)
         .select()
         .single();
 
       if (error || !newUser) throw new ConflictException('Failed to create OAuth user');
       user = newUser;
+    } else if (profile.profilePicture && !user.profile_picture) {
+      // Update existing user with profile picture if they don't have one
+      await client
+        .from('users')
+        .update({ profile_picture: profile.profilePicture })
+        .eq('id', user.id);
     }
 
     return this.issueLoginForUser(user.id);
@@ -260,7 +271,7 @@ export class AuthService {
     if (error || !user) throw new UnauthorizedException('User not found');
 
     return {
-      token: this.jwtService.sign({ sub: user.id.toString(), email: user.email }),
+      token: this.jwtService.sign({ userId: user.id.toString(), sub: user.id.toString(), email: user.email }),
       user: {
         id: user.id,
         firstname: user.firstname,

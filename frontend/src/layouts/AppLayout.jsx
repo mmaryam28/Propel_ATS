@@ -303,7 +303,9 @@ function Navbar() {
                     <Link to="/analytics" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">📊 Platform Analytics</Link>
                     <div className="border-t border-gray-200 my-1"></div>
                     <Link to="/resumes" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Resumes</Link>
-                    <Link to="/coverletters/templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Cover Letters</Link>
+                    <Link to="/coverletters/generate" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Generate Cover Letter</Link>
+                    <Link to="/coverletters/saved" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Saved Cover Letters</Link>
+                    <Link to="/coverletters/templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Cover Letter Templates</Link>
                   </div>
                 )}
               </div>
