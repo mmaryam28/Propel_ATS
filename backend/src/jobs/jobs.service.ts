@@ -284,8 +284,8 @@ export class JobsService {
       glassdoorRating: (dto as any).glassdoorRating !== undefined ? (dto as any).glassdoorRating : undefined,
       glassdoorUrl: (dto as any).glassdoorUrl ?? undefined,
   // UC-042 materials
-  resumeVersionId: (dto as any).resumeVersionId !== undefined ? (dto as any).resumeVersionId : undefined,
-  coverLetterVersionId: (dto as any).coverLetterVersionId !== undefined ? (dto as any).coverLetterVersionId : undefined,
+      resumeVersionId: (dto as any).resumeVersionId !== undefined ? (dto as any).resumeVersionId : undefined,
+      coverLetterVersionId: (dto as any).coverLetterVersionId !== undefined ? (dto as any).coverLetterVersionId : undefined,
       notes: dto.notes ?? undefined,
       negotiationNotes: dto.negotiationNotes ?? undefined,
       interviewNotes: dto.interviewNotes ?? undefined,
