@@ -85,6 +85,9 @@ import './styles/globals.css';
 import './styles/theme.css';
 
 const TemplatesPage = lazy(() => import('./coverletters/pages/TemplatesPage'));
+const GeneratePage = lazy(() => import('./coverletters/pages/GeneratePage'));
+const SavedCoverLettersPage = lazy(() => import('./coverletters/pages/SavedCoverLettersPage'));
+const EditCoverLetterPage = lazy(() => import('./coverletters/pages/EditCoverLetterPage'));
 
 // UC-014 color system tokens
 // import "./CS490/UC-014/styles/colors.css";
@@ -184,6 +187,30 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>Loading templates…</div>}>
             <TemplatesPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/coverletters/generate',
+        element: (
+          <Suspense fallback={<div>Loading…</div>}>
+            <GeneratePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/coverletters/saved',
+        element: (
+          <Suspense fallback={<div>Loading…</div>}>
+            <SavedCoverLettersPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/coverletters/edit/:id',
+        element: (
+          <Suspense fallback={<div>Loading…</div>}>
+            <EditCoverLetterPage />
           </Suspense>
         ),
       },
