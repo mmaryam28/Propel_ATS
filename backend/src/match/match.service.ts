@@ -46,7 +46,18 @@ export class MatchService {
       return { error: "No skill requirements found for this job." };
     }
 
-    // 3️⃣ Compute match score
+    // 3️⃣ Get skill names for all required skills
+    const skillIds = jobSkillsData.map(js => js.skill_id);
+    const { data: skillsData } = await supabase
+      .from("skills")
+      .select("id, name")
+      .in("id", skillIds);
+    
+    const skillNames: Record<string, string> = Object.fromEntries(
+      (skillsData || []).map((skill: any) => [skill.id, skill.name])
+    );
+
+    // 4️⃣ Compute match score
     let totalWeight = 0;
     let weightedScore = 0;
     const strengths: string[] = [];
@@ -55,6 +66,7 @@ export class MatchService {
 
     for (const js of jobSkillsData) {
       const skillId = js.skill_id;
+      const skillName = skillNames[skillId] || skillId;
       const need = js.req_level ?? 0;
       const w = js.weight ?? 1;
       const have = userSkills[skillId] ?? 0;
@@ -66,15 +78,15 @@ export class MatchService {
       // Store individual skill breakdown
       skillBreakdown[skillId] = { have, need, score: Math.round(skillScore) };
 
-      if (have >= need) strengths.push(skillId);
-      else gaps.push({ skill: skillId, have, need, weight: w });
+      if (have >= need) strengths.push(skillName);
+      else gaps.push({ skill: skillName, have, need, weight: w });
     }
 
 
 
     const skillScore = totalWeight ? weightedScore / totalWeight : 0;
 
-    // 4️⃣ Use default weighting preferences (no user_weights table)
+    // 5️⃣ Use default weighting preferences (no user_weights table)
     const skillsWeight = 0.7;
     const expWeight = 0.2;
     const eduWeight = 0.1;
@@ -370,8 +382,15 @@ async getSkillGaps(userId: string, jobId: string) {
       const recommendations = await this.generateRecommendations(userId, jobId, matchResult);
       
       return {
-        ...matchResult,
-        recommendations,
+        overallScore: matchResult.score || 0,
+        breakdown: {
+          skills: matchResult.breakdown?.skills || 0,
+          experience: matchResult.breakdown?.experience || 0,
+          education: matchResult.breakdown?.education || 0,
+        },
+        strengths: matchResult.breakdown?.strengths || [],
+        gaps: matchResult.breakdown?.gaps || [],
+        recommendations: recommendations.map(r => r.suggestion || r),
         timestamp: new Date().toISOString()
       };
     } catch (error) {

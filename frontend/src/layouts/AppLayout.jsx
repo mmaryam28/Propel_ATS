@@ -14,16 +14,40 @@ function Breadcrumbs() {
   const [segments, setSegments] = useState([]);
 
   useEffect(() => {
+    const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     const parts = location.pathname.split("/").filter(Boolean);
     const acc = [];
-    parts.forEach((p, idx) => {
-      const href = "/" + parts.slice(0, idx + 1).join("/");
-      const name = decodeURIComponent(p)
-        .replace(/-/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-      acc.push({ name, href });
-    });
-    setSegments(acc);
+    
+    const fetchSegments = async () => {
+      for (let idx = 0; idx < parts.length; idx++) {
+        const p = parts[idx];
+        const href = "/" + parts.slice(0, idx + 1).join("/");
+        let name = decodeURIComponent(p)
+          .replace(/-/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        
+        // Check if this is a team ID (previous segment is "teams")
+        if (idx > 0 && parts[idx - 1] === 'teams' && p.match(/^[0-9a-f-]+$/i)) {
+          try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API}/teams/${p}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.ok) {
+              const teamData = await response.json();
+              name = teamData.name || name;
+            }
+          } catch (error) {
+            console.error('Error fetching team name:', error);
+          }
+        }
+        
+        acc.push({ name, href });
+      }
+      setSegments(acc);
+    };
+    
+    fetchSegments();
   }, [location.pathname]);
 
   if (segments.length === 0) return null;
@@ -103,7 +127,40 @@ function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false); // Profile dropdown
   const [jobsOpen, setJobsOpen] = useState(false); // Jobs dropdown
   const [prepareOpen, setPrepareOpen] = useState(false); // Prepare dropdown
+  const [profilePicture, setProfilePicture] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
+
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.log('No token found in localStorage');
+          return;
+        }
+        const response = await fetch(`${API}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!response.ok) {
+          console.error('Failed to fetch profile:', response.status, response.statusText);
+          return;
+        }
+        const data = await response.json();
+        console.log('Profile data:', data);
+        if (data?.user?.profile_picture) {
+          console.log('Setting profile picture:', data.user.profile_picture);
+          setProfilePicture(data.user.profile_picture);
+        } else {
+          console.log('No profile picture in response');
+        }
+      } catch (error) {
+        console.error('Error fetching profile picture:', error);
+      }
+    };
+    fetchProfilePicture();
+  }, [location.pathname]);
 
   useEffect(() => setOpen(false), [location.pathname]);
 
@@ -298,7 +355,31 @@ function Navbar() {
           </div>
 
           {/* Right side */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-3">
+            {/* Profile Picture */}
+            <button
+              onClick={() => navigate('/profile')}
+              className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center hover:ring-2 hover:ring-blue-500 transition-all"
+              title="Go to Profile"
+            >
+              {profilePicture ? (
+                <img 
+                  src={profilePicture} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Failed to load profile picture');
+                    e.target.style.display = 'none';
+                    setProfilePicture(null);
+                  }}
+                />
+              ) : (
+                <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+
             <button
               onClick={() => {
                 localStorage.clear();

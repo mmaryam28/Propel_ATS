@@ -3,6 +3,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { MailService } from '../mail/mail.service';
 import { CreateTeamDto, UpdateTeamDto, InviteMemberDto, UpdateMemberDto, AcceptInvitationDto } from './dto/team.dto';
 import { randomBytes } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class TeamsService {
@@ -565,8 +566,17 @@ export class TeamsService {
       })
       .eq('id', invitation.id);
 
-    await this.logActivity(invitation.team_id, userId, 'member_added', {
+    // Get user details for activity log
+    const { data: userData } = await supabase
+      .from('users')
+      .select('email, firstname, lastname')
+      .eq('id', userId)
+      .single();
+
+    await this.logActivity(invitation.team_id, userId, 'member_joined', {
       role: invitation.role,
+      email: userData?.email,
+      name: `${userData?.firstname || ''} ${userData?.lastname || ''}`.trim()
     });
 
     return memberData;
@@ -905,28 +915,60 @@ export class TeamsService {
     // Verify user is a team member
     await this.verifyMembership(userId, teamId);
 
+    // Helper to convert empty strings to null
+    const toNull = (val: any) => (val === '' || val === undefined || val === null) ? null : val;
+
+    // Parse salary if provided
+    let salaryMin: number | null = null;
+    let salaryMax: number | null = null;
+    const salaryStr = toNull(jobData.salary);
+    if (salaryStr) {
+      const salaryMatch = salaryStr.match(/(\d[\d,]*)\s*-\s*(\d[\d,]*)/);
+      if (salaryMatch) {
+        salaryMin = parseInt(salaryMatch[1].replace(/,/g, ''));
+        salaryMax = parseInt(salaryMatch[2].replace(/,/g, ''));
+      }
+    }
+
+    // Build insert payload - only include fields with actual values
+    const insertData: any = {
+      id: uuidv4(),
+      userId: userId,
+      company: toNull(jobData.company) || 'Unknown',
+      title: toNull(jobData.position) || 'Untitled Position',
+      status: toNull(jobData.status) || 'Interested',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      statusUpdatedAt: new Date().toISOString()
+    };
+
+    // Add optional fields only if they have actual values (not empty strings)
+    const location = toNull(jobData.location);
+    const description = toNull(jobData.jobDescription);
+    const notes = toNull(jobData.notes);
+
+    if (location) insertData.location = location;
+    if (description) insertData.description = description;
+    if (notes) insertData.notes = notes;
+    if (salaryMin !== null) insertData.salaryMin = salaryMin;
+    if (salaryMax !== null) insertData.salaryMax = salaryMax;
+
     // Create job for this user
     const { data, error } = await supabase
       .from('jobs')
-      .insert({
-        userId: userId,
-        company: jobData.company,
-        title: jobData.position,
-        location: jobData.location,
-        description: jobData.jobDescription,
-        salaryMin: jobData.salary,
-        status: jobData.status || 'Interested',
-        notes: jobData.notes
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating job:', error);
+      throw error;
+    }
 
     // Log activity
     await this.logActivity(teamId, userId, 'job_posting_added', {
-      company: jobData.company,
-      position: jobData.position
+      company: insertData.company,
+      position: insertData.title
     });
 
     return data;

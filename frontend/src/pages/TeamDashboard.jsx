@@ -30,6 +30,8 @@ export default function TeamDashboard() {
   const [myResumes, setMyResumes] = useState([]);
   const [myCoverLetters, setMyCoverLetters] = useState([]);
   const [message, setMessage] = useState(null);
+  const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
+  const [selectedJobDetails, setSelectedJobDetails] = useState(null);
   
   const [jobForm, setJobForm] = useState({
     company: '',
@@ -376,7 +378,8 @@ export default function TeamDashboard() {
         case 'invitation_sent':
           return `Invited ${data.email} as ${data.role}`;
         case 'member_joined':
-          return `${data.email || 'A member'} joined the team`;
+        case 'member_added':
+          return `${data.name || data.email || 'A member'} joined the team${data.role ? ` as ${data.role}` : ''}`;
         case 'member_removed':
           return `${data.email || 'A member'} was removed from the team`;
         case 'role_changed':
@@ -387,6 +390,12 @@ export default function TeamDashboard() {
           return `Added cover letter for ${data.position} at ${data.company}`;
         case 'resume_added':
           return `Added resume: ${data.title}`;
+        case 'task_created':
+          return `Created task: ${data.title}${data.assigned_to ? ` (assigned to ${data.assigned_to})` : ''}`;
+        case 'task_updated':
+          return `Updated task: ${data.title}${data.status ? ` - Status: ${data.status}` : ''}`;
+        case 'task_completed':
+          return `Completed task: ${data.title}`;
         default:
           // For unknown types, show key-value pairs
           return Object.entries(data)
@@ -569,7 +578,10 @@ export default function TeamDashboard() {
               </div>
             ) : (
               resources.applications.map((app) => (
-                <div key={app.id} className="p-6 hover:bg-gray-50">
+                <div key={app.id} className="p-6 hover:bg-gray-50 cursor-pointer" onClick={() => {
+                  setSelectedJobDetails(app);
+                  setShowJobDetailsModal(true);
+                }}>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
@@ -1318,6 +1330,149 @@ export default function TeamDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Job Details Modal */}
+      {showJobDetailsModal && selectedJobDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex justify-between items-start">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{selectedJobDetails.title || selectedJobDetails.position}</h2>
+                <p className="text-lg text-gray-700 mt-1">{selectedJobDetails.company}</p>
+              </div>
+              <button
+                onClick={() => setShowJobDetailsModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Status Badge */}
+              <div>
+                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                  selectedJobDetails.status === 'applied' ? 'bg-blue-100 text-blue-800' :
+                  selectedJobDetails.status === 'interview' ? 'bg-purple-100 text-purple-800' :
+                  selectedJobDetails.status === 'offer' ? 'bg-green-100 text-green-800' :
+                  selectedJobDetails.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {selectedJobDetails.status}
+                </span>
+              </div>
+
+              {/* Job Information */}
+              <div className="grid grid-cols-2 gap-4">
+                {selectedJobDetails.location && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Location</p>
+                    <p className="text-gray-900">{selectedJobDetails.location}</p>
+                  </div>
+                )}
+                
+                {(selectedJobDetails.salaryMin || selectedJobDetails.salaryMax) && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Salary Range</p>
+                    <p className="text-gray-900">
+                      {selectedJobDetails.salaryMin && `$${selectedJobDetails.salaryMin.toLocaleString()}`}
+                      {selectedJobDetails.salaryMin && selectedJobDetails.salaryMax && ' - '}
+                      {selectedJobDetails.salaryMax && `$${selectedJobDetails.salaryMax.toLocaleString()}`}
+                    </p>
+                  </div>
+                )}
+
+                {selectedJobDetails.industry && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Industry</p>
+                    <p className="text-gray-900">{selectedJobDetails.industry}</p>
+                  </div>
+                )}
+
+                {selectedJobDetails.jobType && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Job Type</p>
+                    <p className="text-gray-900">{selectedJobDetails.jobType}</p>
+                  </div>
+                )}
+
+                {selectedJobDetails.createdAt && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Added On</p>
+                    <p className="text-gray-900">{new Date(selectedJobDetails.createdAt).toLocaleDateString()}</p>
+                  </div>
+                )}
+
+                {selectedJobDetails.user && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Added By</p>
+                    <p className="text-gray-900">
+                      {selectedJobDetails.user.firstname} {selectedJobDetails.user.lastname}
+                      <br />
+                      <span className="text-sm text-gray-600">{selectedJobDetails.user.email}</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Job Description */}
+              {selectedJobDetails.description && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Job Description</p>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-gray-900 whitespace-pre-wrap">{selectedJobDetails.description}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedJobDetails.notes && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Notes</p>
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <p className="text-gray-900 whitespace-pre-wrap">{selectedJobDetails.notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Posting URL */}
+              {selectedJobDetails.postingUrl && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Job Posting</p>
+                  <a
+                    href={selectedJobDetails.postingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    View Original Posting →
+                  </a>
+                </div>
+              )}
+
+              {/* Deadline */}
+              {selectedJobDetails.deadline && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Application Deadline</p>
+                  <p className="text-gray-900">{new Date(selectedJobDetails.deadline).toLocaleDateString()}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50">
+              <button
+                onClick={() => {
+                  setShowJobDetailsModal(false);
+                  handleOpenComments('job', selectedJobDetails.id, `${selectedJobDetails.title || selectedJobDetails.position} at ${selectedJobDetails.company}`);
+                }}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                💬 View Comments
+              </button>
+            </div>
           </div>
         </div>
       )}
