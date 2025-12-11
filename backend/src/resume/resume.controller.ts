@@ -103,9 +103,18 @@ export class ResumeController {
         console.warn('⚠️  No userId provided in userProfile');
       }
       
-      // Extract the actual resume data from the AI response
-      // Handle case where AI returns { raw: "..." } due to incomplete JSON
-      let aiData = result.aiContent;
+      // Extract the actual resume data from multiple sources:
+      // 1. First check if aiContent was sent directly in the request body (frontend sends complete data)
+      // 2. Then check result.aiContent (from AI generation)
+      // 3. Fall back to empty structure
+      let aiData = (dto as any).aiContent || result.aiContent;
+      
+      console.log('📊 [PDF] Data sources check:', {
+        hasDtoAiContent: !!(dto as any).aiContent,
+        hasResultAiContent: !!result.aiContent,
+        aiDataKeys: aiData ? Object.keys(aiData) : [],
+      });
+      
       if (aiData?.raw && typeof aiData.raw === 'string') {
         console.warn('⚠️  AI returned raw text, attempting to parse...');
         try {
@@ -127,10 +136,17 @@ export class ResumeController {
         },
         sections: {
           ...aiData?.sections,
+          summary: aiData?.summary || aiData?.sections?.summary || '',
+          skills: aiData?.skills || aiData?.sections?.skills || [],
           experience: aiData?.sections?.experience || aiData?.experience || [],
+          education: aiData?.education || aiData?.sections?.education || [],
+          projects: aiData?.projects || aiData?.sections?.projects || [],
+          certifications: aiData?.certifications || aiData?.sections?.certifications || [],
         },
-        skills: aiData?.skills || {},
+        skills: (Array.isArray(aiData?.skills) ? aiData.skills : (aiData?.skills || {})),
         experience: aiData?.sections?.experience || aiData?.experience || [],
+        education: aiData?.education || aiData?.sections?.education || [],
+        projects: aiData?.projects || aiData?.sections?.projects || [],
       };
       
       console.log('📋 PDF Data structure:', {
@@ -139,9 +155,12 @@ export class ResumeController {
         contactPhone: resumeDataForPDF.contact.phone,
         hasSections: !!resumeDataForPDF.sections,
         hasSkills: !!resumeDataForPDF.skills,
+        skillsType: typeof resumeDataForPDF.skills,
+        skillsIsArray: Array.isArray(resumeDataForPDF.skills),
+        skillsLength: Array.isArray(resumeDataForPDF.skills) ? resumeDataForPDF.skills.length : Object.keys(resumeDataForPDF.skills).length,
         experienceCount: Array.isArray(resumeDataForPDF.experience) ? resumeDataForPDF.experience.length : 0,
-        sectionsExperienceCount: Array.isArray(resumeDataForPDF.sections?.experience) ? resumeDataForPDF.sections.experience.length : 0,
         sectionsKeys: Object.keys(resumeDataForPDF.sections || {}),
+        sectionsSkillsLength: Array.isArray(resumeDataForPDF.sections?.skills) ? resumeDataForPDF.sections.skills.length : 0,
       });
       
       const pdfBuffer = await this.resumeService.generatePDF(resumeDataForPDF);

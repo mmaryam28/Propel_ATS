@@ -312,106 +312,86 @@ export class ResumeService {
     
     // Use template-based prompt if templateType is provided
     if (dto.templateType) {
+    // Default prompt (now job-board–aware)
+      const jobTitle = dto.jobTitle || "the target role";
+      const company = dto.company || "the company";
+      const jobDescription = dto.jobDescription || "";
+
       const prompt = `
-  You are a professional resume writer.  
-  Generate resume content in clean JSON ONLY, using this template type:
+      You are a professional resume writer.
 
-  TEMPLATE TYPE: ${dto.templateType.toUpperCase()}
+      Generate an optimized, ATS-friendly resume tailored SPECIFICALLY to:
 
-  Job Description:
-  ${dto.jobDescription}
+      ROLE: ${jobTitle}
+      COMPANY: ${company}
 
-  User Profile:
-  ${JSON.stringify(dto.userProfile, null, 2)}
+      Use the following real job description, taken from the user’s saved job board:
 
-  ==============================
-  TEMPLATE RULES
-  ==============================
+      JOB DESCRIPTION:
+      ${jobDescription}
 
-  If the template is **CHRONOLOGICAL**:
-  Return JSON with:
-  {
-    "header": {...},
-    "summary": "string",
-    "experience": [
+      =========================
+      USER PROFILE
+      =========================
+      ${JSON.stringify(dto.userProfile, null, 2)}
+
+      =========================
+      CRITICAL INSTRUCTIONS
+      =========================
+      - DO NOT invent fake jobs or fake work history.
+      - Rewrite and enhance the user's real experience using action verbs and measurable impact.
+      - Prioritize keywords, tools, and responsibilities extracted from the job description.
+      - Align the resume strongly with the role of "${jobTitle}".
+      - Improve clarity and conciseness.
+      - If the user has no projects listed, create 2–3 **realistic, role-appropriate projects** that demonstrate the required skills.
+      - Ensure the resume is clean JSON with no explanation text.
+
+      =========================
+      OUTPUT FORMAT (STRICT)
+      =========================
       {
-        "title": "string",
-        "company": "string",
-        "location": "string",
-        "startDate": "YYYY-MM",
-        "endDate": "YYYY-MM or Present",
-        "bullets": ["action bullet", ...]
+        "sections": {
+          "summary": "2–3 sentence tailored summary for ${jobTitle}",
+          "experience": [
+            {
+              "title": "string",
+              "company": "string",
+              "location": "string",
+              "startDate": "YYYY-MM",
+              "endDate": "YYYY-MM or Present",
+              "achievements": [
+                "strong bullet with metrics",
+                "keyword-aligned bullet"
+              ]
+            }
+          ],
+          "projects": [
+            {
+              "name": "string",
+              "description": "1–2 sentence impact description",
+              "technologies": ["React", "Node", ...],
+              "achievements": ["bullet", "bullet"]
+            }
+          ],
+          "education": [
+            {
+              "degree": "Bachelor of Science in ...",
+              "institution": "New Jersey Institute of Technology (NJIT)",
+              "location": "Newark, NJ",
+              "graduationDate": "Expected May 2026"
+            }
+          ]
+        },
+        "skills": {
+          "technical": [...],
+          "languages": [...],
+          "frameworks": [...],
+          "tools": [...]
+        }
       }
-    ],
-    "skills": {
-      "technical": [...],
-      "soft": [...],
-      "tools": [...]
-    },
-    "education": [...]
-  }
 
-  If the template is **FUNCTIONAL**:
-  Return JSON with:
-  {
-    "header": {...},
-    "summary": "string",
-    "skillsSummary": [
-      {
-        "category": "Skill Area",
-        "details": ["skill", "skill", ...]
-      }
-    ],
-    "achievements": ["bullet", "bullet"],
-    "experience": [
-      {
-        "company": "string",
-        "role": "string",
-        "notes": ["short, factual notes without full bullets"]
-      }
-    ],
-    "education": [...]
-  }
-
-  If the template is **HYBRID**:
-  Return JSON with:
-  {
-    "header": {...},
-    "summary": "string",
-    "skillsSummary": [
-      {
-        "category": "Skill Area",
-        "details": ["skill", "skill"]
-      }
-    ],
-    "experience": [
-      {
-        "title": "string",
-        "company": "string",
-        "startDate": "YYYY-MM",
-        "endDate": "YYYY-MM or Present",
-        "bullets": ["metric-based bullet", ...]
-      }
-    ],
-    "projects": [
-      {
-        "name": "string",
-        "description": "string",
-        "tech": ["React", "Node", ...]
-      }
-    ],
-    "education": [...]
-  }
-
-  ==============================
-  INSTRUCTIONS
-  ==============================
-  - RETURN JSON ONLY — NO explanation.
-  - Do NOT create fake experience or fake roles.
-  - Improve clarity, impact, and alignment with job description.
-  - Use strong action verbs and measurable outcomes where possible.
-  - ${projectsInstruction}
-  `;
+      Return ONLY valid JSON.
+      `;
 
       const result = await this.callAI(prompt);
       const elapsed = Date.now() - startTime;
@@ -492,26 +472,101 @@ Return ONLY valid JSON with optimized content tailored to the job description. F
 
 
   async optimizeSkills(dto: GenerateAIDto) {
-    const prompt = `Analyze this job description and optimize the skills list to match.
+    console.log('\n🎯 [Optimize Skills] Starting skills optimization...');
+    console.log(`📊 User skills count: ${Array.isArray(dto.userProfile.skills) ? dto.userProfile.skills.length : 0}`);
+    console.log(`📋 Job description length: ${dto.jobDescription?.length || 0} chars`);
 
-Job Description:
+    const prompt = `You are an expert recruiter and skills analyst.
+
+ANALYZE THIS JOB POSTING:
 ${dto.jobDescription}
 
-Current Skills:
+COMPARE WITH USER'S CURRENT SKILLS:
 ${JSON.stringify(dto.userProfile.skills, null, 2)}
 
-Return a JSON object with optimized skills grouped by category:
+USER'S EXPERIENCE:
+${JSON.stringify(dto.userProfile.experience, null, 2)}
+
+=================================
+TASK: Perform comprehensive skills optimization
+=================================
+
+1. Extract ALL required and desired skills from the job description
+2. Compare against user's current skills
+3. Identify exact matches, transferable skills, and gaps
+4. Reorder user skills by relevance to this specific role
+5. Suggest high-impact skills to add (skills gap analysis)
+6. Calculate match score as percentage
+
+Return ONLY valid JSON with this EXACT structure:
 {
-  "technical": ["relevant technical skills from job description"],
-  "languages": ["programming languages"],
-  "frameworks": ["frameworks and libraries"],
-  "tools": ["development tools"],
-  "soft": ["soft skills mentioned in job description"]
+  "matchScore": 85,
+  "summary": "Brief analysis of skills alignment (1-2 sentences)",
+  
+  "matched": {
+    "description": "Skills user has that match job requirements",
+    "skills": ["skill1", "skill2", "skill3"],
+    "count": 5
+  },
+  
+  "transferable": {
+    "description": "User skills that are transferable/relevant to the role",
+    "skills": ["skill1", "skill2"],
+    "count": 2,
+    "relevance": "How these skills apply to the role"
+  },
+  
+  "prioritize": {
+    "description": "User's existing skills to emphasize more on resume",
+    "skills": ["skill1", "skill2"],
+    "reason": "Why these are most important for this role"
+  },
+  
+  "recommended": {
+    "description": "High-impact skills to learn or develop",
+    "skills": [
+      {
+        "skill": "skill name",
+        "importance": "critical/high/medium",
+        "reason": "Why this skill is needed",
+        "timeToLearn": "1-2 months"
+      }
+    ]
+  },
+  
+  "skillGaps": {
+    "critical": ["skill", "skill"],
+    "desirable": ["skill", "skill"]
+  },
+  
+  "categorized": {
+    "technical": ["skill1", "skill2"],
+    "languages": ["Python", "Java"],
+    "frameworks": ["React", "Node.js"],
+    "tools": ["Git", "Docker"],
+    "soft": ["Leadership", "Communication"]
+  },
+  
+  "industrySpecific": {
+    "industry": "software engineering/data science/etc",
+    "topSkills": ["skill1", "skill2", "skill3"],
+    "recommendations": "Industry-specific advice"
+  },
+  
+  "reorderedSkills": ["skill1", "skill2", "skill3"],
+  "reorderReason": "Explanation of new ordering"
 }
 
-Prioritize skills that match the job description. Return ONLY valid JSON.`;
+Be precise and actionable. Focus on maximizing the user's chances with THIS specific employer.`;
 
-    return { optimization: await this.askAI(prompt) };
+    const result = await this.askAI(prompt);
+    console.log('✅ [Optimize Skills] Analysis complete');
+    
+    return { 
+      optimization: result,
+      jobTitle: dto.jobTitle,
+      company: dto.company,
+    };
   }
 
 
@@ -657,28 +712,49 @@ Provide constructive, actionable feedback. Return ONLY valid JSON.`;
 
         // Skills - handle both array and object formats
         const skills = contentData.skills || contentData.sections?.skills;
+        console.log('🔧 [PDF] Skills processing:', {
+          hasSkills: !!skills,
+          skillsType: typeof skills,
+          skillsIsArray: Array.isArray(skills),
+          skillsLength: Array.isArray(skills) ? skills.length : (typeof skills === 'object' ? Object.keys(skills).length : 0),
+          skillsSample: Array.isArray(skills) ? skills.slice(0, 3) : skills,
+        });
+
         if (skills) {
           doc.fontSize(14).font('Helvetica-Bold').text('SKILLS');
           doc.moveDown(0.3);
           
           if (Array.isArray(skills)) {
             // Skills as array of strings or objects
-            const skillNames = skills.map(s => typeof s === 'string' ? s : s.name).filter(Boolean);
+            const skillNames = skills.map(s => typeof s === 'string' ? s : s.name || s.title).filter(Boolean);
+            console.log('📚 [PDF] Array skills count:', skillNames.length);
             if (skillNames.length > 0) {
               doc.fontSize(10).font('Helvetica').text(skillNames.join(', '));
               doc.moveDown(0.5);
+            } else {
+              console.warn('⚠️  [PDF] No skill names extracted from array');
             }
-          } else if (typeof skills === 'object') {
+          } else if (typeof skills === 'object' && skills !== null) {
             // Skills as categorized object
+            console.log('📚 [PDF] Object skills categories:', Object.keys(skills));
+            let skillsAdded = 0;
             Object.entries(skills).forEach(([category, skillList]: [string, any]) => {
               if (Array.isArray(skillList) && skillList.length > 0) {
                 doc.fontSize(10).font('Helvetica-Bold').text(`${category.charAt(0).toUpperCase() + category.slice(1)}:`, { continued: true });
                 doc.font('Helvetica').text(` ${skillList.join(', ')}`);
                 doc.moveDown(0.2);
+                skillsAdded++;
               }
             });
+            if (skillsAdded === 0) {
+              console.warn('⚠️  [PDF] No skill categories with data found');
+            }
             doc.moveDown(0.5);
+          } else {
+            console.warn('⚠️  [PDF] Skills is not array or object:', typeof skills);
           }
+        } else {
+          console.warn('⚠️  [PDF] No skills data found in contentData');
         }
 
         // Education
