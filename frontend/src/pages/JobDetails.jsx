@@ -6,6 +6,7 @@ import { Toast } from "../components/Toast";
 import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults, getResumeVersions, getCoverLetters, downloadResumePDF, getResumeDetails, getCoverLetterDetails, downloadCoverLetterPDF } from "../lib/api";
 import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
 import InterviewOutcomeModal from "../components/InterviewOutcomeModal";
+import EmailIntegration from "../components/EmailIntegration";
 import { useAnalytics } from "../contexts/AnalyticsContext";
 
 export default function JobDetails() {
@@ -652,6 +653,14 @@ export default function JobDetails() {
             )}
           </Card.Body>
         </Card>
+
+        {/* Email Integration - UC-113 */}
+        <EmailIntegration 
+          jobId={jobId} 
+          companyName={job.company} 
+          jobTitle={job.title} 
+        />
+
         <Card variant="default" size="large">
           <Card.Header><Card.Title>Contacts</Card.Title></Card.Header>
           <Card.Body className="grid gap-3 sm:grid-cols-2">
