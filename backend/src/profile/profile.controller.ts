@@ -172,7 +172,7 @@ export class ProfileController {
   @UseInterceptors(FileInterceptor('file', {
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
     fileFilter: (req, file, callback) => {
-      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+      if (!file.mimetype.startsWith('image/')) {
         return callback(new BadRequestException('Only image files are allowed'), false);
       }
       callback(null, true);
@@ -193,14 +193,19 @@ export class ProfileController {
 
     const client = this.supabase.getClient();
 
-    const { error } = await client
+    console.log('Updating profile picture for user:', userId);
+    const { data, error } = await client
       .from('users')
       .update({ profile_picture: base64Image })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select();
 
     if (error) {
+      console.error('Database update error:', error);
       return { message: 'Failed to update profile picture', error: error.message };
     }
+
+    console.log('Profile picture updated in database:', data);
 
     return { 
       message: 'Profile picture updated successfully',

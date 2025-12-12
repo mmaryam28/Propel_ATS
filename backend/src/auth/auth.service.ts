@@ -125,6 +125,7 @@ export class AuthService {
       .select('*')
       .eq('id', userId)
       .single();
+    console.log('getUserById result for', userId, ':', data?.profile_picture ? 'has profile_picture' : 'no profile_picture');
     return data;
   }
 

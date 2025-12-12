@@ -29,9 +29,27 @@ export class MatchService {
       `)
       .eq("user_id", userId);
 
-    if (userSkillsError) throw userSkillsError;
+    if (userSkillsError) {
+      console.error('Error fetching user skills:', userSkillsError);
+      throw userSkillsError;
+    }
+    
+    console.log(`[Match] User ${userId} has ${userSkillsData?.length || 0} skills in user_skills table`);
+    
     if (!userSkillsData || userSkillsData.length === 0) {
-      return { error: "No skills found for this user." };
+      console.warn(`[Match] User ${userId} has no skills - returning error`);
+      return { 
+        error: "No skills found for this user. Please add skills at /skills first.",
+        score: 0,
+        breakdown: {
+          skills: 0,
+          experience: 100,
+          education: 100,
+          strengths: [],
+          gaps: [],
+          skillDetails: {}
+        }
+      };
     }
 
     // Map to { skillName: level } - filter out skills that couldn't be joined
@@ -43,14 +61,21 @@ export class MatchService {
           row.level ?? 0,
         ])
     );
+    
+    console.log(`[Match] User skills mapped:`, Object.keys(userSkills));
 
     // 2️⃣ Get job skills (now using denormalized structure)
-    const { data: jobSkillsData, error: jobSkillsError } = await supabase
+    const { data: jobSkillsData, error: jobSkillsError} = await supabase
       .from("job_skills")
       .select("skill_name, skill_category, req_level, weight")
       .eq("job_id", jobId);
 
-    if (jobSkillsError) throw jobSkillsError;
+    if (jobSkillsError) {
+      console.error('Error fetching job skills:', jobSkillsError);
+      throw jobSkillsError;
+    }
+    
+    console.log(`[Match] Job ${jobId} has ${jobSkillsData?.length || 0} required skills`);
     
     // 3️⃣ Initialize variables
     let totalWeight = 0;
@@ -77,9 +102,12 @@ export class MatchService {
         if (have >= need) strengths.push(skillName);
         else gaps.push({ skill: skillName, have, need, weight: w });
       }
+    } else {
+      console.warn(`[Match] Job ${jobId} has no required skills defined`);
     }
 
     const skillScore = totalWeight ? weightedScore / totalWeight : 0;
+    console.log(`[Match] Calculated skill score: ${skillScore}%`);
 
     // 5️⃣ Use default weighting preferences (no user_weights table)
     const skillsWeight = 0.7;
@@ -94,6 +122,8 @@ export class MatchService {
       skillScore * skillsWeight +
       experienceScore * expWeight +
       educationScore * eduWeight;
+      
+    console.log(`[Match] Final score: ${Math.round(total)}%`);
 
     const breakdown = {
       skills: skillScore,
@@ -409,7 +439,15 @@ async getSkillGaps(userId: string, jobId: string) {
     
     const { data, error } = await supabase
       .from("user_skills")
-      .select("skill_id, level")
+      .select(`
+        skill_id,
+        level,
+        skills:skill_id (
+          id,
+          name,
+          category
+        )
+      `)
       .eq("user_id", userId);
 
     if (error) {
@@ -417,10 +455,14 @@ async getSkillGaps(userId: string, jobId: string) {
       return [];
     }
 
-    return data?.map(row => ({
-      skill: row.skill_id,
-      level: row.level
-    })) || [];
+    return data
+      ?.filter((row: any) => row.skills && row.skills.name)
+      .map((row: any) => ({
+        id: row.skill_id,
+        name: row.skills.name,
+        category: row.skills.category,
+        level: row.level
+      })) || [];
   }
 
   async getUserWeights(userId: string) {
