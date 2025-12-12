@@ -39,6 +39,7 @@ import { GitHubModule } from './github/github.module';
 import { AbTestingModule } from './ab-testing/ab-testing.module';
 import { ApplicationQualityModule } from './application-quality/application-quality.module';
 import { ExternalCertificationsModule } from './external-certifications/external-certifications.module';
+import { EmailIntegrationModule } from './email-integration/email-integration.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { ExternalCertificationsModule } from './external-certifications/external
   AbTestingModule,
   ApplicationQualityModule,
   ExternalCertificationsModule,
+  EmailIntegrationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

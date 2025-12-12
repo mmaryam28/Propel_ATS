@@ -82,6 +82,7 @@ import TeamManagement from './pages/TeamManagement';
 import TeamMembers from './pages/TeamMembers';
 import TeamDashboard from './pages/TeamDashboard';
 import AcceptTeamInvitation from './pages/AcceptTeamInvitation';
+import GmailCallback from './pages/GmailCallback';
 
 import './index.css';
 import './styles/globals.css';
@@ -107,6 +108,7 @@ const router = createBrowserRouter([
   { path: '/reset/:token', element: <PasswordResetComplete /> }, // new
 
   { path: '/logout', element: <Logout /> },
+  { path: '/gmail-callback', element: <GmailCallback /> },
 
   // Authenticated app routes under layout
   {
