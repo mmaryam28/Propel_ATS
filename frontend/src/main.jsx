@@ -83,6 +83,7 @@ import TeamMembers from './pages/TeamMembers';
 import TeamDashboard from './pages/TeamDashboard';
 import AcceptTeamInvitation from './pages/AcceptTeamInvitation';
 import GmailCallback from './pages/GmailCallback';
+import TimingOptimizerPage from './pages/TimingOptimizerPage';
 
 import './index.css';
 import './styles/globals.css';
@@ -158,6 +159,7 @@ const router = createBrowserRouter([
       { path: '/network-analytics', element: <NetworkingAnalytics /> },
       { path: '/success-patterns', element: <SuccessPatterns /> },
       { path: '/analytics', element: <AnalyticsDashboard /> },
+      { path: '/timing-optimizer', element: <TimingOptimizerPage /> },
 
       // Networking routes
       { path: '/networking/contacts', element: <ContactsPage /> },
