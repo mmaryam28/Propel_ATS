@@ -295,6 +295,7 @@ function Navbar() {
                     <Link to="/jobs" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Tracker</Link>
                     <Link to="/jobs/calendar" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Calendar</Link>
                     <Link to="/quality-check" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Quality Check</Link>
+                    <Link to="/timing-optimizer" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">⏰ Timing Optimizer</Link>
                     <Link to="/application-success" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Application Analytics</Link>
                     <Link to="/productivity-tracker" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Productivity Tracker</Link>
                     <Link to="/network-analytics" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Network Analytics</Link>
