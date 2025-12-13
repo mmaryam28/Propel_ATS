@@ -7,12 +7,13 @@ import type { JobStatus } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { ImportJobDto } from './dto/import-job.dto';
 import { EnrichCompanyDto } from './dto/enrich-company.dto';
+import { SalaryService } from '../salary/salary.service';
 
 
 @Controller('jobs')
 @UseGuards(AuthGuard('jwt'))
 export class JobsController {
-  constructor(private jobs: JobsService) {}
+  constructor(private jobs: JobsService, private salaryService: SalaryService) {}
 
   @Get()
   async list(
@@ -137,6 +138,18 @@ export class JobsController {
   async materialsUsage(@Req() req: any) {
     const userId = req.user.userId;
     return this.jobs.getMaterialsUsage(userId);
+  }
+
+  // UC-112: Salary benchmarks for job title and location
+  @Get('salary-benchmarks')
+  async getSalaryBenchmarks(
+    @Query('jobTitle') jobTitle: string,
+    @Query('location') location: string,
+  ) {
+    if (!jobTitle || !location) {
+      return { error: 'Missing required parameters: jobTitle, location' };
+    }
+    return await this.salaryService.getSalaryBenchmarks(jobTitle, location);
   }
 
   @Get('materials/defaults')
