@@ -124,4 +124,48 @@ export class SalaryController {
   async getAvailableRoles() {
     return await this.salaryService.getAvailableRoles();
   }
+
+  /**
+   * UC-112: Get salary benchmarks with percentile breakdowns
+   */
+  @Get('benchmarks')
+  async getSalaryBenchmarks(
+    @Query('jobTitle') jobTitle: string,
+    @Query('location') location: string,
+  ) {
+    if (!jobTitle || !location) {
+      return { error: 'Missing required parameters: jobTitle, location' };
+    }
+    return await this.salaryService.getSalaryBenchmarks(jobTitle, location);
+  }
+
+  /**
+   * UC-112: Get salary data for a specific job detail page
+   */
+  @Get('job-detail/:jobId')
+  @UseGuards(JwtAuthGuard)
+  async getSalaryDataForJobDetail(@Req() req: any) {
+    const jobId = req.params.jobId;
+    if (!jobId) {
+      return { error: 'Missing job ID' };
+    }
+    return await this.salaryService.getSalaryDataForJobDetail(jobId);
+  }
+
+  /**
+   * UC-112: Admin endpoint to refresh expired cache
+   */
+  @Post('admin/refresh-cache')
+  async refreshExpiredCache() {
+    return await this.salaryService.refreshExpiredCache();
+  }
+
+  /**
+   * UC-112: Admin endpoint to clear cache
+   */
+  @Post('admin/clear-cache')
+  async clearMemoryCache() {
+    this.salaryService.clearMemoryCache();
+    return { message: 'Cache cleared' };
+  }
 }

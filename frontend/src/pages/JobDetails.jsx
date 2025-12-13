@@ -8,6 +8,7 @@ import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
 import InterviewOutcomeModal from "../components/InterviewOutcomeModal";
 import EmailIntegration from "../components/EmailIntegration";
 import { useAnalytics } from "../contexts/AnalyticsContext";
+import SalaryBenchmarks from "../components/SalaryBenchmarks";
 
 export default function JobDetails() {
   const { jobId } = useParams();
@@ -557,6 +558,13 @@ export default function JobDetails() {
           )}
         </Card.Body>
       </Card>
+
+      {/* UC-112: Salary Benchmarks */}
+      <SalaryBenchmarks 
+        jobTitle={job.title} 
+        location={job.location || 'Unknown'} 
+        jobSalary={{ min: job.salaryMin, max: job.salaryMax }}
+      />
 
       {/* Notes and Contacts */}
       <div className="grid gap-4 lg:grid-cols-2">
