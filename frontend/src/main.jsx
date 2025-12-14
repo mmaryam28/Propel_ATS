@@ -84,11 +84,13 @@ import TeamDashboard from './pages/TeamDashboard';
 import AcceptTeamInvitation from './pages/AcceptTeamInvitation';
 import GmailCallback from './pages/GmailCallback';
 import TimingOptimizerPage from './pages/TimingOptimizerPage';
+import SecurityDemo from './pages/SecurityDemo';
 
 import './index.css';
 import './styles/globals.css';
 import './styles/theme.css';
 
+// Lazy load pages for better performance (UC-134)
 const TemplatesPage = lazy(() => import('./coverletters/pages/TemplatesPage'));
 const GeneratePage = lazy(() => import('./coverletters/pages/GeneratePage'));
 const SavedCoverLettersPage = lazy(() => import('./coverletters/pages/SavedCoverLettersPage'));
@@ -137,6 +139,10 @@ const router = createBrowserRouter([
       { path: '/employment', element: <EmploymentHistoryPage /> },
       { path: '/cards', element: <CardPreview /> },
       { path: '/typography', element: <TypographyPreview /> },
+      
+      { path: '/security', element: <SecurityDemo /> }, // UC-135: Security demo
+      
+
       { path: '/resumes', element: <ResumeDashboard /> },
       { path: '/resumes/templates', element: <TemplateManager /> },
       { path: '/resumes/ai', element: <AIResumeGenerator /> },

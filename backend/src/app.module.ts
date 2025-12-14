@@ -41,6 +41,7 @@ import { ApplicationQualityModule } from './application-quality/application-qual
 import { ExternalCertificationsModule } from './external-certifications/external-certifications.module';
 import { EmailIntegrationModule } from './email-integration/email-integration.module';
 import { TimingOptimizerModule } from './timing-optimizer/timing-optimizer.module';
+import { SecurityModule } from './security/security.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { TimingOptimizerModule } from './timing-optimizer/timing-optimizer.modul
   ExternalCertificationsModule,
   EmailIntegrationModule,
   TimingOptimizerModule,
+  SecurityModule, // UC-135: Security hardening
   ],
   controllers: [AppController],
   providers: [AppService],
