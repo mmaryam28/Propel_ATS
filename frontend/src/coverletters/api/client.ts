@@ -23,6 +23,22 @@ export const listTemplates = (q?: string, category?: string) =>
 export const getTemplate = (slug: string) =>
   api<TemplateResponse>(`/templates/${slug}`);
 
+// ---------- UC-056: AI Generation ----------
+
+export async function generateCoverLetter(data: {
+  templateSlug: string;
+  jobDescription: string;
+  profileSummary: string;
+  tone: string;
+  company?: string;
+  industry?: string;
+}) {
+  return api<{ generated: string }>('/generate', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 // ---------- UC-060 + UC-061 helpers ----------
 
 export async function saveEditedCoverLetter(slug: string, content: string) {
@@ -60,4 +76,76 @@ function toQS(obj: Record<string, any>) {
   });
   const qs = s.toString();
   return qs ? `?${qs}` : '';
+}
+
+// ---------- Authenticated API helper ----------
+async function authenticatedApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`http://localhost:3000/coverletters${path}`, {
+    headers: { 
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    ...init,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ---------- UC-056: Saved Cover Letters ----------
+
+export interface SavedCoverLetter {
+  id: string;
+  userId: string;
+  jobId: string;
+  title: string;
+  content: string;
+  templateSlug?: string;
+  tone?: string;
+  company?: string;
+  jobDescription?: string;
+  profileSummary?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function saveCoverLetter(data: {
+  jobId: string;
+  title: string;
+  content: string;
+  templateSlug?: string;
+  tone?: string;
+  company?: string;
+  jobDescription?: string;
+  profileSummary?: string;
+}) {
+  return authenticatedApi<SavedCoverLetter>('/saved', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listSavedCoverLetters(jobId?: string) {
+  const query = jobId ? `?jobId=${jobId}` : '';
+  return authenticatedApi<SavedCoverLetter[]>(`/saved${query}`);
+}
+
+export async function getSavedCoverLetter(id: string) {
+  return authenticatedApi<SavedCoverLetter>(`/saved/${id}`);
+}
+
+export async function updateCoverLetter(id: string, data: {
+  title?: string;
+  content?: string;
+}) {
+  return authenticatedApi<SavedCoverLetter>(`/saved/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteCoverLetter(id: string) {
+  return authenticatedApi<{ success: boolean }>(`/saved/${id}`, {
+    method: 'DELETE',
+  });
 }

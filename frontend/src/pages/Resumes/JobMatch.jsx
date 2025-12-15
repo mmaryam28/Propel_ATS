@@ -180,22 +180,70 @@ const JobMatch = () => {
   const exportMatchReport = () => {
     if (!matchData || !selectedJob) return;
     
-    const report = {
-      job: selectedJob.title,
-      company: selectedJob.company,
-      matchDate: new Date().toISOString(),
-      overallScore: matchData.overallScore,
-      breakdown: matchData.breakdown,
-      strengths: matchData.strengths,
-      gaps: matchData.gaps,
-      recommendations: matchData.recommendations
-    };
+    // Create PDF content
+    const content = [];
     
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    // Title
+    content.push('JOB MATCH REPORT');
+    content.push('='.repeat(80));
+    content.push('');
+    
+    // Job Details
+    content.push(`Position: ${selectedJob.title}`);
+    content.push(`Company: ${selectedJob.company}`);
+    content.push(`Match Date: ${new Date().toLocaleDateString()}`);
+    content.push('');
+    
+    // Overall Score
+    content.push('OVERALL MATCH SCORE');
+    content.push('-'.repeat(80));
+    content.push(`${Math.round(matchData.overallScore || 0)}%`);
+    content.push('');
+    
+    // Breakdown
+    content.push('SCORE BREAKDOWN');
+    content.push('-'.repeat(80));
+    content.push(`Skills Match: ${Math.round(matchData.breakdown?.skills || 0)}%`);
+    content.push(`Experience Match: ${Math.round(matchData.breakdown?.experience || 0)}%`);
+    content.push(`Education Match: ${Math.round(matchData.breakdown?.education || 0)}%`);
+    content.push('');
+    
+    // Strengths
+    if (matchData.strengths && matchData.strengths.length > 0) {
+      content.push('KEY STRENGTHS');
+      content.push('-'.repeat(80));
+      matchData.strengths.forEach((strength, i) => {
+        content.push(`${i + 1}. ${strength}`);
+      });
+      content.push('');
+    }
+    
+    // Gaps
+    if (matchData.gaps && matchData.gaps.length > 0) {
+      content.push('SKILL GAPS');
+      content.push('-'.repeat(80));
+      matchData.gaps.forEach((gap, i) => {
+        content.push(`${i + 1}. ${gap.skill || gap} - Need: ${gap.need || 'N/A'}, Have: ${gap.have || 'N/A'}`);
+      });
+      content.push('');
+    }
+    
+    // Recommendations
+    if (matchData.recommendations && matchData.recommendations.length > 0) {
+      content.push('RECOMMENDATIONS');
+      content.push('-'.repeat(80));
+      matchData.recommendations.forEach((rec, i) => {
+        content.push(`${i + 1}. ${rec}`);
+      });
+    }
+    
+    // Create text blob and download
+    const reportText = content.join('\n');
+    const blob = new Blob([reportText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `job-match-report-${selectedJob.title.replace(/\\s+/g, '-').toLowerCase()}.json`;
+    link.download = `job-match-report-${selectedJob.title.replace(/\s+/g, '-').toLowerCase()}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };

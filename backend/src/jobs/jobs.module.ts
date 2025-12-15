@@ -4,9 +4,10 @@ import { JobsService } from './jobs.service';
 import { ApplicationAnalyticsController } from './application-analytics.controller';
 import { ApplicationAnalyticsService } from './application-analytics.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { SalaryModule } from '../salary/salary.module';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, SalaryModule],
   controllers: [JobsController, ApplicationAnalyticsController],
   providers: [JobsService, ApplicationAnalyticsService],
 })

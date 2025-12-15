@@ -97,10 +97,10 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() req, @Res() res: any) {
-    const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontend = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
     try {
       const result = await this.authService.loginOrCreateOAuthUser('google', req.user);
-      return res.redirect(`${frontend}/dashboard?token=${encodeURIComponent(result.token)}`);
+      return res.redirect(`${frontend}/login?token=${encodeURIComponent(result.token)}`);
     } catch (e: any) {
       return res.redirect(`${frontend}/login?error=${encodeURIComponent(e?.message || 'Google login failed')}`);
     }
@@ -114,10 +114,10 @@ export class AuthController {
   @Get('linkedin/callback')
   @UseGuards(AuthGuard('linkedin'))
   async linkedinCallback(@Req() req, @Res() res: any) {
-    const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontend = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
     try {
       const result = await this.authService.loginOrCreateOAuthUser('linkedin', req.user);
-      return res.redirect(`${frontend}/dashboard?token=${encodeURIComponent(result.token)}`);
+      return res.redirect(`${frontend}/login?token=${encodeURIComponent(result.token)}`);
     } catch (e: any) {
       return res.redirect(`${frontend}/login?error=${encodeURIComponent(e?.message || 'LinkedIn login failed')}`);
     }
