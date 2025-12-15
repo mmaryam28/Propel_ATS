@@ -120,8 +120,8 @@ export class ResumeService {
   //----------------------------------------------------
   private async askAI(prompt: string) {
     const startTime = Date.now();
-    console.log('\n🤖 [AI Request] Starting Ollama API call...');
-    console.log(`📊 Prompt length: ${prompt.length} characters`);
+    console.log('\n [AI Request] Starting Ollama API call...');
+    console.log(` Prompt length: ${prompt.length} characters`);
     
     try {
       console.log(`🌐 Connecting to: ${this.ollamaUrl}/api/generate`);

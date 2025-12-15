@@ -76,4 +76,8 @@ export class CreateJobDto {
   // UC-042: Application materials linkage at creation time (optional)
   @IsOptional() @IsUUID() resumeVersionId?: string | null;
   @IsOptional() @IsUUID() coverLetterVersionId?: string | null;
+
+  // Geocoding fields
+  @IsOptional() @IsNumber() latitude?: number | null;
+  @IsOptional() @IsNumber() longitude?: number | null;
 }

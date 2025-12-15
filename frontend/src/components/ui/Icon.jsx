@@ -42,7 +42,7 @@ const iconMap = {
   // Status & Feedback
   success: HiIcons.HiCheckCircle,
   error: HiIcons.HiExclamationCircle,
-  warning: HiIcons.HiExclamationTriangle,
+  warning: HiIcons.HiExclamation,
   info: HiIcons.HiInformationCircle,
   loading: AiIcons.AiOutlineLoading3Quarters,
 

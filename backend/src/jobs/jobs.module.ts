@@ -4,9 +4,10 @@ import { JobsService } from './jobs.service';
 import { ApplicationAnalyticsController } from './application-analytics.controller';
 import { ApplicationAnalyticsService } from './application-analytics.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { GeocodingModule } from '../geocoding/geocoding.module';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, GeocodingModule],
   controllers: [JobsController, ApplicationAnalyticsController],
   providers: [JobsService, ApplicationAnalyticsService],
 })

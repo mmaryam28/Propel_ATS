@@ -35,6 +35,17 @@ export class JobsController {
     return this.jobs.list(userId, s, search, industry, location, salaryMin, salaryMax, deadlineFrom, deadlineTo, sortBy, sortOrder, showArchived);
   }
 
+  @Get('map')
+  async getMapData(
+    @Req() req: any,
+    @Query('jobType') jobType?: string,
+    @Query('maxDistance') maxDistance?: string,
+    @Query('maxTime') maxTime?: string,
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.getMapData(userId, jobType, maxDistance, maxTime);
+  }
+
   @Post()
   async create(@Req() req: any, @Body() dto: CreateJobDto) {
     const userId = req.user.userId;
