@@ -234,7 +234,7 @@ export default function TeamManagement() {
           {teams.map((team) => (
             <div key={team.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-semibold">{team.name}</h3>
+                <h3 className="text-xl font-semibold text-black">{team.name}</h3>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getSubscriptionBadge(team.subscription_type)}`}>
                   {team.subscription_type}
                 </span>

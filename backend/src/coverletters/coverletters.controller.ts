@@ -2,11 +2,16 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Delete,
   Query,
   Param,
   Body,
   Res,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 
 import { CoverlettersService } from './coverletters.service';
@@ -35,6 +40,45 @@ export class CoverlettersController {
   @Get('templates/:slug')
   getTemplate(@Param('slug') slug: string) {
     return this.svc.getTemplateBySlug(slug);
+  }
+
+  // ===============================================================
+  // UC-056: Saved Cover Letters CRUD - MUST come before ':id' route
+  // ===============================================================
+  
+  @Post('saved')
+  @UseGuards(AuthGuard('jwt'))
+  async saveCoverLetter(@Req() req: any, @Body() body: any) {
+    const userId = req.user.userId;
+    return this.svc.saveCoverLetter(userId, body);
+  }
+
+  @Get('saved')
+  @UseGuards(AuthGuard('jwt'))
+  async listSavedCoverLetters(@Req() req: any, @Query('jobId') jobId?: string) {
+    const userId = req.user.userId;
+    return this.svc.listSavedCoverLetters(userId, jobId);
+  }
+
+  @Get('saved/:id')
+  @UseGuards(AuthGuard('jwt'))
+  async getSavedCoverLetter(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.svc.getSavedCoverLetter(userId, id);
+  }
+
+  @Put('saved/:id')
+  @UseGuards(AuthGuard('jwt'))
+  async updateCoverLetter(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+    const userId = req.user.userId;
+    return this.svc.updateCoverLetter(userId, id, body);
+  }
+
+  @Delete('saved/:id')
+  @UseGuards(AuthGuard('jwt'))
+  async deleteCoverLetter(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.userId;
+    return this.svc.deleteCoverLetter(userId, id);
   }
 
   // ===============================================================
@@ -125,7 +169,7 @@ export class CoverlettersController {
     }
 
     try {
-      const saved = await this.svc.saveCoverLetter(userId, title, content, company);
+      const saved = await this.svc.saveCoverLetterVersion(userId, title, content, company);
       console.log(`Saved cover letter: ${title} for user ${userId}`);
       return { success: true, data: saved };
     } catch (error) {

@@ -789,3 +789,64 @@ export async function getExperimentDashboard(experimentId: string) {
   const { data } = await api.get(`/ab-testing/experiments/${experimentId}/dashboard`);
   return data;
 }
+
+// ========================================
+// Email Integration (UC-113)
+// ========================================
+
+export async function getGmailAuthUrl(): Promise<{ authUrl: string }> {
+  const { data } = await api.get('/email-integration/auth-url');
+  return data;
+}
+
+export async function getGmailConnectionStatus(): Promise<{ connected: boolean }> {
+  const { data } = await api.get('/email-integration/status');
+  return data;
+}
+
+export async function connectGmail(code: string): Promise<{ success: boolean }> {
+  const { data } = await api.post('/email-integration/connect', { code });
+  return data;
+}
+
+export async function disconnectGmail(): Promise<{ success: boolean }> {
+  const { data } = await api.delete('/email-integration/disconnect');
+  return data;
+}
+
+export async function searchEmails(query?: string, maxResults?: number, pageToken?: string): Promise<{
+  emails: Array<{
+    id: string;
+    threadId: string;
+    subject: string;
+    fromEmail: string;
+    fromName: string;
+    receivedDate: string;
+    snippet: string;
+    isRead: boolean;
+    labels?: string[];
+  }>;
+  nextPageToken: string | null;
+}> {
+  const params: any = {};
+  if (query) params.query = query;
+  if (maxResults) params.maxResults = maxResults;
+  if (pageToken) params.pageToken = pageToken;
+  const { data } = await api.get('/email-integration/search', { params });
+  return data;
+}
+
+export async function linkEmailToJob(jobId: string, emailId: string): Promise<any> {
+  const { data } = await api.post('/email-integration/link', { jobId, emailId });
+  return data;
+}
+
+export async function getLinkedEmails(jobId: string): Promise<any[]> {
+  const { data } = await api.get(`/email-integration/job/${jobId}`);
+  return data;
+}
+
+export async function unlinkEmail(emailLinkId: string): Promise<{ success: boolean }> {
+  const { data } = await api.delete(`/email-integration/unlink/${emailLinkId}`);
+  return data;
+}
