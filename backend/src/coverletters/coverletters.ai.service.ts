@@ -30,7 +30,6 @@ export class CoverletterAIService {
         Industry: ${industry}
         Company: ${companyInfo ? companyInfo : "N/A"}
         Job Description: ${jobDescription}
-        User Profile: ${profileSummary}
 
         Use this template structure:
         ${templateBody}
@@ -38,7 +37,9 @@ export class CoverletterAIService {
         Guidelines:
         - Mention the company (${companyInfo ? companyInfo : "the organization"}) naturally.
         - Reflect the ${industry} field's language, tone, and priorities.
-        - Keep it concise and professional (under 3 paragraphs).
+        - Keep it concise and professional (3 paragraphs).
+        - Tailor the content to highlight skills and experience relevant to this specific job.
+        - End with "Sincerely,\n\nKhalid Itani"
         Return only the completed cover letter text.
         `;
 

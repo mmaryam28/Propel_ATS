@@ -83,12 +83,17 @@ import TeamManagement from './pages/TeamManagement';
 import TeamMembers from './pages/TeamMembers';
 import TeamDashboard from './pages/TeamDashboard';
 import AcceptTeamInvitation from './pages/AcceptTeamInvitation';
+import GmailCallback from './pages/GmailCallback';
+import TimingOptimizerPage from './pages/TimingOptimizerPage';
 
 import './index.css';
 import './styles/globals.css';
 import './styles/theme.css';
 
 const TemplatesPage = lazy(() => import('./coverletters/pages/TemplatesPage'));
+const GeneratePage = lazy(() => import('./coverletters/pages/GeneratePage'));
+const SavedCoverLettersPage = lazy(() => import('./coverletters/pages/SavedCoverLettersPage'));
+const EditCoverLetterPage = lazy(() => import('./coverletters/pages/EditCoverLetterPage'));
 
 // UC-014 color system tokens
 // import "./CS490/UC-014/styles/colors.css";
@@ -108,6 +113,7 @@ const router = createBrowserRouter([
   { path: '/reset/:token', element: <PasswordResetComplete /> }, // new
 
   { path: '/logout', element: <Logout /> },
+  { path: '/gmail-callback', element: <GmailCallback /> },
 
   // Authenticated app routes under layout
   {
@@ -155,6 +161,7 @@ const router = createBrowserRouter([
       { path: '/network-analytics', element: <NetworkingAnalytics /> },
       { path: '/success-patterns', element: <SuccessPatterns /> },
       { path: '/analytics', element: <AnalyticsDashboard /> },
+      { path: '/timing-optimizer', element: <TimingOptimizerPage /> },
 
       // Networking routes
       { path: '/networking/contacts', element: <ContactsPage /> },
@@ -190,6 +197,30 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>Loading templates…</div>}>
             <TemplatesPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/coverletters/generate',
+        element: (
+          <Suspense fallback={<div>Loading…</div>}>
+            <GeneratePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/coverletters/saved',
+        element: (
+          <Suspense fallback={<div>Loading…</div>}>
+            <SavedCoverLettersPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/coverletters/edit/:id',
+        element: (
+          <Suspense fallback={<div>Loading…</div>}>
+            <EditCoverLetterPage />
           </Suspense>
         ),
       },

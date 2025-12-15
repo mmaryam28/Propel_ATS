@@ -28,6 +28,7 @@ const iconMap = {
   // Navigation & Actions
   menu: HiIcons.HiMenu,
   close: HiIcons.HiX,
+  x: HiIcons.HiX,
   search: HiIcons.HiSearch,
   plus: HiIcons.HiPlus,
   edit: HiIcons.HiPencil,

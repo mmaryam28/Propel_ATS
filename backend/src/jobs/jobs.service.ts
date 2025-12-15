@@ -1736,4 +1736,134 @@ export class JobsService {
     if (error) throw error;
     return { success: true, message: 'Interview deleted' };
   }
+
+  // Job Skills Management
+  async getJobSkills(userId: string, jobId: string) {
+    const client = this.supabase.getClient();
+    
+    // Verify job ownership
+    await this.verifyJobOwnership(userId, jobId);
+    
+    // Get skills directly from job_skills table (denormalized)
+    const { data, error } = await client
+      .from('job_skills')
+      .select('skill_name, skill_category, req_level, weight')
+      .eq('job_id', jobId);
+    
+    if (error) throw error;
+    
+    return (data || []).map((item: any) => ({
+      skillName: item.skill_name,
+      name: item.skill_name,
+      category: item.skill_category,
+      reqLevel: item.req_level,
+      weight: item.weight
+    }));
+  }
+
+  async addJobSkill(
+    userId: string,
+    jobId: string,
+    skillId: string,
+    reqLevel?: number,
+    weight?: number
+  ) {
+    const client = this.supabase.getClient();
+    
+    // Verify job ownership
+    await this.verifyJobOwnership(userId, jobId);
+    
+    // Get skill details from skills table
+    const { data: skill } = await client
+      .from('skills')
+      .select('id, name, category')
+      .eq('id', skillId)
+      .single();
+    
+    if (!skill) {
+      throw new BadRequestException('Skill not found');
+    }
+    
+    // Add skill to job with denormalized data
+    const { data, error } = await client
+      .from('job_skills')
+      .insert({
+        job_id: jobId,
+        skill_name: skill.name,
+        skill_category: skill.category,
+        req_level: reqLevel ?? null,
+        weight: weight ?? 1.0
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      if (error.code === '23505') { // Duplicate key
+        throw new BadRequestException('This skill is already added to the job');
+      }
+      throw error;
+    }
+    
+    return { success: true, message: `Added skill: ${skill.name}`, data };
+  }
+
+  async removeJobSkill(userId: string, jobId: string, skillName: string) {
+    const client = this.supabase.getClient();
+    
+    // Verify job ownership
+    await this.verifyJobOwnership(userId, jobId);
+    
+    const { error } = await client
+      .from('job_skills')
+      .delete()
+      .eq('job_id', jobId)
+      .eq('skill_name', skillName);
+    
+    if (error) throw error;
+    
+    return { success: true, message: 'Skill removed from job' };
+  }
+
+  async updateJobSkill(
+    userId: string,
+    jobId: string,
+    skillName: string,
+    reqLevel?: number,
+    weight?: number
+  ) {
+    const client = this.supabase.getClient();
+    
+    // Verify job ownership
+    await this.verifyJobOwnership(userId, jobId);
+    
+    const updates: any = {};
+    if (reqLevel !== undefined) updates.req_level = reqLevel;
+    if (weight !== undefined) updates.weight = weight;
+    
+    const { data, error } = await client
+      .from('job_skills')
+      .update(updates)
+      .eq('job_id', jobId)
+      .eq('skill_name', skillName)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return { success: true, message: 'Skill updated', data };
+  }
+
+  private async verifyJobOwnership(userId: string, jobId: string) {
+    const client = this.supabase.getClient();
+    const { data: job } = await client
+      .from('jobs')
+      .select('id')
+      .eq('id', jobId)
+      .eq('userId', userId)
+      .single();
+    
+    if (!job) {
+      throw new NotFoundException('Job not found or access denied');
+    }
+  }
 }

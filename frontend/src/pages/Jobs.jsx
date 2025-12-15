@@ -46,6 +46,14 @@ export default function Jobs() {
   const [showShareModal, setShowShareModal] = React.useState(false);
   const [jobToShare, setJobToShare] = React.useState(null);
   const [shareMessage, setShareMessage] = React.useState(null);
+  const [showSkillsModal, setShowSkillsModal] = React.useState(false);
+  const [selectedJob, setSelectedJob] = React.useState(null);
+  const [jobSkills, setJobSkills] = React.useState([]);
+  const [availableSkills, setAvailableSkills] = React.useState([]);
+  const [selectedSkillId, setSelectedSkillId] = React.useState('');
+  const [skillReqLevel, setSkillReqLevel] = React.useState(3);
+  const [skillWeight, setSkillWeight] = React.useState(1.0);
+  const [skillsMessage, setSkillsMessage] = React.useState(null);
 
   React.useEffect(() => {
     fetchTeams();
@@ -86,6 +94,85 @@ export default function Jobs() {
       console.error('Error sharing job:', e);
       setShareMessage({ text: 'Failed to share job', type: 'error' });
       setTimeout(() => setShareMessage(null), 3000);
+    }
+  }
+
+  async function handleManageSkills(job) {
+    setSelectedJob(job);
+    setShowSkillsModal(true);
+    await fetchJobSkills(job.id);
+    await fetchAvailableSkills();
+  }
+
+  async function fetchJobSkills(jobId) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/jobs/${jobId}/skills`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setJobSkills(response.data || []);
+    } catch (e) {
+      console.error('Error fetching job skills:', e);
+    }
+  }
+
+  async function fetchAvailableSkills() {
+    try {
+      const token = localStorage.getItem('token');
+      // Fetch ALL skills from the skills table, not just user's skills
+      const response = await axios.get(`${API}/skills`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('All skills response:', response.data);
+      setAvailableSkills(response.data || []);
+    } catch (e) {
+      console.error('Error fetching skills:', e);
+      console.error('Error details:', e.response?.data);
+      setAvailableSkills([]); // Set empty array on error
+    }
+  }
+
+  async function handleAddSkill(e) {
+    e.preventDefault();
+    if (!selectedSkillId || !selectedJob) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API}/jobs/${selectedJob.id}/skills`, {
+        skillId: selectedSkillId,
+        reqLevel: skillReqLevel,
+        weight: skillWeight
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSkillsMessage({ text: 'Skill added successfully!', type: 'success' });
+      setTimeout(() => setSkillsMessage(null), 3000);
+      setSelectedSkillId('');
+      setSkillReqLevel(3);
+      setSkillWeight(1.0);
+      await fetchJobSkills(selectedJob.id);
+    } catch (e) {
+      console.error('Error adding skill:', e);
+      setSkillsMessage({ text: e.response?.data?.message || 'Failed to add skill', type: 'error' });
+      setTimeout(() => setSkillsMessage(null), 3000);
+    }
+  }
+
+  async function handleRemoveSkill(skillName) {
+    if (!selectedJob) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API}/jobs/${selectedJob.id}/skills/${encodeURIComponent(skillName)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSkillsMessage({ text: 'Skill removed successfully!', type: 'success' });
+      setTimeout(() => setSkillsMessage(null), 3000);
+      await fetchJobSkills(selectedJob.id);
+    } catch (e) {
+      console.error('Error removing skill:', e);
+      setSkillsMessage({ text: 'Failed to remove skill', type: 'error' });
+      setTimeout(() => setSkillsMessage(null), 3000);
     }
   }
 
@@ -525,6 +612,15 @@ export default function Jobs() {
                       Share with Team
                     </button>
                   )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleManageSkills(j);
+                    }}
+                    className="text-sm font-medium text-green-600 hover:text-green-700"
+                  >
+                    🔧 Manage Skills
+                  </button>
                 </div>
               </div>
             );
@@ -642,6 +738,147 @@ export default function Jobs() {
           shareMessage.type === 'error' ? 'bg-red-500' : 'bg-green-500'
         } text-white`}>
           {shareMessage.text}
+        </div>
+      )}
+
+      {/* Manage Skills Modal */}
+      {showSkillsModal && selectedJob && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Manage Skills for {selectedJob.title}</h2>
+              <button
+                onClick={() => {
+                  setShowSkillsModal(false);
+                  setSelectedJob(null);
+                  setJobSkills([]);
+                  setSkillsMessage(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            {skillsMessage && (
+              <div className={`mb-4 px-4 py-3 rounded-lg ${
+                skillsMessage.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
+              }`}>
+                {skillsMessage.text}
+              </div>
+            )}
+
+            {/* Add Skill Form */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold mb-3 text-black">Add Skill</h3>
+              <form onSubmit={handleAddSkill} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Skill *</label>
+                  <select
+                    value={selectedSkillId}
+                    onChange={(e) => setSelectedSkillId(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    required
+                  >
+                    <option value="">Select a skill...</option>
+                    {availableSkills
+                      .filter(skill => !jobSkills.some(js => js.skillId === skill.id))
+                      .map(skill => (
+                        <option key={skill.id} value={skill.id}>
+                          {skill.name} {skill.category ? `(${skill.category})` : ''}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Required Level (0-5)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="5"
+                      value={skillReqLevel}
+                      onChange={(e) => setSkillReqLevel(parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Weight
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="5"
+                      value={skillWeight}
+                      onChange={(e) => setSkillWeight(parseFloat(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Add Skill
+                </button>
+              </form>
+            </div>
+
+            {/* Current Skills List */}
+            <div>
+              <h3 className="font-semibold mb-3">Current Skills ({jobSkills.length})</h3>
+              {jobSkills.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No skills added yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {jobSkills.map(skill => (
+                    <div key={skill.name} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                      <div className="flex-1">
+                        <div className="font-medium">{skill.name}</div>
+                        {skill.category && (
+                          <div className="text-sm text-gray-500">{skill.category}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-sm">
+                          <span className="text-gray-500">Level:</span> 
+                          <span className="font-medium ml-1">{skill.reqLevel ?? 'N/A'}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-gray-500">Weight:</span> 
+                          <span className="font-medium ml-1">{skill.weight ?? 1.0}</span>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveSkill(skill.name)}
+                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowSkillsModal(false);
+                  setSelectedJob(null);
+                  setJobSkills([]);
+                  setSkillsMessage(null);
+                }}
+                className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

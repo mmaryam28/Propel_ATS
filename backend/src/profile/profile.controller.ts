@@ -1,4 +1,5 @@
-import { Controller, Get, Put, Body, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Req, UnauthorizedException, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SupabaseService } from '../supabase/supabase.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProfileCompletenessService } from './profile-completeness.service';
@@ -121,22 +122,40 @@ export class ProfileController {
       throw new UnauthorizedException('User not authenticated');
     }
     
-    const { firstname, lastname, email, phone, location, headline, bio, experience_level } = body;
+    const { 
+      firstname, 
+      lastname, 
+      email,
+      bio, 
+      phone, 
+      role, 
+      location, 
+      title,
+      headline,
+      experience_level,
+      linkedin_url, 
+      github_url, 
+      portfolio_url 
+    } = body;
     
     const client = this.supabase.getClient();
     
-    // Build update object mapping to actual database columns
+    // Build update object with only provided fields
     const updateFields: any = {};
     if (firstname !== undefined) updateFields.firstname = firstname;
     if (lastname !== undefined) updateFields.lastname = lastname;
     if (email !== undefined) updateFields.email = email;
-    if (phone !== undefined) updateFields.phone = phone;
-    if (location !== undefined) updateFields.location = location;
-    if (headline !== undefined) updateFields.title = headline; // Map headline to title column
     if (bio !== undefined) updateFields.bio = bio;
-    if (experience_level !== undefined) updateFields.role = experience_level; // Map experience_level to role column
-    // Note: industry field doesn't exist in database schema
-    
+    if (phone !== undefined) updateFields.phone = phone;
+    if (role !== undefined) updateFields.role = role;
+    if (experience_level !== undefined) updateFields.role = experience_level; // Map experience_level to role
+    if (location !== undefined) updateFields.location = location;
+    if (title !== undefined) updateFields.title = title;
+    if (headline !== undefined) updateFields.title = headline; // Map headline to title
+    if (linkedin_url !== undefined) updateFields.linkedin_url = linkedin_url;
+    if (github_url !== undefined) updateFields.github_url = github_url;
+    if (portfolio_url !== undefined) updateFields.portfolio_url = portfolio_url;
+
     if (Object.keys(updateFields).length === 0) {
       return { message: 'No profile fields provided' };
     }
@@ -147,5 +166,71 @@ export class ProfileController {
       throw new UnauthorizedException(`Failed to update profile: ${error.message}`);
     }
     return { message: 'Profile updated successfully' };
+  }
+
+  @Post('upload-picture')
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, callback) => {
+      if (!file.mimetype.startsWith('image/')) {
+        return callback(new BadRequestException('Only image files are allowed'), false);
+      }
+      callback(null, true);
+    },
+  }))
+  async uploadProfilePicture(@Req() req, @UploadedFile() file: Express.Multer.File) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    // Convert file buffer to base64
+    const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
+    const client = this.supabase.getClient();
+
+    console.log('Updating profile picture for user:', userId);
+    const { data, error } = await client
+      .from('users')
+      .update({ profile_picture: base64Image })
+      .eq('id', userId)
+      .select();
+
+    if (error) {
+      console.error('Database update error:', error);
+      return { message: 'Failed to update profile picture', error: error.message };
+    }
+
+    console.log('Profile picture updated in database:', data);
+
+    return { 
+      message: 'Profile picture updated successfully',
+      profile_picture: base64Image
+    };
+  }
+
+  @Delete('remove-picture')
+  async removeProfilePicture(@Req() req) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    const client = this.supabase.getClient();
+
+    const { error } = await client
+      .from('users')
+      .update({ profile_picture: null })
+      .eq('id', userId);
+
+    if (error) {
+      return { message: 'Failed to remove profile picture', error: error.message };
+    }
+
+    return { message: 'Profile picture removed successfully' };
   }
 }

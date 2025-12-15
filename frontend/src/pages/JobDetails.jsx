@@ -6,7 +6,9 @@ import { Toast } from "../components/Toast";
 import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults, getResumeVersions, getCoverLetters, downloadResumePDF, getResumeDetails, getCoverLetterDetails, downloadCoverLetterPDF } from "../lib/api";
 import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
 import InterviewOutcomeModal from "../components/InterviewOutcomeModal";
+import EmailIntegration from "../components/EmailIntegration";
 import { useAnalytics } from "../contexts/AnalyticsContext";
+import SalaryBenchmarks from "../components/SalaryBenchmarks";
 
 export default function JobDetails() {
   const { jobId } = useParams();
@@ -557,6 +559,13 @@ export default function JobDetails() {
         </Card.Body>
       </Card>
 
+      {/* UC-112: Salary Benchmarks */}
+      <SalaryBenchmarks 
+        jobTitle={job.title} 
+        location={job.location || 'Unknown'} 
+        jobSalary={{ min: job.salaryMin, max: job.salaryMax }}
+      />
+
       {/* Notes and Contacts */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card variant="default" size="large">
@@ -652,6 +661,14 @@ export default function JobDetails() {
             )}
           </Card.Body>
         </Card>
+
+        {/* Email Integration - UC-113 */}
+        <EmailIntegration 
+          jobId={jobId} 
+          companyName={job.company} 
+          jobTitle={job.title} 
+        />
+
         <Card variant="default" size="large">
           <Card.Header><Card.Title>Contacts</Card.Title></Card.Header>
           <Card.Body className="grid gap-3 sm:grid-cols-2">

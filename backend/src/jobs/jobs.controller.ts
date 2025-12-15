@@ -7,12 +7,13 @@ import type { JobStatus } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { ImportJobDto } from './dto/import-job.dto';
 import { EnrichCompanyDto } from './dto/enrich-company.dto';
+import { SalaryService } from '../salary/salary.service';
 
 
 @Controller('jobs')
 @UseGuards(AuthGuard('jwt'))
 export class JobsController {
-  constructor(private jobs: JobsService) {}
+  constructor(private jobs: JobsService, private salaryService: SalaryService) {}
 
   @Get()
   async list(
@@ -150,6 +151,18 @@ export class JobsController {
     return this.jobs.getMaterialsUsage(userId);
   }
 
+  // UC-112: Salary benchmarks for job title and location
+  @Get('salary-benchmarks')
+  async getSalaryBenchmarks(
+    @Query('jobTitle') jobTitle: string,
+    @Query('location') location: string,
+  ) {
+    if (!jobTitle || !location) {
+      return { error: 'Missing required parameters: jobTitle, location' };
+    }
+    return await this.salaryService.getSalaryBenchmarks(jobTitle, location);
+  }
+
   @Get('materials/defaults')
   async getMaterialDefaults(@Req() req: any) {
     const userId = req.user.userId;
@@ -227,5 +240,43 @@ export class JobsController {
   async delete(@Req() req: any, @Param('id') id: string) {
     const userId = req.user.userId;
     return this.jobs.delete(userId, id);
+  }
+
+  // Job Skills Management
+  @Get(':id/skills')
+  async getJobSkills(@Req() req: any, @Param('id') jobId: string) {
+    const userId = req.user.userId;
+    return this.jobs.getJobSkills(userId, jobId);
+  }
+
+  @Post(':id/skills')
+  async addJobSkill(
+    @Req() req: any,
+    @Param('id') jobId: string,
+    @Body() body: { skillId: string; reqLevel?: number; weight?: number }
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.addJobSkill(userId, jobId, body.skillId, body.reqLevel, body.weight);
+  }
+
+  @Delete(':id/skills/:skillName')
+  async removeJobSkill(
+    @Req() req: any,
+    @Param('id') jobId: string,
+    @Param('skillName') skillName: string
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.removeJobSkill(userId, jobId, decodeURIComponent(skillName));
+  }
+
+  @Patch(':id/skills/:skillName')
+  async updateJobSkill(
+    @Req() req: any,
+    @Param('id') jobId: string,
+    @Param('skillName') skillName: string,
+    @Body() body: { reqLevel?: number; weight?: number }
+  ) {
+    const userId = req.user.userId;
+    return this.jobs.updateJobSkill(userId, jobId, decodeURIComponent(skillName), body.reqLevel, body.weight);
   }
 }
