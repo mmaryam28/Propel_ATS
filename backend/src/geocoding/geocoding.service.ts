@@ -10,8 +10,23 @@ export interface GeocodeResult {
 @Injectable()
 export class GeocodingService {
   private readonly nominatimUrl = 'https://nominatim.openstreetmap.org/search';
+  private readonly cacheTtlSeconds: number;
+  private readonly cache = new Map<string, { result: GeocodeResult | null; expiresAt: number }>();
+
+  constructor() {
+    const envTtl = process.env.GEOCODING_CACHE_TTL_SECONDS;
+    this.cacheTtlSeconds = envTtl ? parseInt(envTtl, 10) : 86400; // default 24 hours
+  }
 
   async geocodeLocation(location: string): Promise<GeocodeResult | null> {
+    if (!location || location.trim().length === 0) return null;
+
+    const key = location.trim().toLowerCase();
+    const now = Date.now();
+    const cached = this.cache.get(key);
+    if (cached && cached.expiresAt > now) {
+      return cached.result;
+    }
     try {
       const response = await axios.get(this.nominatimUrl, {
         params: {
@@ -26,12 +41,19 @@ export class GeocodingService {
 
       if (response.data && response.data.length > 0) {
         const result = response.data[0];
+        const res: GeocodeResult = {
+          latitude: parseFloat(result.lat),
+          longitude: parseFloat(result.lon),
+          displayName: result.display_name,
+        };
+        this.cache.set(key, { result: res, expiresAt: now + this.cacheTtlSeconds * 1000 });
         return {
           latitude: parseFloat(result.lat),
           longitude: parseFloat(result.lon),
           displayName: result.display_name,
         };
       }
+      this.cache.set(key, { result: null, expiresAt: now + this.cacheTtlSeconds * 1000 });
       return null;
     } catch (error) {
       console.error('Geocoding error:', error);

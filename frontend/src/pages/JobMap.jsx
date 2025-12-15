@@ -15,6 +15,10 @@ L.Icon.Default.mergeOptions({
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Dev-only auto-login token support: set VITE_DEV_TOKEN into localStorage when running in dev
+const DEV_TOKEN = import.meta.env.VITE_DEV_TOKEN;
+const IS_DEV = import.meta.env.DEV;
+
 export default function JobMap() {
   const [jobs, setJobs] = useState([]);
   const [homeLocation, setHomeLocation] = useState(null);
@@ -32,6 +36,20 @@ export default function JobMap() {
   useEffect(() => {
     loadMapData();
   }, [filters]);
+
+  // If running locally in dev and a dev token is provided, auto-populate localStorage
+  useEffect(() => {
+    try {
+      if (IS_DEV && DEV_TOKEN) {
+        const existing = localStorage.getItem('token') || localStorage.getItem('accessToken') || sessionStorage.getItem('token');
+        if (!existing) {
+          localStorage.setItem('token', DEV_TOKEN);
+        }
+      }
+    } catch (e) {
+      // ignore storage errors in constrained environments
+    }
+  }, []);
 
   const loadMapData = async () => {
     try {
