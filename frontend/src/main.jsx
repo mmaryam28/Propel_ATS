@@ -85,6 +85,7 @@ import AcceptTeamInvitation from './pages/AcceptTeamInvitation';
 import GmailCallback from './pages/GmailCallback';
 import TimingOptimizerPage from './pages/TimingOptimizerPage';
 import SecurityDemo from './pages/SecurityDemo';
+import AccessibilityDemo from './pages/AccessibilityDemo';
 
 import './index.css';
 import './styles/globals.css';
@@ -141,7 +142,7 @@ const router = createBrowserRouter([
       { path: '/typography', element: <TypographyPreview /> },
       
       { path: '/security', element: <SecurityDemo /> }, // UC-135: Security demo
-      
+      { path: '/accessibility', element: <AccessibilityDemo /> }, // UC-144: Accessibility testing
 
       { path: '/resumes', element: <ResumeDashboard /> },
       { path: '/resumes/templates', element: <TemplateManager /> },

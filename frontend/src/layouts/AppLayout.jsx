@@ -56,7 +56,7 @@ function Breadcrumbs() {
     <nav className="px-4 sm:px-6 lg:px-8 py-2" aria-label="Breadcrumb">
       <ol className="flex items-center gap-2 text-sm text-gray-500">
         <li>
-          <Link to="/" className="hover:text-gray-900">Home</Link>
+          <Link to="/" className="text-gray-700 hover:text-gray-900">Home</Link>
         </li>
         {segments.map((seg, i) => (
           <li key={seg.href} className="flex items-center gap-2">
@@ -66,7 +66,7 @@ function Breadcrumbs() {
                 {seg.name}
               </span>
             ) : (
-              <Link to={seg.href} className="hover:text-gray-900">{seg.name}</Link>
+              <Link to={seg.href} className="text-gray-700 hover:text-gray-900">{seg.name}</Link>
             )}
           </li>
         ))}
@@ -186,7 +186,7 @@ function Navbar() {
                 alt="Propel logo"
                 className="h-7 w-7 object-contain rounded-md hover:scale-105 transition-transform duration-200"
               />
-              <span className="font-semibold whitespace-nowrap">
+              <span className="font-semibold whitespace-nowrap text-gray-900">
                 PROPEL
               </span>
             </Link>
