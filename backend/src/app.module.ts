@@ -42,6 +42,7 @@ import { ExternalCertificationsModule } from './external-certifications/external
 import { EmailIntegrationModule } from './email-integration/email-integration.module';
 
 import { TimingOptimizerModule } from './timing-optimizer/timing-optimizer.module';
+import { SecurityModule } from './security/security.module';
 import { ApiMonitoringModule } from './api-monitoring/api-monitoring.module';
 
 @Module({
@@ -89,6 +90,7 @@ import { ApiMonitoringModule } from './api-monitoring/api-monitoring.module';
   ExternalCertificationsModule,
   EmailIntegrationModule,
   TimingOptimizerModule,
+  SecurityModule, // UC-135: Security hardening
     ApiMonitoringModule,
   ],
   controllers: [AppController],
