@@ -5,6 +5,7 @@ import { CreateJobDto, JOB_STATUSES, JobStatus } from './dto/create-job.dto';
 import { ImportJobResponse } from './dto/import-job.dto';
 import type { EnrichCompanyResponse } from './dto/enrich-company.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
+import { GeocodingService } from '../geocoding/geocoding.service';
 
 // DB <-> API mapping helpers
 // NOTE: Your Supabase table appears to have camelCase column names (userId, jobType, postingUrl, etc.)
@@ -39,6 +40,9 @@ function toDb(dto: CreateJobDto & { userId: string }) {
   // UC-042 materials linkage
   resumeVersionId: toNull((dto as any).resumeVersionId),
   coverLetterVersionId: toNull((dto as any).coverLetterVersionId),
+    // Geocoding fields
+    latitude: dto.latitude ?? null,
+    longitude: dto.longitude ?? null,
     // status fields
     status: (dto.status as JobStatus) ?? 'Interested',
     statusUpdatedAt: new Date().toISOString(),
@@ -92,12 +96,15 @@ function toApi(row: any) {
     createdAt: row.createdAt ?? row.created_at ?? null,
     updatedAt: row.updatedAt ?? row.updated_at ?? null,
     userId: row.userId ?? row.user_id,
+    // Geocoding fields
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
   };
 }
 
 @Injectable()
 export class JobsService {
-  constructor(private supabase: SupabaseService) {}
+  constructor(private supabase: SupabaseService, private geocodingService: GeocodingService) {}
 
   async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string, showArchived?: boolean) {
     const client = this.supabase.getClient();
@@ -198,7 +205,19 @@ export class JobsService {
         }
       }
     } catch { /* ignore missing table */ }
-    const payload = toDb({ ...dto, userId, ...(resumeVersionId !== undefined ? { resumeVersionId } : {}), ...(coverLetterVersionId !== undefined ? { coverLetterVersionId } : {} ) } as any);
+    
+    // Geocode location if provided and coordinates not set
+    let latitude = dto.latitude;
+    let longitude = dto.longitude;
+    if (dto.location && (latitude === undefined || longitude === undefined)) {
+      const geocodeResult = await this.geocodingService.geocodeLocation(dto.location);
+      if (geocodeResult) {
+        latitude = geocodeResult.latitude;
+        longitude = geocodeResult.longitude;
+      }
+    }
+    
+    const payload = toDb({ ...dto, userId, latitude, longitude, ...(resumeVersionId !== undefined ? { resumeVersionId } : {}), ...(coverLetterVersionId !== undefined ? { coverLetterVersionId } : {} ) } as any);
     
     console.log('DEBUG: toDb payload:', { 
       title: payload.title, 
@@ -244,6 +263,105 @@ export class JobsService {
       // ignore missing table/permissions
     }
     return toApi(data);
+  }
+
+  async getMapData(userId: string, jobType?: string, maxDistance?: string, maxTime?: string) {
+    const client = this.supabase.getClient();
+
+    // Get user's home location
+    const { data: user, error: userError } = await client
+      .from('users')
+      .select('location')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    const homeLocation = user.location;
+    let homeCoords: { latitude: number; longitude: number } | null = null;
+    if (homeLocation) {
+      homeCoords = await this.geocodingService.geocodeLocation(homeLocation);
+    }
+
+    // Get all jobs (not just those with coordinates)
+    let query = client
+      .from('jobs')
+      .select('*')
+      .eq('userId', String(userId))
+      .is('archivedAt', null);
+
+    if (jobType) {
+      query = query.eq('jobType', jobType);
+    }
+
+    const { data: jobs, error } = await query;
+    if (error) {
+      throw error;
+    }
+
+    const maxDist = maxDistance ? parseFloat(maxDistance) : null;
+    const maxTimeMinutes = maxTime ? parseFloat(maxTime) : null;
+
+    const jobsWithDistance = await Promise.all((jobs || []).map(async job => {
+      const jobData = toApi(job);
+      let distance: number | null = null;
+      let estimatedTime: number | null = null;
+
+      // If job doesn't have coordinates, try to geocode it
+      if (!jobData.latitude || !jobData.longitude) {
+        if (jobData.location) {
+          try {
+            const coords = await this.geocodingService.geocodeLocation(jobData.location);
+            if (coords) {
+              jobData.latitude = coords.latitude;
+              jobData.longitude = coords.longitude;
+
+              // Update the job in the database with the new coordinates
+              await client
+                .from('jobs')
+                .update({
+                  latitude: coords.latitude,
+                  longitude: coords.longitude,
+                  updatedAt: new Date().toISOString()
+                })
+                .eq('id', job.id);
+            }
+          } catch (geocodeError) {
+            console.warn(`Failed to geocode location for job ${job.id}: ${jobData.location}`, geocodeError);
+          }
+        }
+      }
+
+      if (homeCoords && jobData.latitude && jobData.longitude) {
+        distance = this.geocodingService.calculateDistance(
+          homeCoords.latitude, homeCoords.longitude,
+          jobData.latitude, jobData.longitude
+        );
+
+        // Rough estimate: 50 km/h average speed for driving
+        if (distance !== null) {
+          estimatedTime = (distance / 50) * 60; // minutes
+        }
+      }
+
+      // Filter by max distance/time if specified
+      if (maxDist && distance && distance > maxDist) return null;
+      if (maxTimeMinutes && estimatedTime && estimatedTime > maxTimeMinutes) return null;
+
+      return {
+        ...jobData,
+        distance,
+        estimatedTime,
+      };
+    }));
+
+    return {
+      jobs: jobsWithDistance.filter(Boolean),
+      homeLocation,
+      homeCoords,
+    };
   }
 
   async getById(userId: string, id: string) {
