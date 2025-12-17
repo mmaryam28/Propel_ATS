@@ -91,7 +91,7 @@ export default function UpcomingDeadlinesWidget() {
     <div className="page-card p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-semibold text-gray-900">Upcoming Deadlines</h3>
-        <Link to="/jobs" className="text-sm text-[var(--primary-color)] hover:underline font-medium">
+        <Link to="/jobs" className="text-sm text-blue-700 hover:underline font-medium">
           View all →
         </Link>
       </div>

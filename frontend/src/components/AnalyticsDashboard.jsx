@@ -76,7 +76,7 @@ export default function AnalyticsDashboard() {
                       className={`h-full ${statusColors[status] || 'bg-gray-500'} flex items-center justify-end px-3`}
                       style={{ width: `${(count / analytics.totalApplications) * 100}%` }}
                     >
-                      <span className="text-xs font-medium text-white">{count}</span>
+                      <span className="text-xs font-medium text-gray-900">{count}</span>
                     </div>
                   </div>
                 </div>
