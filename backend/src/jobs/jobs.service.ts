@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { ApiMonitoringService } from '../api-monitoring/api-monitoring.service';
 import { v4 as uuidv4 } from 'uuid';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateJobDto, JOB_STATUSES, JobStatus } from './dto/create-job.dto';
@@ -104,6 +105,11 @@ function toApi(row: any) {
 
 @Injectable()
 export class JobsService {
+  constructor(
+    private supabase: SupabaseService,
+    @Inject(forwardRef(() => ApiMonitoringService))
+    private apiMonitoringService: ApiMonitoringService,
+  ) {}
   constructor(private supabase: SupabaseService, private geocodingService: GeocodingService) {}
 
   async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string, showArchived?: boolean) {

@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
+import { ApiMonitoringService } from '../api-monitoring/api-monitoring.service';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -7,7 +8,11 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class EmailIntegrationService {
   private oauth2Client: OAuth2Client;
 
-  constructor(private supabase: SupabaseService) {
+  constructor(
+    private supabase: SupabaseService,
+    @Inject(forwardRef(() => ApiMonitoringService))
+    private apiMonitoringService: ApiMonitoringService,
+  ) {
     const clientId = process.env.GMAIL_CLIENT_ID;
     const clientSecret = process.env.GMAIL_CLIENT_SECRET;
     const redirectUri = process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/email-integration/callback';
@@ -158,6 +163,9 @@ export class EmailIntegrationService {
     maxResults: number = 20,
     pageToken?: string
   ): Promise<any> {
+    const serviceName = 'GmailAPI';
+    const quota = 1000; // Example quota, adjust as needed
+    const start = Date.now();
     try {
       const tokens = await this.getTokens(userId);
       this.oauth2Client.setCredentials(tokens);
@@ -173,6 +181,7 @@ export class EmailIntegrationService {
       });
 
       if (!listResponse.data.messages) {
+        this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
         return { emails: [], nextPageToken: null };
       }
 
@@ -210,11 +219,13 @@ export class EmailIntegrationService {
 
       const emails = await Promise.all(emailPromises);
 
+      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
       return {
         emails,
         nextPageToken: listResponse.data.nextPageToken || null,
       };
     } catch (error) {
+      this.apiMonitoringService.recordError(serviceName, error?.message || String(error));
       console.error('Error searching emails:', error);
       throw new BadRequestException('Failed to search emails. Please try again.');
     }

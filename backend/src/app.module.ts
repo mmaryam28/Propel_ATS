@@ -40,7 +40,9 @@ import { AbTestingModule } from './ab-testing/ab-testing.module';
 import { ApplicationQualityModule } from './application-quality/application-quality.module';
 import { ExternalCertificationsModule } from './external-certifications/external-certifications.module';
 import { EmailIntegrationModule } from './email-integration/email-integration.module';
+
 import { TimingOptimizerModule } from './timing-optimizer/timing-optimizer.module';
+import { ApiMonitoringModule } from './api-monitoring/api-monitoring.module';
 
 @Module({
   imports: [
@@ -87,6 +89,7 @@ import { TimingOptimizerModule } from './timing-optimizer/timing-optimizer.modul
   ExternalCertificationsModule,
   EmailIntegrationModule,
   TimingOptimizerModule,
+    ApiMonitoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],
