@@ -4,6 +4,7 @@ import { JobsService } from './jobs.service';
 import { ApplicationAnalyticsController } from './application-analytics.controller';
 import { ApplicationAnalyticsService } from './application-analytics.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { GeocodingModule } from '../geocoding/geocoding.module';
 import { SalaryModule } from '../salary/salary.module';
 import { ApiMonitoringModule } from '../api-monitoring/api-monitoring.module';
 
@@ -12,6 +13,7 @@ import { ApiMonitoringModule } from '../api-monitoring/api-monitoring.module';
     SupabaseModule,
     SalaryModule,
     forwardRef(() => ApiMonitoringModule),
+    GeocodingModule
   ],
   controllers: [JobsController, ApplicationAnalyticsController],
   providers: [JobsService, ApplicationAnalyticsService],

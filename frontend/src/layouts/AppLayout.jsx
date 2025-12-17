@@ -294,6 +294,7 @@ function Navbar() {
                 {jobsOpen && (
                   <div className="absolute top-full mt-1 left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
                     <Link to="/jobs" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Tracker</Link>
+                    <Link to="/jobs/map" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Map</Link>
                     <Link to="/jobs/calendar" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Calendar</Link>
                     <Link to="/quality-check" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Quality Check</Link>
                     <Link to="/timing-optimizer" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">⏰ Timing Optimizer</Link>

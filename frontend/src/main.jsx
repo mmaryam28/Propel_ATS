@@ -11,6 +11,7 @@ import Jobs from './pages/Jobs';
 import JobPipeline from './pages/JobPipeline.jsx';
 import JobDetails from './pages/JobDetails';
 import JobCalendar from './pages/JobCalendar';
+import JobMap from './pages/JobMap';
 import ArchivedJobs from './pages/ArchivedJobs';
 import StatisticsPage from './pages/StatisticsPage';
 import Applications from './pages/Applications';
@@ -122,6 +123,7 @@ const router = createBrowserRouter([
       { path: '/jobs', element: <Jobs /> },
       { path: '/jobs/pipeline', element: <JobPipeline /> },
       { path: '/jobs/calendar', element: <JobCalendar /> },
+      { path: '/jobs/map', element: <JobMap /> },
       { path: '/jobs/archived', element: <ArchivedJobs /> },
       { path: '/jobs/statistics', element: <StatisticsPage /> },
       { path: '/jobs/:jobId', element: <JobDetails /> },
