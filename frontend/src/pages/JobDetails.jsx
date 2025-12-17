@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
 import { Toast } from "../components/Toast";
+import JobRequirementsMatch from "../components/JobRequirementsMatch";
 import { getJob, updateJob, listJobHistory, getCompanyNews, enrichCompanyFromUrl, archiveJob, deleteJob, restoreJob, listJobMaterialsHistory, getUserMaterialDefaults, setUserMaterialDefaults, getResumeVersions, getCoverLetters, downloadResumePDF, getResumeDetails, getCoverLetterDetails, downloadCoverLetterPDF } from "../lib/api";
 import ScheduleInterviewModal from "../components/ScheduleInterviewModal";
 import InterviewOutcomeModal from "../components/InterviewOutcomeModal";
@@ -15,6 +16,7 @@ export default function JobDetails() {
   const navigate = useNavigate();
   const { triggerRefresh } = useAnalytics();
   const [job, setJob] = React.useState(null);
+  const [userId, setUserId] = React.useState(null);
   const [edit, setEdit] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -40,6 +42,13 @@ export default function JobDetails() {
   const [showDocumentModal, setShowDocumentModal] = React.useState(false);
   const [documentModalContent, setDocumentModalContent] = React.useState(null);
   const [loadingDocument, setLoadingDocument] = React.useState(false);
+
+  React.useEffect(() => { 
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    }
+  }, []);
 
   React.useEffect(() => { (async () => {
     try {
@@ -565,6 +574,18 @@ export default function JobDetails() {
         location={job.location || 'Unknown'} 
         jobSalary={{ min: job.salaryMin, max: job.salaryMax }}
       />
+
+      {/* UC-123: Job Requirements Match Analysis */}
+      {userId && (
+        <Card variant="default" size="large">
+          <Card.Header>
+            <Card.Title>UC-123: Job Requirements Match Analysis</Card.Title>
+          </Card.Header>
+          <Card.Body>
+            <JobRequirementsMatch jobId={jobId} userId={userId} />
+          </Card.Body>
+        </Card>
+      )}
 
       {/* Notes and Contacts */}
       <div className="grid gap-4 lg:grid-cols-2">
