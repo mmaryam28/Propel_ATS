@@ -40,7 +40,7 @@ async function bootstrap() {
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'http://localhost:3000', 'http://localhost:5173'],
+        connectSrc: ["'self'", 'http://localhost:3000', 'http://localhost:5173', 'https://cs-490-project.vercel.app', 'https://cs-490-project-l12tt6cfg-khalid-itanis-projects.vercel.app'],
       },
     },
     hsts: {
@@ -56,12 +56,17 @@ async function bootstrap() {
   // CORS Configuration - Allow both local and production frontends
   const allowedOrigins = [
     'http://localhost:5173', // Local development
-    process.env.FRONTEND_URL, // Production frontend
-  ].filter(Boolean); // Remove undefined values
+    'http://localhost:3000', // Local backend
+    'https://cs-490-project.vercel.app', // Production frontend
+    'https://cs-490-project-l12tt6cfg-khalid-itanis-projects.vercel.app', // Vercel preview
+    process.env.FRONTEND_URL, // Additional production frontend from env
+  ].filter(Boolean); // Remove undefined/null values
 
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
   
   app.useGlobalPipes(
