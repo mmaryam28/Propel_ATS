@@ -53,17 +53,24 @@ async function bootstrap() {
     xssFilter: true,
   }));
   
-  // CORS Configuration - Allow both local and production frontends
-  const allowedOrigins = [
-    'http://localhost:5173', // Local development
-    'http://localhost:3000', // Local backend
-    'https://cs-490-project.vercel.app', // Production frontend
-    'https://cs-490-project-l12tt6cfg-khalid-itanis-projects.vercel.app', // Vercel preview
-    process.env.FRONTEND_URL, // Additional production frontend from env
-  ].filter(Boolean); // Remove undefined/null values
-
+  // CORS Configuration - Allow all Vercel preview/prod domains dynamically
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow server-to-server or curl (no origin)
+      if (!origin) return callback(null, true);
+
+      // Allow all Vercel preview + prod domains
+      if (origin.endsWith('.vercel.app')) {
+        return callback(null, true);
+      }
+
+      // Allow local dev
+      if (origin === 'http://localhost:5173' || origin === 'http://localhost:3000') {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
