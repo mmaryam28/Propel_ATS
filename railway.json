@@ -1,6 +1,3 @@
-# Railway configuration file
-# This tells Railway how to build and deploy your backend
-
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
