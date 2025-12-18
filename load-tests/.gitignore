@@ -1,0 +1,6 @@
+# Load test results
+*.json
+results/
+
+# k6 summary reports
+summary.html

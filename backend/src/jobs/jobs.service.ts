@@ -110,7 +110,6 @@ export class JobsService {
     private geocodingService: GeocodingService,
     @Inject(forwardRef(() => ApiMonitoringService))
     private apiMonitoringService: ApiMonitoringService,
-    private geocodingService: GeocodingService,
   ) {}
 
   async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string, showArchived?: boolean) {
