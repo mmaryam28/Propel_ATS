@@ -25,6 +25,9 @@ RUN npm prune --production
 # Stage 2: Production runtime with Ollama
 FROM node:20-alpine AS production
 
+# Add build arg to bust cache
+ARG CACHEBUST=1
+
 # Install curl for health checks and downloading Ollama
 RUN apk add --no-cache curl bash dumb-init
 
@@ -45,6 +48,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+
+# Bust cache to ensure fresh copy of start.sh
+RUN echo "Cache bust: $CACHEBUST"
 
 # Copy startup script 
 COPY --chown=nestjs:nodejs start.sh ./start.sh
