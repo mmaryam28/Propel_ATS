@@ -36,9 +36,29 @@ export class MatchService {
     
     console.log(`[Match] User ${userId} has ${userSkillsData?.length || 0} skills in user_skills table`);
     
-    if (!userSkillsData || userSkillsData.length === 0) {
-      console.warn(`[Match] User ${userId} has no skills - returning error`);
-      return { 
+    // Fallback: If user_skills is empty, use new profile `skills` table
+    let profileSkills: any[] | null = userSkillsData;
+    if (!profileSkills || profileSkills.length === 0) {
+      const { data: altSkills, error: altErr } = await supabase
+        .from('skills')
+        .select('name, proficiency, "userId"')
+        .eq('"userId"', userId);
+      if (altErr) {
+        console.error('[Match] Error fetching fallback skills:', altErr);
+      }
+      if (altSkills && altSkills.length > 0) {
+        console.log(`[Match] Fallback skills found in 'skills' table: ${altSkills.length}`);
+        // Normalize into same structure as user_skills join result
+        profileSkills = altSkills.map((s: any) => ({
+          skills: { name: s.name },
+          level: this.mapProficiencyToLevel(s.proficiency)
+        }));
+      }
+    }
+
+    if (!profileSkills || profileSkills.length === 0) {
+      console.warn(`[Match] User ${userId} has no skills across known tables`);
+      return {
         error: "No skills found for this user. Please add skills at /skills first.",
         score: 0,
         breakdown: {
@@ -52,12 +72,13 @@ export class MatchService {
       };
     }
 
-    // Map to { skillName: level } - filter out skills that couldn't be joined
+    // Map to { normalizedSkillName: level } for robust case-insensitive matching
+    const normalize = (s: string) => (s ?? "").toString().trim().toLowerCase();
     const userSkills: Record<string, number> = Object.fromEntries(
-      userSkillsData
+      profileSkills
         .filter((row: any) => row.skills && row.skills.name)
         .map((row: any) => [
-          row.skills.name,
+          normalize(row.skills.name),
           row.level ?? 0,
         ])
     );
@@ -88,9 +109,10 @@ export class MatchService {
     if (jobSkillsData && jobSkillsData.length > 0) {
       for (const js of jobSkillsData) {
         const skillName = js.skill_name;
+        const normalizedSkillName = normalize(skillName);
         const need = js.req_level ?? 0;
         const w = js.weight ?? 1;
-        const have = userSkills[skillName] ?? 0;
+        const have = userSkills[normalizedSkillName] ?? 0;
         const skillScore = Math.min(have / Math.max(need, 1), 1) * 100;
 
         totalWeight += w;
@@ -109,14 +131,34 @@ export class MatchService {
     const skillScore = totalWeight ? weightedScore / totalWeight : 0;
     console.log(`[Match] Calculated skill score: ${skillScore}%`);
 
+    // 5️⃣ Get user employment history to calculate experience level
+    const { data: employmentHistory } = await supabase
+      .from("employment")
+      .select("start_date, end_date, position_title")
+      .eq("user_id", userId)
+      .order("end_date", { ascending: false });
+
+    // 5.1️⃣ Get job experience requirement from job description or infer from title
+    const { data: jobData } = await supabase
+      .from("jobs")
+      .select("description, title, experience_level")
+      .eq("id", jobId)
+      .single();
+
+    const experienceScore = await this.calculateExperienceMatch(userId, employmentHistory || [], jobData);
+    
+    // 5.2️⃣ Get user education to calculate education match
+    const { data: educationData } = await supabase
+      .from("education")
+      .select("degree_type, field_of_study")
+      .eq("user_id", userId);
+
+    const educationScore = await this.calculateEducationMatch(jobData?.description, educationData || []);
+
     // 5️⃣ Use default weighting preferences (no user_weights table)
     const skillsWeight = 0.7;
     const expWeight = 0.2;
     const eduWeight = 0.1;
-
-    // 5️⃣ Temporary experience/education placeholder
-    const experienceScore = 100;
-    const educationScore = 100;
 
     const total =
       skillScore * skillsWeight +
@@ -162,12 +204,25 @@ async getSkillGaps(userId: string, jobId: string) {
 
   if (userErr) throw userErr;
 
-  // Create map keyed by skill name, filter out null joins
-  const skillMap = Object.fromEntries(
+  // Create map keyed by normalized skill name, filter out null joins
+  const normalize = (s: string) => (s ?? "").toString().trim().toLowerCase();
+  let skillMap = Object.fromEntries(
     (userSkills || [])
       .filter((us: any) => us.skills && us.skills.name)
-      .map((us: any) => [us.skills.name, us.level])
+      .map((us: any) => [normalize(us.skills.name), us.level])
   );
+  // Fallback to profile skills table if needed
+  if (!userSkills || userSkills.length === 0 || Object.keys(skillMap).length === 0) {
+    const { data: altSkills } = await supabase
+      .from('skills')
+      .select('name, proficiency, "userId"')
+      .eq('"userId"', userId);
+    if (altSkills && altSkills.length > 0) {
+      skillMap = Object.fromEntries(
+        altSkills.map((s: any) => [normalize(s.name), this.mapProficiencyToLevel(s.proficiency)])
+      );
+    }
+  }
 
   // 2️⃣ Fetch job's required skills (using denormalized structure)
   const { data: jobSkills, error: jobErr } = await supabase
@@ -182,7 +237,7 @@ async getSkillGaps(userId: string, jobId: string) {
     .map((js: any) => {
       const skillName = js.skill_name;
       const required = js.req_level ?? 0;
-      const have = skillMap[skillName] ?? 0;
+      const have = skillMap[normalize(skillName)] ?? 0;
       const progress = Math.round((have / Math.max(required, 1)) * 100);
       const gapScore = required - have;
       return { skill: skillName, required, have, progress, gapScore };
@@ -210,7 +265,7 @@ async getSkillGaps(userId: string, jobId: string) {
     .map((js: any) => {
       const skillName = js.skill_name;
       const required = js.req_level ?? 0;
-      const have = skillMap[skillName] ?? 0;
+      const have = skillMap[normalize(skillName)] ?? 0;
       const progress = Math.round((have / Math.max(required, 1)) * 100);
       return { skill: skillName, required, have, progress };
     })
@@ -437,6 +492,7 @@ async getSkillGaps(userId: string, jobId: string) {
   async getUserSkills(userId: string) {
     const supabase = this.supabaseService.getClient();
     
+    // Try legacy user_skills first
     const { data, error } = await supabase
       .from("user_skills")
       .select(`
@@ -450,19 +506,34 @@ async getSkillGaps(userId: string, jobId: string) {
       `)
       .eq("user_id", userId);
 
-    if (error) {
-      console.error('Error fetching user skills:', error);
+    if (!error && data && data.length > 0) {
+      return data
+        .filter((row: any) => row.skills && row.skills.name)
+        .map((row: any) => ({
+          id: row.skill_id,
+          name: row.skills.name,
+          category: row.skills.category,
+          level: row.level
+        }));
+    }
+
+    // Fallback to profile `skills` table
+    const { data: altSkills, error: altErr } = await supabase
+      .from('skills')
+      .select('id, name, category, proficiency, "userId"')
+      .eq('"userId"', userId);
+
+    if (altErr) {
+      console.error('Error fetching fallback skills:', altErr);
       return [];
     }
 
-    return data
-      ?.filter((row: any) => row.skills && row.skills.name)
-      .map((row: any) => ({
-        id: row.skill_id,
-        name: row.skills.name,
-        category: row.skills.category,
-        level: row.level
-      })) || [];
+    return (altSkills || []).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      category: s.category,
+      level: this.mapProficiencyToLevel(s.proficiency)
+    }));
   }
 
   async getUserWeights(userId: string) {
@@ -574,6 +645,156 @@ async getSkillGaps(userId: string, jobId: string) {
     }
 
     return recommendations;
+  }
+
+  /**
+   * UC-123: Calculate experience level match against job requirements
+   * Analyzes years of experience and position levels
+   */
+  private async calculateExperienceMatch(userId: string, employmentHistory: any[], jobData: any): Promise<number> {
+    try {
+      // Calculate total years of experience
+      let totalMonths = 0;
+      const now = new Date();
+      
+      for (const job of employmentHistory) {
+        const startDate = new Date(job.start_date);
+        const endDate = job.end_date ? new Date(job.end_date) : now;
+        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                          (endDate.getMonth() - startDate.getMonth());
+        totalMonths += monthsDiff;
+      }
+      
+      const yearsOfExperience = totalMonths / 12;
+      
+      // Extract required experience level from job description or title
+      const jobDescription = jobData?.description?.toLowerCase() || '';
+      const jobTitle = jobData?.title?.toLowerCase() || '';
+      const experienceLevel = jobData?.experience_level?.toLowerCase() || this.inferExperienceLevel(jobDescription + ' ' + jobTitle);
+      
+      let requiredYears = 0;
+      let requiredLevel = 'entry'; // default
+      
+      // Parse experience requirements from description
+      const expMatch = jobDescription.match(/(\d+)\+?\s*years?/i);
+      if (expMatch) {
+        requiredYears = parseInt(expMatch[1]);
+      }
+      
+      // Determine required level
+      if (jobDescription.includes('senior') || jobDescription.includes('lead') || jobDescription.includes('principal')) {
+        requiredLevel = 'senior';
+        requiredYears = Math.max(requiredYears, 5);
+      } else if (jobDescription.includes('mid') || jobDescription.includes('intermediate')) {
+        requiredLevel = 'mid';
+        requiredYears = Math.max(requiredYears, 2);
+      } else {
+        requiredLevel = 'entry';
+      }
+      
+      // Determine user's level based on experience
+      let userLevel = 'entry';
+      if (yearsOfExperience >= 5) userLevel = 'senior';
+      else if (yearsOfExperience >= 2) userLevel = 'mid';
+      
+      // Calculate match score
+      let experienceScore = 0;
+      if (yearsOfExperience >= requiredYears) {
+        experienceScore = 100;
+      } else if (yearsOfExperience >= requiredYears * 0.7) {
+        experienceScore = 85;
+      } else if (yearsOfExperience >= requiredYears * 0.5) {
+        experienceScore = 70;
+      } else {
+        experienceScore = Math.min(100, (yearsOfExperience / requiredYears) * 100);
+      }
+      
+      // Bonus for exceeding requirements
+      if (yearsOfExperience >= requiredYears * 1.5) {
+        experienceScore = Math.min(100, experienceScore + 10);
+      }
+      
+      console.log(`[Experience Match] User: ${yearsOfExperience.toFixed(1)} yrs (${userLevel}), Required: ${requiredYears} yrs (${requiredLevel}), Score: ${experienceScore}`);
+      
+      return Math.round(experienceScore);
+    } catch (error) {
+      console.error('Error calculating experience match:', error);
+      return 100; // Default to perfect match if error
+    }
+  }
+
+  /**
+   * UC-123: Calculate education match against job requirements
+   */
+  private async calculateEducationMatch(jobDescription: string = '', educationData: any[]): Promise<number> {
+    try {
+      const jobDescLower = jobDescription.toLowerCase();
+      
+      // Check if job requires specific education
+      const requiresBachelor = jobDescLower.includes("bachelor") || jobDescLower.includes("b.s.") || jobDescLower.includes("b.a.");
+      const requiresMaster = jobDescLower.includes("master") || jobDescLower.includes("m.s.") || jobDescLower.includes("m.a.");
+      const requiresPhd = jobDescLower.includes("phd") || jobDescLower.includes("doctorate");
+      const requiresCertification = jobDescLower.includes("certification") || jobDescLower.includes("certified");
+      
+      // Default score
+      let educationScore = 100;
+      
+      // If no specific education requirement found, give full marks
+      if (!requiresBachelor && !requiresMaster && !requiresPhd && !requiresCertification) {
+        return 100;
+      }
+      
+      // Check user's education
+      const userDegrees = educationData.map(e => e.degree_type?.toLowerCase() || '');
+      
+      if (requiresPhd) {
+        educationScore = userDegrees.some(d => d.includes('phd') || d.includes('doctorate')) ? 100 : 70;
+      } else if (requiresMaster) {
+        educationScore = userDegrees.some(d => d.includes('master') || d.includes('m.s')) ? 100 : 
+                        userDegrees.some(d => d.includes('bachelor')) ? 85 : 70;
+      } else if (requiresBachelor) {
+        educationScore = userDegrees.some(d => d.includes('bachelor') || d.includes('b.s') || d.includes('b.a')) ? 100 : 80;
+      }
+      
+      console.log(`[Education Match] Score: ${educationScore}`);
+      
+      return educationScore;
+    } catch (error) {
+      console.error('Error calculating education match:', error);
+      return 100;
+    }
+  }
+
+  /**
+   * Infer experience level from job description/title
+   */
+  private inferExperienceLevel(text: string): string {
+    const textLower = text.toLowerCase();
+    if (textLower.includes('senior') || textLower.includes('lead') || textLower.includes('principal')) {
+      return 'senior';
+    } else if (textLower.includes('mid') || textLower.includes('intermediate')) {
+      return 'mid';
+    }
+    return 'entry';
+  }
+
+  /**
+   * Map profile skill proficiency labels to numeric levels for matching
+   * Beginner=1, Intermediate=2, Advanced=3, Expert=4
+   */
+  private mapProficiencyToLevel(proficiency: string): number {
+    switch ((proficiency || '').toLowerCase()) {
+      case 'beginner':
+        return 1;
+      case 'intermediate':
+        return 2;
+      case 'advanced':
+        return 3;
+      case 'expert':
+        return 4;
+      default:
+        return 1;
+    }
   }
 
 }

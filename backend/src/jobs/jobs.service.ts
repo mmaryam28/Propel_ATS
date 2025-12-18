@@ -79,8 +79,8 @@ function toApi(row: any) {
     glassdoorRating: row.glassdoorRating ?? null,
     glassdoorUrl: row.glassdoorUrl ?? null,
   // UC-042 materials linkage
-  resumeVersionId: row.resumeVersionId ?? null,
-  coverLetterVersionId: row.coverLetterVersionId ?? null,
+    resumeVersionId: row.resumeVersionId ?? null,
+    coverLetterVersionId: row.coverLetterVersionId ?? null,
     notes: row.notes ?? null,
     negotiationNotes: row.negotiationNotes ?? row.negotiation_notes ?? null,
     interviewNotes: row.interviewNotes ?? row.interview_notes ?? null,
@@ -110,6 +110,7 @@ export class JobsService {
     private geocodingService: GeocodingService,
     @Inject(forwardRef(() => ApiMonitoringService))
     private apiMonitoringService: ApiMonitoringService,
+    private geocodingService: GeocodingService,
   ) {}
 
   async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string, showArchived?: boolean) {
