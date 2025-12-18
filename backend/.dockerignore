@@ -46,10 +46,7 @@ coverage
 .github
 .gitlab-ci.yml
 
-# Other
+# Other (keep build-related configs for Docker build)
 .prettierrc
 .eslintrc.js
 .editorconfig
-tsconfig.json
-tsconfig.build.json
-nest-cli.json
