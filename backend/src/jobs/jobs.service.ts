@@ -109,8 +109,8 @@ export class JobsService {
     private supabase: SupabaseService,
     @Inject(forwardRef(() => ApiMonitoringService))
     private apiMonitoringService: ApiMonitoringService,
+    private geocodingService: GeocodingService,
   ) {}
-  constructor(private supabase: SupabaseService, private geocodingService: GeocodingService) {}
 
   async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string, showArchived?: boolean) {
     const client = this.supabase.getClient();
