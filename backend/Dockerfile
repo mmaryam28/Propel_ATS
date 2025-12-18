@@ -1,64 +1,35 @@
-# Backend Dockerfile for Railway deployment with Ollama support
-# Multi-stage build for optimized image size and security
+# Optimized Dockerfile with Ollama for Railway (under 4GB limit)
+# Uses smaller model (tinyllama) to reduce image size
 
 # Stage 1: Build the application
 FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
-
-# Copy package files for dependency installation
 COPY package*.json ./
-
-# Install ALL dependencies (including devDependencies needed for build)
 RUN npm ci
-
-# Copy all source code
 COPY . .
-
-# Build the NestJS application (compiles TypeScript to JavaScript)
 RUN npm run build
-
-# Remove devDependencies after build
 RUN npm prune --production
 
 # Stage 2: Production runtime with Ollama
 FROM node:20-alpine AS production
 
-# Add build arg to bust cache
-ARG CACHEBUST=1
+# Install minimal dependencies
+RUN apk add --no-cache curl bash dumb-init ca-certificates
 
-# Install curl for health checks and downloading Ollama
-RUN apk add --no-cache curl bash dumb-init
-
-# Install Ollama
+# Install Ollama (minimal installation, model pulled at runtime)
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
-# Create non-root user for security
+# Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
 
-# Set working directory
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
-
-# Copy production node_modules from builder
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
-
-# Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-
-# Bust cache to ensure fresh copy of start.sh
-RUN echo "Cache bust: $CACHEBUST"
-
-# Copy startup script 
 COPY --chown=nestjs:nodejs start.sh ./start.sh
 RUN chmod +x ./start.sh
 
-# Expose ports
-# 3000 for NestJS API
-# 11434 for Ollama (internal only)
 EXPOSE 3000
 
 # Use startup script to launch both Ollama and NestJS
