@@ -14,6 +14,9 @@ RUN npm prune --production
 # Stage 2: Production runtime with Ollama
 FROM node:20-alpine AS production
 
+# Force cache invalidation
+ARG CACHEBUST=3
+
 # Install minimal dependencies
 RUN apk add --no-cache curl bash dumb-init ca-certificates
 
