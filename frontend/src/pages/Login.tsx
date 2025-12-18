@@ -10,6 +10,8 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
 
+  //new line to force commit
+  
   // Handle OAuth token from redirect
   useEffect(() => {
     const token = searchParams.get('token');
