@@ -110,6 +110,7 @@ export class JobsService {
     private geocodingService: GeocodingService,
     @Inject(forwardRef(() => ApiMonitoringService))
     private apiMonitoringService: ApiMonitoringService,
+    private geocodingService: GeocodingService,
   ) {}
 
   async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string, showArchived?: boolean) {
@@ -678,6 +679,10 @@ export class JobsService {
     const apiKey = process.env.NEWS_API_KEY;
     // Primary: NewsAPI.org when key available
     if (apiKey) {
+      const start = Date.now();
+      const serviceName = 'NewsAPI';
+      const quota = 100; // NewsAPI free tier: 100 requests/day
+
       try {
         const url = new URL('https://newsapi.org/v2/everything');
         url.searchParams.set('q', `"${company}"`);
@@ -686,6 +691,10 @@ export class JobsService {
         url.searchParams.set('pageSize', '5');
         const res = await fetch(url.toString(), { headers: { 'X-Api-Key': apiKey } });
         const json = await res.json();
+
+        // Record API usage
+        this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
+
         if (res.ok && Array.isArray(json.articles) && json.articles.length) {
           const articles = json.articles.map((a: any) => ({
             title: a.title,
@@ -696,7 +705,11 @@ export class JobsService {
           }));
           return { company, articles };
         }
-      } catch {/* fall through to RSS */}
+      } catch (error) {
+        // Record error
+        this.apiMonitoringService.recordError(serviceName, error?.message || String(error));
+        /* fall through to RSS */
+      }
     }
 
     // Fallback: Google News RSS (no key required)

@@ -14,10 +14,10 @@ export default function ApiMonitoringDashboard() {
       setLoading(true);
       try {
         const [usageRes, errorsRes, alertsRes, respTimeRes] = await Promise.all([
-          axios.get('/admin/api-monitoring/usage'),
-          axios.get('/admin/api-monitoring/errors'),
-          axios.get('/admin/api-monitoring/alerts'),
-          axios.get('/admin/api-monitoring/response-times'),
+          axios.get('/api-monitoring/usage'),
+          axios.get('/api-monitoring/errors'),
+          axios.get('/api-monitoring/alerts'),
+          axios.get('/api-monitoring/response-times'),
         ]);
         setUsage(usageRes.data);
         setErrors(errorsRes.data);

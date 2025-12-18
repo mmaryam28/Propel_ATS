@@ -1,5 +1,6 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { ApiMonitoringService } from '../api-monitoring/api-monitoring.service';
 import axios from 'axios';
 
 @Injectable()
@@ -8,7 +9,10 @@ export class GitHubService {
   private readonly clientSecret = process.env.GITHUB_CLIENT_SECRET;
   private readonly redirectUri = process.env.GITHUB_REDIRECT_URI || 'http://localhost:3000/github/callback';
 
-  constructor(private supabase: SupabaseService) {}
+  constructor(
+    private supabase: SupabaseService,
+    private apiMonitoringService: ApiMonitoringService,
+  ) {}
 
   // Generate GitHub OAuth URL
   getAuthUrl(userId: string) {
@@ -21,6 +25,10 @@ export class GitHubService {
 
   // Handle OAuth callback
   async handleCallback(code: string, state: string) {
+    const start = Date.now();
+    const serviceName = 'GitHub API';
+    const quota = 5000; // GitHub authenticated API quota: 5000 requests/hour
+
     try {
       // Extract userId from state
       const decoded = JSON.parse(Buffer.from(state, 'base64').toString());
@@ -85,8 +93,13 @@ export class GitHubService {
       // Trigger initial sync
       await this.syncRepositories(userId);
 
+      // Record successful API usage
+      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
+
       return { success: true, connection: data };
     } catch (error) {
+      // Record API error
+      this.apiMonitoringService.recordError(serviceName, error?.message || String(error));
       console.error('GitHub OAuth error:', error);
       throw new HttpException(
         'Failed to connect GitHub account',
@@ -129,6 +142,10 @@ export class GitHubService {
 
   // Sync repositories from GitHub
   async syncRepositories(userId: string) {
+    const start = Date.now();
+    const serviceName = 'GitHub API';
+    const quota = 5000;
+
     const connection = await this.getConnection(userId);
     if (!connection) {
       throw new HttpException('GitHub not connected', HttpStatus.BAD_REQUEST);
@@ -259,8 +276,13 @@ export class GitHubService {
         .update({ last_synced_at: new Date().toISOString() })
         .eq('user_id', userId);
 
+      // Record successful API usage
+      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
+
       return { success: true, count: repos.length };
     } catch (error) {
+      // Record error
+      this.apiMonitoringService.recordError(serviceName, error?.message || String(error));
       console.error('Sync repositories error:', error);
       throw new HttpException(
         'Failed to sync repositories',
