@@ -60,6 +60,8 @@ export default function Login() {
     }
   };
 
+  const API_BASE = (import.meta as any).env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
+
   return (
     <div className="auth-page">
       <header className="lp-header container">
@@ -104,14 +106,14 @@ export default function Login() {
             <button
               type="button"
               className="btn btn--oauth"
-              onClick={() => (window.location.href = "http://localhost:3000/auth/google")}
+              onClick={() => (window.location.href = `${API_BASE}/auth/google`)}
             >
               Sign in with Google
             </button>
             <button
               type="button"
               className="btn btn--oauth"
-              onClick={() => (window.location.href = "http://localhost:3000/auth/linkedin")}
+              onClick={() => (window.location.href = `${API_BASE}/auth/linkedin`)}
             >
               Sign in with LinkedIn
             </button>

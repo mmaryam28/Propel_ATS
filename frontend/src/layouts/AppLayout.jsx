@@ -15,7 +15,7 @@ function Breadcrumbs() {
   const [segments, setSegments] = useState([]);
 
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const API = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
     const parts = location.pathname.split("/").filter(Boolean);
     const acc = [];
     
@@ -131,7 +131,7 @@ function Navbar() {
   const [profilePicture, setProfilePicture] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
+  const API = import.meta?.env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
   useEffect(() => {
     const fetchProfilePicture = async () => {

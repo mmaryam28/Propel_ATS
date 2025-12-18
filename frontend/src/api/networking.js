@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -53,7 +53,7 @@ export const linkedinAuthAPI = {
       }
       
       // Redirect directly to the connect endpoint which uses the linkedin-networking strategy
-      window.location.href = `http://localhost:3000/linkedin-auth/connect?state=${encodeURIComponent(userId)}`;
+      window.location.href = `${API_URL}/linkedin-auth/connect?state=${encodeURIComponent(userId)}`;
     } catch (error) {
       console.error('Failed to initiate LinkedIn connection:', error);
       throw error;

@@ -23,7 +23,8 @@ export default function GeneratePage() {
   async function loadJobs() {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/jobs', {
+      const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+      const res = await fetch(`${base}/jobs`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {

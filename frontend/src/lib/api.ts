@@ -4,7 +4,7 @@ import axios from 'axios';
 // Use Vite's import.meta.env for API base URL, fallback to localhost
 const API_BASE_URL = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL
-  : 'http://localhost:3000';
+  : 'https://cs490-backend.onrender.com';
 console.log('API base:', API_BASE_URL);
 
 export const api = axios.create({
