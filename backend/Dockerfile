@@ -1,5 +1,6 @@
 # Multi-stage Dockerfile for NestJS + Ollama on Railway
 # Model is pulled at RUNTIME, not baked into image
+# REBUILD: 2025-12-18T02:00:00Z
 
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -9,7 +10,9 @@ COPY . .
 RUN npm install --only=development && npm run build
 
 FROM node:20-alpine
-RUN apk add --no-cache curl bash dumb-init && \
+ARG CACHEBUST=20251218
+RUN echo "Cache bust: $CACHEBUST" && \
+    apk add --no-cache curl bash dumb-init && \
     curl -fsSL https://ollama.com/install.sh | sh && \
     addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001 && \
