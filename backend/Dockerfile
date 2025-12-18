@@ -46,11 +46,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
-# List files to debug (will show if start.sh exists in build context)
-RUN ls -la /app || true
-
-# Copy startup script from build context (Railway root is backend/)
-COPY --chown=nestjs:nodejs ./start.sh ./start.sh
+# Copy startup script 
+COPY --chown=nestjs:nodejs start.sh ./start.sh
 RUN chmod +x ./start.sh
 
 # Expose ports
