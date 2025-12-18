@@ -36,9 +36,29 @@ export class MatchService {
     
     console.log(`[Match] User ${userId} has ${userSkillsData?.length || 0} skills in user_skills table`);
     
-    if (!userSkillsData || userSkillsData.length === 0) {
-      console.warn(`[Match] User ${userId} has no skills - returning error`);
-      return { 
+    // Fallback: If user_skills is empty, use new profile `skills` table
+    let profileSkills: any[] | null = userSkillsData;
+    if (!profileSkills || profileSkills.length === 0) {
+      const { data: altSkills, error: altErr } = await supabase
+        .from('skills')
+        .select('name, proficiency, "userId"')
+        .eq('"userId"', userId);
+      if (altErr) {
+        console.error('[Match] Error fetching fallback skills:', altErr);
+      }
+      if (altSkills && altSkills.length > 0) {
+        console.log(`[Match] Fallback skills found in 'skills' table: ${altSkills.length}`);
+        // Normalize into same structure as user_skills join result
+        profileSkills = altSkills.map((s: any) => ({
+          skills: { name: s.name },
+          level: this.mapProficiencyToLevel(s.proficiency)
+        }));
+      }
+    }
+
+    if (!profileSkills || profileSkills.length === 0) {
+      console.warn(`[Match] User ${userId} has no skills across known tables`);
+      return {
         error: "No skills found for this user. Please add skills at /skills first.",
         score: 0,
         breakdown: {
@@ -52,12 +72,13 @@ export class MatchService {
       };
     }
 
-    // Map to { skillName: level } - filter out skills that couldn't be joined
+    // Map to { normalizedSkillName: level } for robust case-insensitive matching
+    const normalize = (s: string) => (s ?? "").toString().trim().toLowerCase();
     const userSkills: Record<string, number> = Object.fromEntries(
-      userSkillsData
+      profileSkills
         .filter((row: any) => row.skills && row.skills.name)
         .map((row: any) => [
-          row.skills.name,
+          normalize(row.skills.name),
           row.level ?? 0,
         ])
     );
@@ -88,9 +109,10 @@ export class MatchService {
     if (jobSkillsData && jobSkillsData.length > 0) {
       for (const js of jobSkillsData) {
         const skillName = js.skill_name;
+        const normalizedSkillName = normalize(skillName);
         const need = js.req_level ?? 0;
         const w = js.weight ?? 1;
-        const have = userSkills[skillName] ?? 0;
+        const have = userSkills[normalizedSkillName] ?? 0;
         const skillScore = Math.min(have / Math.max(need, 1), 1) * 100;
 
         totalWeight += w;
@@ -182,12 +204,25 @@ async getSkillGaps(userId: string, jobId: string) {
 
   if (userErr) throw userErr;
 
-  // Create map keyed by skill name, filter out null joins
-  const skillMap = Object.fromEntries(
+  // Create map keyed by normalized skill name, filter out null joins
+  const normalize = (s: string) => (s ?? "").toString().trim().toLowerCase();
+  let skillMap = Object.fromEntries(
     (userSkills || [])
       .filter((us: any) => us.skills && us.skills.name)
-      .map((us: any) => [us.skills.name, us.level])
+      .map((us: any) => [normalize(us.skills.name), us.level])
   );
+  // Fallback to profile skills table if needed
+  if (!userSkills || userSkills.length === 0 || Object.keys(skillMap).length === 0) {
+    const { data: altSkills } = await supabase
+      .from('skills')
+      .select('name, proficiency, "userId"')
+      .eq('"userId"', userId);
+    if (altSkills && altSkills.length > 0) {
+      skillMap = Object.fromEntries(
+        altSkills.map((s: any) => [normalize(s.name), this.mapProficiencyToLevel(s.proficiency)])
+      );
+    }
+  }
 
   // 2️⃣ Fetch job's required skills (using denormalized structure)
   const { data: jobSkills, error: jobErr } = await supabase
@@ -202,7 +237,7 @@ async getSkillGaps(userId: string, jobId: string) {
     .map((js: any) => {
       const skillName = js.skill_name;
       const required = js.req_level ?? 0;
-      const have = skillMap[skillName] ?? 0;
+      const have = skillMap[normalize(skillName)] ?? 0;
       const progress = Math.round((have / Math.max(required, 1)) * 100);
       const gapScore = required - have;
       return { skill: skillName, required, have, progress, gapScore };
@@ -230,7 +265,7 @@ async getSkillGaps(userId: string, jobId: string) {
     .map((js: any) => {
       const skillName = js.skill_name;
       const required = js.req_level ?? 0;
-      const have = skillMap[skillName] ?? 0;
+      const have = skillMap[normalize(skillName)] ?? 0;
       const progress = Math.round((have / Math.max(required, 1)) * 100);
       return { skill: skillName, required, have, progress };
     })
@@ -457,6 +492,7 @@ async getSkillGaps(userId: string, jobId: string) {
   async getUserSkills(userId: string) {
     const supabase = this.supabaseService.getClient();
     
+    // Try legacy user_skills first
     const { data, error } = await supabase
       .from("user_skills")
       .select(`
@@ -470,19 +506,34 @@ async getSkillGaps(userId: string, jobId: string) {
       `)
       .eq("user_id", userId);
 
-    if (error) {
-      console.error('Error fetching user skills:', error);
+    if (!error && data && data.length > 0) {
+      return data
+        .filter((row: any) => row.skills && row.skills.name)
+        .map((row: any) => ({
+          id: row.skill_id,
+          name: row.skills.name,
+          category: row.skills.category,
+          level: row.level
+        }));
+    }
+
+    // Fallback to profile `skills` table
+    const { data: altSkills, error: altErr } = await supabase
+      .from('skills')
+      .select('id, name, category, proficiency, "userId"')
+      .eq('"userId"', userId);
+
+    if (altErr) {
+      console.error('Error fetching fallback skills:', altErr);
       return [];
     }
 
-    return data
-      ?.filter((row: any) => row.skills && row.skills.name)
-      .map((row: any) => ({
-        id: row.skill_id,
-        name: row.skills.name,
-        category: row.skills.category,
-        level: row.level
-      })) || [];
+    return (altSkills || []).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      category: s.category,
+      level: this.mapProficiencyToLevel(s.proficiency)
+    }));
   }
 
   async getUserWeights(userId: string) {
@@ -725,6 +776,25 @@ async getSkillGaps(userId: string, jobId: string) {
       return 'mid';
     }
     return 'entry';
+  }
+
+  /**
+   * Map profile skill proficiency labels to numeric levels for matching
+   * Beginner=1, Intermediate=2, Advanced=3, Expert=4
+   */
+  private mapProficiencyToLevel(proficiency: string): number {
+    switch ((proficiency || '').toLowerCase()) {
+      case 'beginner':
+        return 1;
+      case 'intermediate':
+        return 2;
+      case 'advanced':
+        return 3;
+      case 'expert':
+        return 4;
+      default:
+        return 1;
+    }
   }
 
 }

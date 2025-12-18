@@ -579,7 +579,7 @@ export default function JobDetails() {
       {userId && (
         <Card variant="default" size="large">
           <Card.Header>
-            <Card.Title>UC-123: Job Requirements Match Analysis</Card.Title>
+            <Card.Title>Job Requirements Match Analysis</Card.Title>
           </Card.Header>
           <Card.Body>
             <JobRequirementsMatch jobId={jobId} userId={userId} />

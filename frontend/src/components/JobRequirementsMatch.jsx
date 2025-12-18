@@ -93,9 +93,31 @@ export default function JobRequirementsMatch({ jobId, userId }) {
   const strengths = matchData.strengths || [];
   const gaps = matchData.gaps || [];
   const recommendations = matchData.recommendations || [];
+  const hasNoSkillsError = matchData.error && matchData.error.toLowerCase().includes('no skills found');
 
   return (
     <div className="space-y-6">
+      {/* No Skills Warning Banner */}
+      {hasNoSkillsError && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-lg shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-amber-900 mb-1">No Skills in Your Profile</h3>
+              <p className="text-sm text-amber-800 mb-3">
+                To see your job match score and get personalized recommendations, you need to add skills to your profile first.
+              </p>
+              <a 
+                href="/skills" 
+                className="inline-block px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                → Add Skills to Your Profile
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header with overall score */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Job Requirements Match Analysis</h2>
@@ -239,44 +261,154 @@ export default function JobRequirementsMatch({ jobId, userId }) {
 
       {/* Gaps Tab */}
       {activeTab === 'gaps' && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Missing Skills or Requirements</h3>
-          {gaps && gaps.length > 0 ? (
-            <div className="space-y-3">
-              {gaps.map((gap, idx) => (
-                <div key={idx} className="p-4 bg-orange-50 rounded-lg border-l-4 border-orange-500 hover:bg-orange-100 transition-colors">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold text-gray-900">{gap.skill}</h4>
-                    <span className="text-xs font-semibold px-2 py-1 bg-orange-200 text-orange-800 rounded-full">
-                      Gap: {gap.need - gap.have} levels
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-2">
-                    Current Level: <strong>{gap.have}</strong> | Required Level: <strong>{gap.need}</strong>
-                  </p>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-orange-500 h-2 rounded-full"
-                      style={{ width: `${Math.min((gap.have / gap.need) * 100, 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
+        <div className="space-y-6">
+          {/* Priority Skills to Add */}
+          {gaps && gaps.length > 0 && (
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg p-6 shadow-sm">
+              <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <span className="text-2xl">🎯</span>
+                Add These Skills to Improve Your Score
+              </h3>
+              <p className="text-sm text-gray-700 mb-4">
+                Adding or improving these skills will directly increase your match score for this job:
+              </p>
+              <div className="space-y-3">
+                {gaps.slice(0, 10).map((gap, idx) => {
+                  const impact = gap.weight || 1;
+                  const potentialIncrease = Math.round((impact / 10) * 7); // Approximate score increase
+                  const isNewSkill = gap.have === 0;
+                  
+                  return (
+                    <div key={idx} className="p-4 bg-white rounded-lg border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <h4 className="font-bold text-gray-900 text-lg">{gap.skill}</h4>
+                          <div className="flex gap-4 mt-1">
+                            <span className="text-sm text-gray-600">
+                              {isNewSkill ? (
+                                <span className="text-red-600 font-semibold">⚠ Not in your profile</span>
+                              ) : (
+                                <span>Your Level: <strong>{gap.have}</strong></span>
+                              )}
+                            </span>
+                            <span className="text-sm text-gray-600">
+                              Required: <strong className="text-orange-600">{gap.need}</strong>
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+                            +{potentialIncrease}% score
+                          </span>
+                          {impact >= 5 && (
+                            <div className="mt-1">
+                              <span className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
+                                HIGH PRIORITY
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="mb-2">
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div
+                            className="bg-orange-500 h-3 rounded-full transition-all"
+                            style={{ width: `${Math.min((gap.have / gap.need) * 100, 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start gap-2 mt-2">
+                        <span className="text-blue-600 text-sm">💡</span>
+                        <p className="text-sm text-gray-700">
+                          {isNewSkill ? (
+                            <strong className="text-red-700">Add this skill to your profile at level {gap.need} to meet requirements</strong>
+                          ) : (
+                            `Improve from level ${gap.have} to ${gap.need} (${gap.need - gap.have} level${gap.need - gap.have > 1 ? 's' : ''} needed)`
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          ) : (
-            <p className="text-gray-600">Excellent! No significant skill gaps identified.</p>
+          )}
+          
+          {/* Action Plan */}
+          {gaps && gaps.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 Quick Action Plan</h3>
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                  <h4 className="font-semibold text-blue-900 mb-2">Step 1: Update Your Profile</h4>
+                  <p className="text-sm text-blue-800 mb-2">Go to your Skills page and add the missing skills above, especially the HIGH PRIORITY ones.</p>
+                  <a href="/skills" className="inline-block text-sm font-semibold text-blue-700 hover:text-blue-900 underline">
+                    → Go to Skills Page
+                  </a>
+                </div>
+                
+                <div className="p-4 bg-purple-50 border-l-4 border-purple-500 rounded">
+                  <h4 className="font-semibold text-purple-900 mb-2">Step 2: Learn & Improve</h4>
+                  <ul className="text-sm text-purple-800 space-y-1">
+                    <li>• Take online courses (Coursera, Udemy, LinkedIn Learning)</li>
+                    <li>• Work on projects that use these skills</li>
+                    <li>• Get certifications if available</li>
+                    <li>• Practice through coding challenges</li>
+                  </ul>
+                </div>
+                
+                <div className="p-4 bg-green-50 border-l-4 border-green-500 rounded">
+                  <h4 className="font-semibold text-green-900 mb-2">Step 3: Show Evidence</h4>
+                  <p className="text-sm text-green-800">In your application, highlight projects or experiences where you've used similar skills, even if not at the required level yet.</p>
+                </div>
+              </div>
+            </div>
           )}
 
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <h4 className="font-semibold text-yellow-900 mb-2">📚 How to Address Gaps</h4>
-            <ul className="text-sm text-yellow-800 space-y-2">
-              <li>• Take online courses (Coursera, Udemy, LinkedIn Learning)</li>
-              <li>• Work on side projects to build practical experience</li>
-              <li>• Seek mentorship or pair programming opportunities</li>
-              <li>• Read industry books and documentation</li>
-              <li>• Contribute to open-source projects</li>
-            </ul>
-          </div>
+          {(!gaps || gaps.length === 0) && (
+            breakdown?.skills === 0 ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 shadow-sm">
+                <div className="text-center py-2">
+                  <span className="text-4xl mb-2 block">⚠️</span>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Job Requirements Defined</h3>
+                  <p className="text-gray-700 mb-4">
+                    This job doesn’t have required skills set yet. To see which skills to add for a better match,
+                    please add job requirements.
+                  </p>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-white border rounded">
+                    <h4 className="font-semibold text-gray-900 mb-2">How to add job skills</h4>
+                    <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                      <li>Open Jobs list</li>
+                      <li>Find this job and click <span className="font-semibold">🔧 Manage Skills</span></li>
+                      <li>Add required skills with level and weight</li>
+                    </ol>
+                    <a href="/jobs" className="inline-block mt-3 text-sm font-semibold text-blue-700 hover:text-blue-900 underline">
+                      → Go to Jobs
+                    </a>
+                  </div>
+                  <div className="p-4 bg-white border rounded">
+                    <h4 className="font-semibold text-gray-900 mb-2">Then update your profile</h4>
+                    <p className="text-sm text-gray-700">Add missing skills on your Skills page to improve your match.</p>
+                    <a href="/skills" className="inline-block mt-3 text-sm font-semibold text-blue-700 hover:text-blue-900 underline">
+                      → Go to Skills
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div className="text-center py-8">
+                  <span className="text-6xl mb-4 block">🎉</span>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Excellent! No Skill Gaps</h3>
+                  <p className="text-gray-600">You meet or exceed all the requirements for this position.</p>
+                </div>
+              </div>
+            )
+          )}
         </div>
       )}
 
