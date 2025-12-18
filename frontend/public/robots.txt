@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Sitemap (uncomment and set if you publish a sitemap)
+# Sitemap: https://your-domain.example.com/sitemap.xml
+
+# Crawl-delay: 10

@@ -6,12 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Propel</title>
 
-    <!-- Fast font loading + fallbacks -->
+    <!-- SEO & Social -->
+    <meta name="description" content="Propel — career management tools: track jobs, build resumes, practice interviews, and analyze hiring patterns." />
+    <meta property="og:title" content="Propel — Career Management" />
+    <meta property="og:description" content="Track jobs, build AI-assisted resumes, practice interviews, and gain hiring insights with Propel." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Fast font loading + fallbacks (preload stylesheet to reduce render-blocking) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <!-- Inter = primary/body; Poppins = headings/emphasis -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" as="style" onload="this.rel='stylesheet'">
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

@@ -29,22 +29,28 @@ export class ApplicationQualityService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async scoreApplication(payload: ApplicationQualityScorePayload): Promise<ApplicationQualityScoreResult> {
+    // --- Validate and normalize inputs ---
+    const resume = String(payload.resume || '');
+    const coverLetter = String(payload.coverLetter || '');
+    const linkedIn = String(payload.linkedIn || '');
+    const jobDescription = String(payload.jobDescription || '');
+    
     // --- Alignment scoring ---
     // Simple keyword matching for demo
-    const jobKeywords = this.extractKeywords(payload.jobDescription);
-    const resumeKeywords = this.extractKeywords(payload.resume);
-    const coverLetterKeywords = this.extractKeywords(payload.coverLetter);
-    const linkedInKeywords = this.extractKeywords(payload.linkedIn);
+    const jobKeywords = this.extractKeywords(jobDescription);
+    const resumeKeywords = this.extractKeywords(resume);
+    const coverLetterKeywords = this.extractKeywords(coverLetter);
+    const linkedInKeywords = this.extractKeywords(linkedIn);
     const allKeywords = [...resumeKeywords, ...coverLetterKeywords, ...linkedInKeywords];
     const missingKeywords = jobKeywords.filter(k => !allKeywords.includes(k));
     const alignmentScore = Math.round(((jobKeywords.length - missingKeywords.length) / jobKeywords.length) * 100);
 
     // --- Formatting scoring ---
-    const formattingIssues = this.detectFormattingIssues(payload.resume, payload.coverLetter);
+    const formattingIssues = this.detectFormattingIssues(resume, coverLetter);
     const formattingScore = formattingIssues.length === 0 ? 100 : Math.max(50, 100 - (formattingIssues.length * 15));
 
     // --- Consistency scoring ---
-    const consistencyScore = this.checkConsistency(payload.resume, payload.coverLetter, payload.linkedIn);
+    const consistencyScore = this.checkConsistency(resume, coverLetter, linkedIn);
 
     // --- Suggestions with priority ranking ---
     const suggestions: Array<{ priority: 'high' | 'medium' | 'low'; text: string }> = [];
@@ -90,10 +96,10 @@ export class ApplicationQualityService {
         formatting_issues: formattingIssues,
         suggestions: suggestions,
         can_submit: canSubmit,
-        resume_content: payload.resume,
-        cover_letter_content: payload.coverLetter,
-        linkedin_profile: payload.linkedIn,
-        job_description: payload.jobDescription,
+        resume_content: resume,
+        cover_letter_content: coverLetter,
+        linkedin_profile: linkedIn,
+        job_description: jobDescription,
       })
       .select()
       .single();

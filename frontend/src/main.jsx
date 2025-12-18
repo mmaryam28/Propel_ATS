@@ -6,8 +6,13 @@ import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { initAnalytics } from './lib/analytics';
 
 // Pages
-import ProfileDashboard from './pages/ProfileDashboard.jsx';
-import Jobs from './pages/Jobs';
+// Lazily load heavy routes to improve initial load performance
+const ProfileDashboard = lazy(() => import('./pages/ProfileDashboard.jsx'));
+const Jobs = lazy(() => import('./pages/Jobs'));
+const ResumeDashboard = lazy(() => import('./pages/Resumes/ResumeDashboard.jsx'));
+const AnalyticsDashboard = lazy(() => import('./pages/AnalyticsDashboard'));
+const SuccessPatterns = lazy(() => import('./pages/Analytics/SuccessPatterns'));
+
 import JobPipeline from './pages/JobPipeline.jsx';
 import JobDetails from './pages/JobDetails';
 import JobCalendar from './pages/JobCalendar';
@@ -38,7 +43,6 @@ import PasswordResetRequest from './pages/PasswordResetRequest';
 import PasswordResetComplete from './pages/PasswordResetComplete';
 
 // Resume pages (UC-046 – UC-054)
-import ResumeDashboard from './pages/Resumes/ResumeDashboard.jsx';
 import TemplateManager from './pages/Resumes/TemplateManager.jsx';
 import AIResumeGenerator from './pages/Resumes/AIResumeGenerator.jsx';
 import SectionCustomizer from './pages/Resumes/SectionCustomizer.jsx';
@@ -61,8 +65,7 @@ import CustomReports from './pages/Prepare/CustomReports';
 import Forecasting from './pages/Prepare/Forecasting';
 import ProductivityAnalytics from './pages/Jobs/ProductivityAnalytics';
 import NetworkingAnalytics from './pages/Networking/NetworkingAnalytics';
-import SuccessPatterns from './pages/Analytics/SuccessPatterns';
-import AnalyticsDashboard from './pages/AnalyticsDashboard';
+// (ResumeDashboard, SuccessPatterns, AnalyticsDashboard are lazy-loaded above)
 
 
 // Networking pages
@@ -138,8 +141,16 @@ const router = createBrowserRouter([
   {
     element: <AppLayout />, // navbar + breadcrumbs on every child route
     children: [
-      { path: '/dashboard', element: <ProfileDashboard /> },
-      { path: '/jobs', element: <Jobs /> },
+      { path: '/dashboard', element: (
+        <Suspense fallback={<div>Loading dashboard…</div>}>
+          <ProfileDashboard />
+        </Suspense>
+      ) },
+      { path: '/jobs', element: (
+        <Suspense fallback={<div>Loading jobs…</div>}>
+          <Jobs />
+        </Suspense>
+      ) },
       { path: '/jobs/duplicates', element: <DuplicatesPage /> },
       { path: '/jobs/pipeline', element: <JobPipeline /> },
       { path: '/jobs/calendar', element: <JobCalendar /> },
@@ -170,7 +181,11 @@ const router = createBrowserRouter([
       { path: '/security', element: <SecurityDemo /> }, // UC-135: Security demo
       { path: '/accessibility', element: <AccessibilityDemo /> }, // UC-144: Accessibility testing
 
-      { path: '/resumes', element: <ResumeDashboard /> },
+      { path: '/resumes', element: (
+        <Suspense fallback={<div>Loading resumes…</div>}>
+          <ResumeDashboard />
+        </Suspense>
+      ) },
       { path: '/resumes/templates', element: <TemplateManager /> },
       { path: '/resumes/ai', element: <AIResumeGenerator /> },
       { path: '/resumes/customize', element: <SectionCustomizer /> },
@@ -190,8 +205,16 @@ const router = createBrowserRouter([
       { path: '/prepare/forecasting', element: <Forecasting /> },
       { path: '/productivity-tracker', element: <ProductivityAnalytics /> },
       { path: '/network-analytics', element: <NetworkingAnalytics /> },
-      { path: '/success-patterns', element: <SuccessPatterns /> },
-      { path: '/analytics', element: <AnalyticsDashboard /> },
+      { path: '/success-patterns', element: (
+        <Suspense fallback={<div>Loading…</div>}>
+          <SuccessPatterns />
+        </Suspense>
+      ) },
+      { path: '/analytics', element: (
+        <Suspense fallback={<div>Loading analytics…</div>}>
+          <AnalyticsDashboard />
+        </Suspense>
+      ) },
       { path: '/timing-optimizer', element: <TimingOptimizerPage /> },
 
       // Networking routes
