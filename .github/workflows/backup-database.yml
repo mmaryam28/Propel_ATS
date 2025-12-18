@@ -1,0 +1,303 @@
+name: Automated Database Backup
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      backup_type:
+        description: 'Type of backup'
+        required: true
+        type: choice
+        options:
+          - daily
+          - weekly
+          - monthly
+          - manual
+
+jobs:
+  backup:
+    name: Backup Database
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      
+      - name: Set backup type
+        id: backup_type
+        run: |
+          if [ "${{ github.event_name }}" == "schedule" ]; then
+            # Check if it's first day of month
+            if [ $(date +%d) -eq 01 ]; then
+              echo "type=monthly" >> $GITHUB_OUTPUT
+            # Check if it's Sunday
+            elif [ $(date +%u) -eq 7 ]; then
+              echo "type=weekly" >> $GITHUB_OUTPUT
+            else
+              echo "type=daily" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "type=${{ github.event.inputs.backup_type || 'manual' }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Generate backup filename
+        id: filename
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d-%H%M%S)
+          DAY_OF_WEEK=$(date +%A)
+          TYPE="${{ steps.backup_type.outputs.type }}"
+          FILENAME="backup-${TYPE}-${TIMESTAMP}.sql"
+          echo "filename=$FILENAME" >> $GITHUB_OUTPUT
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+      
+      - name: Create database backup
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL_PROD }}
+        run: |
+          echo "📦 Creating database backup..."
+          pg_dump "$DATABASE_URL" \
+            --no-owner \
+            --no-acl \
+            --clean \
+            --if-exists \
+            --format=plain \
+            --file="${{ steps.filename.outputs.filename }}"
+          
+          echo "✅ Backup created: ${{ steps.filename.outputs.filename }}"
+          ls -lh ${{ steps.filename.outputs.filename }}
+      
+      - name: Compress backup
+        run: |
+          echo "🗜️ Compressing backup..."
+          gzip "${{ steps.filename.outputs.filename }}"
+          echo "✅ Compressed: ${{ steps.filename.outputs.filename }}.gz"
+          ls -lh "${{ steps.filename.outputs.filename }}.gz"
+      
+      - name: Calculate backup hash
+        id: hash
+        run: |
+          HASH=$(sha256sum "${{ steps.filename.outputs.filename }}.gz" | awk '{print $1}')
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "📝 Backup hash: $HASH"
+      
+      - name: Install dependencies for upload
+        working-directory: backend
+        run: npm ci
+      
+      - name: Upload to S3
+        working-directory: backend
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+        run: |
+          # Create upload script
+          cat > upload-backup.js << 'EOF'
+          const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+          const fs = require('fs');
+          const path = require('path');
+          
+          async function uploadBackup() {
+            const s3Client = new S3Client({
+              region: process.env.AWS_REGION || 'us-east-1',
+              credentials: {
+                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+              }
+            });
+            
+            const filename = process.env.BACKUP_FILENAME;
+            const filepath = path.join('..', filename);
+            const fileContent = fs.readFileSync(filepath);
+            
+            const command = new PutObjectCommand({
+              Bucket: process.env.S3_BUCKET,
+              Key: `database-backups/${filename}`,
+              Body: fileContent,
+              ContentType: 'application/gzip',
+              Metadata: {
+                'backup-type': process.env.BACKUP_TYPE,
+                'timestamp': process.env.TIMESTAMP,
+                'hash': process.env.BACKUP_HASH
+              }
+            });
+            
+            await s3Client.send(command);
+            console.log('✅ Backup uploaded to S3');
+          }
+          
+          uploadBackup().catch(console.error);
+          EOF
+          
+          # Install AWS SDK if not already present
+          npm install @aws-sdk/client-s3 || true
+          
+          # Upload backup
+          BACKUP_FILENAME="${{ steps.filename.outputs.filename }}.gz" \
+          BACKUP_TYPE="${{ steps.filename.outputs.type }}" \
+          TIMESTAMP="${{ steps.filename.outputs.timestamp }}" \
+          BACKUP_HASH="${{ steps.hash.outputs.hash }}" \
+          node upload-backup.js
+      
+      - name: Record backup in database
+        working-directory: backend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_PROD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Create script to record backup
+          cat > record-backup.js << 'EOF'
+          const { createClient } = require('@supabase/supabase-js');
+          const fs = require('fs');
+          const path = require('path');
+          
+          async function recordBackup() {
+            const supabase = createClient(
+              process.env.SUPABASE_URL,
+              process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+            
+            const filename = process.env.BACKUP_FILENAME;
+            const filepath = path.join('..', filename);
+            const stats = fs.statSync(filepath);
+            
+            const { error } = await supabase
+              .from('backup_history')
+              .insert({
+                backupType: process.env.BACKUP_TYPE,
+                filename: filename,
+                fileSizeBytes: stats.size,
+                fileHash: process.env.BACKUP_HASH,
+                storageLocation: 's3',
+                status: 'completed',
+                createdBy: 'github-actions'
+              });
+            
+            if (error) throw error;
+            console.log('✅ Backup recorded in database');
+          }
+          
+          recordBackup().catch(console.error);
+          EOF
+          
+          # Install Supabase client if not present
+          npm install @supabase/supabase-js || true
+          
+          # Record backup
+          BACKUP_FILENAME="${{ steps.filename.outputs.filename }}.gz" \
+          BACKUP_TYPE="${{ steps.filename.outputs.type }}" \
+          BACKUP_HASH="${{ steps.hash.outputs.hash }}" \
+          node record-backup.js
+      
+      - name: Cleanup old backups
+        working-directory: backend
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_TYPE: ${{ steps.filename.outputs.type }}
+        run: |
+          # Create cleanup script
+          cat > cleanup-backups.js << 'EOF'
+          const { S3Client, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+          
+          async function cleanupBackups() {
+            const s3Client = new S3Client({
+              region: process.env.AWS_REGION || 'us-east-1',
+              credentials: {
+                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+              }
+            });
+            
+            const backupType = process.env.BACKUP_TYPE;
+            const retentionDays = backupType === 'monthly' ? 180 : (backupType === 'weekly' ? 28 : 7);
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+            
+            console.log(`🗑️ Cleaning up ${backupType} backups older than ${retentionDays} days`);
+            
+            const listCommand = new ListObjectsV2Command({
+              Bucket: process.env.S3_BUCKET,
+              Prefix: 'database-backups/'
+            });
+            
+            const response = await s3Client.send(listCommand);
+            
+            if (!response.Contents) {
+              console.log('No backups found');
+              return;
+            }
+            
+            let deletedCount = 0;
+            for (const obj of response.Contents) {
+              if (obj.Key.includes(`backup-${backupType}-`) && obj.LastModified < cutoffDate) {
+                await s3Client.send(new DeleteObjectCommand({
+                  Bucket: process.env.S3_BUCKET,
+                  Key: obj.Key
+                }));
+                console.log(`Deleted: ${obj.Key}`);
+                deletedCount++;
+              }
+            }
+            
+            console.log(`✅ Deleted ${deletedCount} old backups`);
+          }
+          
+          cleanupBackups().catch(console.error);
+          EOF
+          
+          node cleanup-backups.js
+      
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup-${{ steps.filename.outputs.timestamp }}
+          path: ${{ steps.filename.outputs.filename }}.gz
+          retention-days: 7
+      
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Backup completed successfully"
+          echo "Type: ${{ steps.filename.outputs.type }}"
+          echo "File: ${{ steps.filename.outputs.filename }}.gz"
+          echo "Hash: ${{ steps.hash.outputs.hash }}"
+          # Uncomment to send Slack notification
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{
+          #     "text": "✅ Database backup completed",
+          #     "blocks": [
+          #       {
+          #         "type": "section",
+          #         "text": {
+          #           "type": "mrkdwn",
+          #           "text": "*Type:* ${{ steps.filename.outputs.type }}\n*File:* ${{ steps.filename.outputs.filename }}.gz"
+          #         }
+          #       }
+          #     ]
+          #   }'
+      
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Backup failed"
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{"text": "🚨 Database backup FAILED! Check logs immediately."}'

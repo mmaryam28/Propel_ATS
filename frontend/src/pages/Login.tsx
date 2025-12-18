@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
 import AuthCard from "../components/AuthCard";
+import { api } from "../lib/api";
 import { identifyUser } from "../lib/analytics";
 
 export default function Login() {
@@ -10,6 +10,8 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
 
+  //new line to force commit
+  
   // Handle OAuth token from redirect
   useEffect(() => {
     const token = searchParams.get('token');
@@ -39,7 +41,7 @@ export default function Login() {
 
     try {
       // Expect login response to include user object with id and token
-      const res = await axios.post("/auth/login", form);
+      const res = await api.post("/auth/login", form);
       if (res.data && res.data.token && res.data.user && res.data.user.id) {
         window.localStorage.setItem('token', res.data.token);
         window.localStorage.setItem('userId', res.data.user.id);
@@ -57,6 +59,8 @@ export default function Login() {
       setError("Invalid email or password");
     }
   };
+
+  const API_BASE = (import.meta as any).env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
   return (
     <div className="auth-page">
@@ -102,14 +106,14 @@ export default function Login() {
             <button
               type="button"
               className="btn btn--oauth"
-              onClick={() => (window.location.href = "http://localhost:3000/auth/google")}
+              onClick={() => (window.location.href = `${API_BASE}/auth/google`)}
             >
               Sign in with Google
             </button>
             <button
               type="button"
               className="btn btn--oauth"
-              onClick={() => (window.location.href = "http://localhost:3000/auth/linkedin")}
+              onClick={() => (window.location.href = `${API_BASE}/auth/linkedin`)}
             >
               Sign in with LinkedIn
             </button>

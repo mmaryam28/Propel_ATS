@@ -79,8 +79,8 @@ function toApi(row: any) {
     glassdoorRating: row.glassdoorRating ?? null,
     glassdoorUrl: row.glassdoorUrl ?? null,
   // UC-042 materials linkage
-  resumeVersionId: row.resumeVersionId ?? null,
-  coverLetterVersionId: row.coverLetterVersionId ?? null,
+    resumeVersionId: row.resumeVersionId ?? null,
+    coverLetterVersionId: row.coverLetterVersionId ?? null,
     notes: row.notes ?? null,
     negotiationNotes: row.negotiationNotes ?? row.negotiation_notes ?? null,
     interviewNotes: row.interviewNotes ?? row.interview_notes ?? null,
@@ -107,6 +107,7 @@ function toApi(row: any) {
 export class JobsService {
   constructor(
     private supabase: SupabaseService,
+    private geocodingService: GeocodingService,
     @Inject(forwardRef(() => ApiMonitoringService))
     private apiMonitoringService: ApiMonitoringService,
     private geocodingService: GeocodingService,

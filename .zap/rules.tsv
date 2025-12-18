@@ -1,0 +1,160 @@
+# OWASP ZAP Rules Configuration
+
+# This file configures OWASP ZAP scanning rules and exclusions
+# Format: <action>\t<element-type>\t<pattern>
+# Actions: IGNORE_SCANNER, WARN, FAIL
+# Element types: URL, HEADER, BODY, STATUS_CODE
+
+# Ignore false positives for known safe patterns
+IGNORE_SCANNER	URL	.*\/_next\/static\/.*
+IGNORE_SCANNER	URL	.*\/api\/health.*
+IGNORE_SCANNER	URL	.*\/favicon\.ico.*
+IGNORE_SCANNER	URL	.*\.(css|js|png|jpg|jpeg|gif|svg|woff|woff2|ttf)$
+
+# Ignore authenticated routes that require valid JWT
+IGNORE_SCANNER	URL	.*\/api\/admin\/.*\?.*jwt.*
+
+# Authentication endpoints - don't flag rate limiting as vulnerability
+IGNORE_SCANNER	BODY	.*Rate limit exceeded.*
+
+# API versioning headers - expected behavior
+IGNORE_SCANNER	HEADER	X-API-Version
+
+# Custom security headers - expected
+IGNORE_SCANNER	HEADER	X-RateLimit-.*
+IGNORE_SCANNER	HEADER	X-Request-ID
+
+# GraphQL introspection - disabled in production
+WARN	BODY	.*__schema.*
+
+# Development endpoints - should not exist in production
+FAIL	URL	.*\/debug.*
+FAIL	URL	.*\/test.*
+FAIL	URL	.*\/_dev.*
+
+# Common security issues to actively scan
+FAIL	BODY	.*password.*hash.*
+FAIL	BODY	.*api_key.*
+FAIL	BODY	.*secret.*
+FAIL	BODY	.*private_key.*
+FAIL	HEADER	X-Powered-By
+FAIL	STATUS_CODE	500
+
+# SQL Injection patterns
+FAIL	URL	.*\'.*OR.*\'.*
+FAIL	URL	.*UNION.*SELECT.*
+FAIL	BODY	.*SQL.*syntax.*error.*
+FAIL	BODY	.*pg_.*error.*
+
+# XSS patterns
+FAIL	BODY	.*<script.*>.*alert.*<\/script>.*
+FAIL	BODY	.*onerror=.*alert.*
+FAIL	BODY	.*javascript:.*
+
+# Path traversal
+FAIL	URL	.*\.\.\/.*
+FAIL	URL	.*\.\.\\.*
+
+# SSRF attempts
+FAIL	URL	.*localhost.*
+FAIL	URL	.*127\.0\.0\.1.*
+FAIL	URL	.*169\.254\.169\.254.*
+FAIL	URL	.*192\.168\..*
+FAIL	URL	.*10\..*
+FAIL	URL	.*172\.(1[6-9]|2[0-9]|3[0-1])\..*
+
+# Common admin paths
+WARN	URL	.*\/admin.*
+WARN	URL	.*\/administrator.*
+WARN	URL	.*\/wp-admin.*
+WARN	URL	.*\/phpmyadmin.*
+
+# Sensitive files
+FAIL	URL	.*\.env.*
+FAIL	URL	.*\.git\/.*
+FAIL	URL	.*web\.config.*
+FAIL	URL	.*\.htaccess.*
+FAIL	URL	.*backup\..*
+FAIL	URL	.*\.bak$
+FAIL	URL	.*\.old$
+FAIL	URL	.*\.swp$
+
+# Technology stack disclosure
+WARN	HEADER	Server.*Express.*
+WARN	HEADER	Server.*nginx.*
+WARN	BODY	.*NestJS.*
+WARN	BODY	.*React.*version.*
+
+# Error disclosure
+FAIL	BODY	.*stack.*trace.*at.*
+FAIL	BODY	.*Error:.*at.*line.*
+FAIL	BODY	.*Exception.*at.*
+
+# Session management
+WARN	HEADER	Set-Cookie.*HttpOnly.*
+WARN	HEADER	Set-Cookie.*Secure.*
+WARN	HEADER	Set-Cookie.*SameSite.*
+
+# CORS misconfigurations
+FAIL	HEADER	Access-Control-Allow-Origin:\s*\*
+FAIL	HEADER	Access-Control-Allow-Credentials:\s*true.*Access-Control-Allow-Origin:\s*\*
+
+# Missing security headers
+WARN	MISSING_HEADER	X-Frame-Options
+WARN	MISSING_HEADER	X-Content-Type-Options
+WARN	MISSING_HEADER	X-XSS-Protection
+WARN	MISSING_HEADER	Strict-Transport-Security
+WARN	MISSING_HEADER	Content-Security-Policy
+
+# Insecure redirects
+FAIL	URL	.*redirect.*url=http:\/\/.*
+FAIL	URL	.*redirect.*url=\/\/.*
+
+# File upload vulnerabilities
+WARN	URL	.*\/upload.*
+WARN	URL	.*\/file.*
+
+# API-specific checks
+WARN	URL	.*\/api\/v[0-9]+\/.*
+FAIL	BODY	.*total.*count.*>.*1000.*
+
+# Common injection points
+WARN	URL	.*\?id=.*
+WARN	URL	.*\?search=.*
+WARN	URL	.*\?query=.*
+WARN	URL	.*\?filter=.*
+WARN	URL	.*\?sort=.*
+
+# Directory listing
+FAIL	BODY	.*Index of.*
+FAIL	BODY	.*Directory listing for.*
+
+# Backup files
+FAIL	URL	.*\.zip$
+FAIL	URL	.*\.tar\.gz$
+FAIL	URL	.*\.sql$
+FAIL	URL	.*dump\..*
+
+# Development tools
+FAIL	URL	.*swagger.*
+FAIL	URL	.*graphiql.*
+FAIL	URL	.*playground.*
+WARN	URL	.*\/docs.*
+WARN	URL	.*\/api-docs.*
+
+# Comments in production code
+WARN	BODY	.*<!--.*TODO.*-->.*
+WARN	BODY	.*<!--.*FIXME.*-->.*
+WARN	BODY	.*<!--.*DEBUG.*-->.*
+
+# Information disclosure in headers
+WARN	HEADER	X-AspNet-Version
+WARN	HEADER	X-AspNetMvc-Version
+WARN	HEADER	X-Powered-By
+
+# Weak ciphers
+FAIL	TLS	.*RC4.*
+FAIL	TLS	.*MD5.*
+FAIL	TLS	.*DES.*
+
+# End of rules

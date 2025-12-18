@@ -85,11 +85,30 @@ import TeamDashboard from './pages/TeamDashboard';
 import AcceptTeamInvitation from './pages/AcceptTeamInvitation';
 import GmailCallback from './pages/GmailCallback';
 import TimingOptimizerPage from './pages/TimingOptimizerPage';
+import SecurityDemo from './pages/SecurityDemo';
+import AccessibilityDemo from './pages/AccessibilityDemo';
+
+// Offers pages (UC-127)
+import Offers from './pages/Offers';
+import OfferComparison from './pages/OfferComparison';
+
+// Responses pages (UC-126)
+import ResponseLibrary from './pages/ResponseLibrary';
+import PracticeMode from './pages/PracticeMode';
+import ResponseAnalytics from './pages/ResponseAnalytics';
+
+// Platform Tracking & Duplicates (UC-125)
+import DuplicatesPage from './pages/DuplicatesPage';
+
+// Career Simulation pages (UC-128)
+import CareerSimulation from './pages/CareerSimulation';
+import SimulationDetail from './pages/SimulationDetail';
 
 import './index.css';
 import './styles/globals.css';
 import './styles/theme.css';
 
+// Lazy load pages for better performance (UC-134)
 const TemplatesPage = lazy(() => import('./coverletters/pages/TemplatesPage'));
 const GeneratePage = lazy(() => import('./coverletters/pages/GeneratePage'));
 const SavedCoverLettersPage = lazy(() => import('./coverletters/pages/SavedCoverLettersPage'));
@@ -121,12 +140,20 @@ const router = createBrowserRouter([
     children: [
       { path: '/dashboard', element: <ProfileDashboard /> },
       { path: '/jobs', element: <Jobs /> },
+      { path: '/jobs/duplicates', element: <DuplicatesPage /> },
       { path: '/jobs/pipeline', element: <JobPipeline /> },
       { path: '/jobs/calendar', element: <JobCalendar /> },
       { path: '/jobs/map', element: <JobMap /> },
       { path: '/jobs/archived', element: <ArchivedJobs /> },
       { path: '/jobs/statistics', element: <StatisticsPage /> },
       { path: '/jobs/:jobId', element: <JobDetails /> },
+      { path: '/offers', element: <Offers /> },
+      { path: '/offers/compare', element: <OfferComparison /> },
+      { path: '/simulation', element: <CareerSimulation /> },
+      { path: '/simulation/:id', element: <SimulationDetail /> },
+      { path: '/responses', element: <ResponseLibrary /> },
+      { path: '/responses/practice/:id', element: <PracticeMode /> },
+      { path: '/responses/analytics', element: <ResponseAnalytics /> },
       { path: '/applications', element: <Applications /> },
       { path: '/quality-check', element: <QualityCheck /> },
       { path: '/mock-interview/:interviewId', element: <MockInterviewSession /> },
@@ -139,6 +166,10 @@ const router = createBrowserRouter([
       { path: '/employment', element: <EmploymentHistoryPage /> },
       { path: '/cards', element: <CardPreview /> },
       { path: '/typography', element: <TypographyPreview /> },
+      
+      { path: '/security', element: <SecurityDemo /> }, // UC-135: Security demo
+      { path: '/accessibility', element: <AccessibilityDemo /> }, // UC-144: Accessibility testing
+
       { path: '/resumes', element: <ResumeDashboard /> },
       { path: '/resumes/templates', element: <TemplateManager /> },
       { path: '/resumes/ai', element: <AIResumeGenerator /> },

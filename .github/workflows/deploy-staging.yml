@@ -1,0 +1,108 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Staging Environment
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.yourapp.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      # Backend Deployment
+      - name: Deploy Backend to Railway (Staging)
+        run: |
+          echo "🚀 Deploying backend to Railway staging..."
+          # Railway CLI deployment (install railway CLI in your project)
+          # npx railway link --project ${{ secrets.RAILWAY_PROJECT_ID_STAGING }}
+          # npx railway up --service backend --environment staging
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+      
+      # Database Migrations
+      - name: Run Database Migrations
+        working-directory: backend
+        run: |
+          echo "📦 Running database migrations..."
+          npm ci
+          # If using Prisma: npx prisma migrate deploy
+          # Or run your SQL migration scripts
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL_STAGING }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_STAGING }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_STAGING }}
+      
+      # Frontend Deployment
+      - name: Build Frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: https://api-staging.yourapp.com
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL_STAGING }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_STAGING }}
+      
+      - name: Deploy Frontend to Vercel (Staging)
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: frontend
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+      
+      # Health Check
+      - name: Health Check
+        run: |
+          echo "🏥 Performing health check..."
+          sleep 30
+          curl -f https://api-staging.yourapp.com/health || exit 1
+          curl -f https://staging.yourapp.com || exit 1
+          echo "✅ Health check passed"
+      
+      # Record Deployment
+      - name: Record Deployment
+        run: |
+          echo "📝 Recording deployment to database..."
+          # Call your API to log deployment
+          # curl -X POST https://api-staging.yourapp.com/deployments \
+          #   -H "Content-Type: application/json" \
+          #   -d '{
+          #     "environment": "staging",
+          #     "commit_sha": "${{ github.sha }}",
+          #     "commit_message": "${{ github.event.head_commit.message }}",
+          #     "deployed_by": "${{ github.actor }}",
+          #     "status": "success"
+          #   }'
+      
+      # Notify Team
+      - name: Notify Team (Success)
+        if: success()
+        run: |
+          echo "✅ Deployment to staging successful!"
+          # Add Slack notification here if needed
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{"text":"✅ Staging deployment successful! Commit: ${{ github.sha }}"}'
+      
+      - name: Notify Team (Failure)
+        if: failure()
+        run: |
+          echo "❌ Deployment to staging failed!"
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{"text":"❌ Staging deployment failed! Commit: ${{ github.sha }}"}'

@@ -61,7 +61,8 @@ export default function TemplatePreviewModal({
           ? "Creative professional experienced in branding, social media campaigns, and storytelling."
           : "Computer Science student experienced in React, Node.js, and modern web development.";
 
-      const res = await fetch("http://localhost:3000/coverletters/generate", {
+      const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+      const res = await fetch(`${base}/coverletters/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -100,7 +101,8 @@ export default function TemplatePreviewModal({
     setSaving(true);
     try {
       const userId = localStorage.getItem('userId');
-      await axios.post('http://localhost:3000/coverletters/save', {
+      const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+      await axios.post(`${base}/coverletters/save`, {
         userId,
         title: title.trim(),
         content: plainText,

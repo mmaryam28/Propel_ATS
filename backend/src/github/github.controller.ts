@@ -34,13 +34,28 @@ export class GitHubController {
   async handleCallback(@Query('code') code: string, @Query('state') state: string) {
     try {
       const result = await this.githubService.handleCallback(code, state);
-      const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, ''); // Remove trailing slash
+      // Determine frontend URL (allow multiple env var fallbacks)
+      const rawFrontend = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || process.env.FRONTEND_HOST || 'http://localhost:5173';
+      const frontendUrl = String(rawFrontend).replace(/\/$/, ''); // Remove trailing slash
+      const redirectUrl = `${frontendUrl}/projects?tab=github`;
+
+      // Log helpful diagnostic info for deployed environments
+      console.info('[GitHubCallback] Using FRONTEND_URL:', rawFrontend);
+      console.info('[GitHubCallback] Using GITHUB_REDIRECT_URI:', process.env.GITHUB_REDIRECT_URI || 'not-set');
+      console.info('[GitHubCallback] Redirecting to:', redirectUrl);
+      if (process.env.NODE_ENV === 'production' && /localhost[:]?/i.test(frontendUrl)) {
+        console.warn('[GitHubCallback] WARNING: FRONTEND_URL resolves to localhost in production. Set FRONTEND_URL in your environment to the deployed frontend domain.');
+      }
+
       // Redirect to frontend projects page
-      return { url: `${frontendUrl}/projects?tab=github`, statusCode: 302 };
+      return { url: redirectUrl, statusCode: 302 };
     } catch (error) {
       console.error('GitHub callback error:', error);
-      const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, ''); // Remove trailing slash
-      return { url: `${frontendUrl}/projects?error=github_connection_failed`, statusCode: 302 };
+      const rawFrontend = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || process.env.FRONTEND_HOST || 'http://localhost:5173';
+      const frontendUrl = String(rawFrontend).replace(/\/$/, ''); // Remove trailing slash
+      const errorRedirect = `${frontendUrl}/projects?error=github_connection_failed`;
+      console.info('[GitHubCallback] Redirecting on error to:', errorRedirect);
+      return { url: errorRedirect, statusCode: 302 };
     }
   }
 

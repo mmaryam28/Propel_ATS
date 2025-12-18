@@ -1,5 +1,6 @@
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`http://localhost:3000/coverletters${path}`, {
+  const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+  const res = await fetch(`${base}/coverletters${path}`, {
     headers: { "Content-Type": "application/json" },
     ...init,
   });
@@ -42,7 +43,8 @@ export async function generateCoverLetter(data: {
 // ---------- UC-060 + UC-061 helpers ----------
 
 export async function saveEditedCoverLetter(slug: string, content: string) {
-  const res = await fetch(`http://localhost:3000/coverletters/save`, {
+  const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+  const res = await fetch(`${base}/coverletters/save`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ slug, content }),
@@ -52,7 +54,8 @@ export async function saveEditedCoverLetter(slug: string, content: string) {
 }
 
 export async function exportCoverLetter(text: string, format: string) {
-  const res = await fetch(`http://localhost:3000/coverletters/export`, {
+  const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+  const res = await fetch(`${base}/coverletters/export`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, format }),
@@ -81,7 +84,8 @@ function toQS(obj: Record<string, any>) {
 // ---------- Authenticated API helper ----------
 async function authenticatedApi<T>(path: string, init?: RequestInit): Promise<T> {
   const token = localStorage.getItem('token');
-  const res = await fetch(`http://localhost:3000/coverletters${path}`, {
+  const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+  const res = await fetch(`${base}/coverletters${path}`, {
     headers: { 
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`

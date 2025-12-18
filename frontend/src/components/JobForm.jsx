@@ -3,17 +3,24 @@ import { importJobFromUrl } from "../lib/api";
 
 const INDUSTRIES = ["Software", "Finance", "Healthcare", "Education", "Other"];
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Internship", "Temporary"];
+
+// Combined source/platform options with mapping to platform values
 const JOB_SOURCES = [
-  "LinkedIn",
-  "Company Website",
-  "Referral",
-  "Recruiter Contact",
-  "Indeed",
-  "Glassdoor",
-  "AngelList",
-  "Networking Event",
-  "Cold Application",
-  "Other"
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'indeed', label: 'Indeed' },
+  { value: 'glassdoor', label: 'Glassdoor' },
+  { value: 'ziprecruiter', label: 'ZipRecruiter' },
+  { value: 'monster', label: 'Monster' },
+  { value: 'careerbuilder', label: 'CareerBuilder' },
+  { value: 'dice', label: 'Dice' },
+  { value: 'company_site', label: 'Company Website' },
+  { value: 'handshake', label: 'Handshake' },
+  { value: 'angellist', label: 'AngelList/Wellfound' },
+  { value: 'referral', label: 'Referral' },
+  { value: 'recruiter', label: 'Recruiter Contact' },
+  { value: 'networking', label: 'Networking Event' },
+  { value: 'cold_application', label: 'Cold Application' },
+  { value: 'other', label: 'Other' },
 ];
 
 export default function JobForm({ initial = {}, onCancel, onSaved }) {
@@ -28,7 +35,7 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
     description: "",
     industry: "",
     jobType: "",
-    source: "Direct Application",
+    source: "",
     ...initial
   });
   const [errors, setErrors] = React.useState({});
@@ -242,7 +249,7 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="form-label">Industry</label>
           <select
@@ -273,19 +280,29 @@ export default function JobForm({ initial = {}, onCancel, onSaved }) {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="form-label">Source</label>
+          <label className="form-label">Source/Platform</label>
           <select
             className="input"
             value={form.source}
             onChange={(e) => setValue("source", e.target.value)}
           >
+            <option value="">Select source...</option>
             {JOB_SOURCES.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Where did you find or apply for this job?
+          </p>
+        </div>
+        <div>
+          {/* Empty space for layout symmetry */}
         </div>
       </div>
 

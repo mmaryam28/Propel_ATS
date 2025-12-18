@@ -1,0 +1,244 @@
+name: Verify Backups
+
+on:
+  schedule:
+    # Run weekly on Sundays at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify Backup Integrity
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+      
+      - name: List recent backups
+        working-directory: backend
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+        run: |
+          cat > list-backups.js << 'EOF'
+          const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+          
+          async function listBackups() {
+            const s3Client = new S3Client({
+              region: process.env.AWS_REGION || 'us-east-1',
+              credentials: {
+                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+              }
+            });
+            
+            const command = new ListObjectsV2Command({
+              Bucket: process.env.S3_BUCKET,
+              Prefix: 'database-backups/'
+            });
+            
+            const response = await s3Client.send(command);
+            
+            if (!response.Contents || response.Contents.length === 0) {
+              console.error('❌ No backups found!');
+              process.exit(1);
+            }
+            
+            const now = new Date();
+            const backups = response.Contents
+              .filter(obj => obj.Key.endsWith('.gz'))
+              .map(obj => ({
+                key: obj.Key,
+                size: obj.Size,
+                lastModified: obj.LastModified,
+                ageHours: (now - obj.LastModified) / (1000 * 60 * 60)
+              }))
+              .sort((a, b) => b.lastModified - a.lastModified);
+            
+            console.log(`\n📦 Found ${backups.length} backups\n`);
+            
+            backups.slice(0, 10).forEach(backup => {
+              console.log(`File: ${backup.key}`);
+              console.log(`Size: ${(backup.size / 1024 / 1024).toFixed(2)} MB`);
+              console.log(`Age: ${backup.ageHours.toFixed(1)} hours`);
+              console.log(`Modified: ${backup.lastModified.toISOString()}\n`);
+            });
+            
+            const latestBackup = backups[0];
+            if (latestBackup.ageHours > 25) {
+              console.error(`❌ Latest backup is ${latestBackup.ageHours.toFixed(1)} hours old (expected < 25 hours)`);
+              process.exit(1);
+            }
+            
+            if (latestBackup.size < 1024 * 1024) { // Less than 1 MB
+              console.error(`❌ Latest backup is suspiciously small: ${(latestBackup.size / 1024).toFixed(2)} KB`);
+              process.exit(1);
+            }
+            
+            console.log('✅ Backup age and size checks passed');
+          }
+          
+          listBackups().catch(console.error);
+          EOF
+          
+          npm install @aws-sdk/client-s3 || true
+          node list-backups.js
+      
+      - name: Check backup in database
+        working-directory: backend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_PROD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cat > check-backup-records.js << 'EOF'
+          const { createClient } = require('@supabase/supabase-js');
+          
+          async function checkBackupRecords() {
+            const supabase = createClient(
+              process.env.SUPABASE_URL,
+              process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+            
+            // Check for recent backups
+            const oneDayAgo = new Date();
+            oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+            
+            const { data, error } = await supabase
+              .from('backup_history')
+              .select('*')
+              .gte('createdAt', oneDayAgo.toISOString())
+              .order('createdAt', { ascending: false });
+            
+            if (error) throw error;
+            
+            if (!data || data.length === 0) {
+              console.error('❌ No backup records found in last 24 hours');
+              process.exit(1);
+            }
+            
+            console.log(`\n📊 Found ${data.length} backup records in last 24 hours\n`);
+            
+            data.forEach(backup => {
+              console.log(`Type: ${backup.backupType}`);
+              console.log(`Status: ${backup.status}`);
+              console.log(`Size: ${(backup.fileSizeBytes / 1024 / 1024).toFixed(2)} MB`);
+              console.log(`Created: ${backup.createdAt}\n`);
+            });
+            
+            const failedBackups = data.filter(b => b.status === 'failed');
+            if (failedBackups.length > 0) {
+              console.error(`❌ Found ${failedBackups.length} failed backups`);
+              process.exit(1);
+            }
+            
+            console.log('✅ All recent backups completed successfully');
+          }
+          
+          checkBackupRecords().catch(console.error);
+          EOF
+          
+          npm install @supabase/supabase-js || true
+          node check-backup-records.js
+      
+      - name: Calculate backup statistics
+        working-directory: backend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_PROD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cat > backup-stats.js << 'EOF'
+          const { createClient } = require('@supabase/supabase-js');
+          
+          async function calculateStats() {
+            const supabase = createClient(
+              process.env.SUPABASE_URL,
+              process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+            
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const { data, error } = await supabase
+              .from('backup_history')
+              .select('*')
+              .gte('createdAt', thirtyDaysAgo.toISOString());
+            
+            if (error) throw error;
+            
+            if (!data || data.length === 0) {
+              console.log('⚠️  No backup data for statistics');
+              return;
+            }
+            
+            const totalBackups = data.length;
+            const successfulBackups = data.filter(b => b.status === 'completed').length;
+            const failedBackups = data.filter(b => b.status === 'failed').length;
+            const successRate = (successfulBackups / totalBackups * 100).toFixed(2);
+            
+            const avgSize = data.reduce((sum, b) => sum + (b.fileSizeBytes || 0), 0) / data.length;
+            const totalSize = data.reduce((sum, b) => sum + (b.fileSizeBytes || 0), 0);
+            
+            console.log('\n📊 Backup Statistics (Last 30 Days)\n');
+            console.log(`Total backups: ${totalBackups}`);
+            console.log(`Successful: ${successfulBackups}`);
+            console.log(`Failed: ${failedBackups}`);
+            console.log(`Success rate: ${successRate}%`);
+            console.log(`Average size: ${(avgSize / 1024 / 1024).toFixed(2)} MB`);
+            console.log(`Total storage: ${(totalSize / 1024 / 1024 / 1024).toFixed(2)} GB`);
+            
+            if (successRate < 95) {
+              console.error(`\n❌ Success rate below 95%: ${successRate}%`);
+              process.exit(1);
+            }
+            
+            console.log('\n✅ Backup statistics look healthy');
+          }
+          
+          calculateStats().catch(console.error);
+          EOF
+          
+          node backup-stats.js
+      
+      - name: Test restore (staging only)
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: backend
+        env:
+          STAGING_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL_STAGING }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+        run: |
+          echo "🧪 Testing backup restore to staging..."
+          echo "This would download latest backup and restore to staging"
+          echo "Skipping actual restore in verification workflow"
+          echo "Use manual restore workflow for full testing"
+      
+      - name: Summary report
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ All backup verification checks passed"
+          else
+            echo "❌ Backup verification failed - review logs"
+          fi
+      
+      - name: Notify results
+        if: failure()
+        run: |
+          echo "❌ Backup verification failed"
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{"text": "⚠️ Backup verification failed! Check GitHub Actions logs."}'

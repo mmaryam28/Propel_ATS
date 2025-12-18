@@ -15,7 +15,7 @@ function Breadcrumbs() {
   const [segments, setSegments] = useState([]);
 
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const API = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
     const parts = location.pathname.split("/").filter(Boolean);
     const acc = [];
     
@@ -57,7 +57,7 @@ function Breadcrumbs() {
     <nav className="px-4 sm:px-6 lg:px-8 py-2" aria-label="Breadcrumb">
       <ol className="flex items-center gap-2 text-sm text-gray-500">
         <li>
-          <Link to="/" className="hover:text-gray-900">Home</Link>
+          <Link to="/" className="text-gray-700 hover:text-gray-900">Home</Link>
         </li>
         {segments.map((seg, i) => (
           <li key={seg.href} className="flex items-center gap-2">
@@ -67,7 +67,7 @@ function Breadcrumbs() {
                 {seg.name}
               </span>
             ) : (
-              <Link to={seg.href} className="hover:text-gray-900">{seg.name}</Link>
+              <Link to={seg.href} className="text-gray-700 hover:text-gray-900">{seg.name}</Link>
             )}
           </li>
         ))}
@@ -131,7 +131,7 @@ function Navbar() {
   const [profilePicture, setProfilePicture] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
+  const API = import.meta?.env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
   useEffect(() => {
     const fetchProfilePicture = async () => {
@@ -187,7 +187,7 @@ function Navbar() {
                 alt="Propel logo"
                 className="h-7 w-7 object-contain rounded-md hover:scale-105 transition-transform duration-200"
               />
-              <span className="font-semibold whitespace-nowrap">
+              <span className="font-semibold whitespace-nowrap text-gray-900">
                 PROPEL
               </span>
             </Link>
@@ -296,6 +296,9 @@ function Navbar() {
                     <Link to="/jobs" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Tracker</Link>
                     <Link to="/jobs/map" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Map</Link>
                     <Link to="/jobs/calendar" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Calendar</Link>
+                    <Link to="/offers" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">💼 Offer Comparison</Link>
+                    <Link to="/simulation" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">📈 Career Simulation</Link>
+                    <Link to="/responses" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">📚 Response Library</Link>
                     <Link to="/quality-check" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Quality Check</Link>
                     <Link to="/timing-optimizer" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">⏰ Timing Optimizer</Link>
                     <Link to="/application-success" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Application Analytics</Link>
@@ -476,6 +479,9 @@ function Navbar() {
                 <div className="pl-6 flex flex-col">
                   <Link to="/jobs" className="py-1 text-sm text-gray-700 hover:underline">Job Tracker</Link>
                   <Link to="/jobs/calendar" className="py-1 text-sm text-gray-700 hover:underline">Calendar</Link>
+                  <Link to="/offers" className="py-1 text-sm text-gray-700 hover:underline font-medium">💼 Offer Comparison</Link>
+                  <Link to="/simulation" className="py-1 text-sm text-gray-700 hover:underline font-medium">📈 Career Simulation</Link>
+                  <Link to="/responses" className="py-1 text-sm text-gray-700 hover:underline font-medium">📚 Response Library</Link>
                   <Link to="/quality-check" className="py-1 text-sm text-gray-700 hover:underline">Quality Check</Link>
                   <Link to="/application-success" className="py-1 text-sm text-gray-700 hover:underline">Application Analytics</Link>
                   <Link to="/productivity-tracker" className="py-1 text-sm text-gray-700 hover:underline">Productivity Tracker</Link>

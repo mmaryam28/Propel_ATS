@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
 // Create axios instance with interceptor for JWT
 const api = axios.create({
