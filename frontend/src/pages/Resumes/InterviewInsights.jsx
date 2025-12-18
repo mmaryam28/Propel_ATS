@@ -425,34 +425,6 @@ const InterviewInsights = () => {
               </Card>
             </div>
 
-            <Card>
-              <Card.Header>
-                <Card.Title>Quick Summary</Card.Title>
-              </Card.Header>
-              <Card.Body>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {insights.process?.stages?.length || 0}
-                    </div>
-                    <div className="text-sm text-gray-600">Interview Stages</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {insights.questions?.questions?.length || 0}
-                    </div>
-                    <div className="text-sm text-gray-600">Common Questions</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {insights.formats?.formats?.length || 0}
-                    </div>
-                    <div className="text-sm text-gray-600">Interview Formats</div>
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
-
             <Card className="mt-4">
               <Card.Header>
                 <Card.Title className="flex items-center gap-2">

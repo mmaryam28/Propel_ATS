@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { SentryModule } from '@sentry/nestjs/setup';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -42,15 +43,19 @@ import { AbTestingModule } from './ab-testing/ab-testing.module';
 import { ApplicationQualityModule } from './application-quality/application-quality.module';
 import { ExternalCertificationsModule } from './external-certifications/external-certifications.module';
 import { EmailIntegrationModule } from './email-integration/email-integration.module';
+
 import { TimingOptimizerModule } from './timing-optimizer/timing-optimizer.module';
 import { ResponsesModule } from './responses/responses.module';
 import { OffersModule } from './offers/offers.module';
 import { PlatformsModule } from './platforms/platforms.module';
 import { DuplicatesModule } from './duplicates/duplicates.module';
 import { SimulationModule } from './simulation/simulation.module';
+import { SecurityModule } from './security/security.module';
+import { ApiMonitoringModule } from './api-monitoring/api-monitoring.module';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env'], // ensures backend/.env is loaded
@@ -99,6 +104,8 @@ import { SimulationModule } from './simulation/simulation.module';
   PlatformsModule,
   DuplicatesModule,
   SimulationModule,
+  SecurityModule,
+  ApiMonitoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],

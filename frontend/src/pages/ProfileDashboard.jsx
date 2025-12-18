@@ -17,20 +17,21 @@ function fmtDate(d) {
 }
 
 const StatCard = ({ title, count = 0, to, icon }) => (
-  <Card variant="hover" size="large" className="flex flex-col gap-3 w-full">
+  <Card variant="hover" size="large" className="flex flex-col gap-3 w-full" role="article" aria-label={`${title} statistics`}>
     <div className="flex items-center gap-3">
-      <div className="rounded-lg bg-gray-100 p-2">{icon}</div>
+      <div className="rounded-lg bg-gray-100 p-2" aria-hidden="true">{icon}</div>
       <Card.Title className="m-0 text-base sm:text-lg">{title}</Card.Title>
     </div>
     <Card.Body>
-      <p className="text-3xl font-semibold">{count}</p>
+      <p className="text-3xl font-semibold" aria-label={`${count} ${title.toLowerCase()}`}>{count}</p>
       <Card.Footer className="mt-2">
         <Link
           to={to}
-          className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+          className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-900 bg-indigo-600 hover:bg-indigo-700"
           style={{ background: 'var(--primary-color, #4f46e5)' }}
+          aria-label={`Quick add ${title.toLowerCase()}`}
         >
-          <Icon name="plus" className="!h-4 !w-4 text-white" variant="white" />
+          <Icon name="plus" className="!h-4 !w-4 text-gray-900" variant="white" aria-hidden="true" />
           Quick add
         </Link>
       </Card.Footer>
@@ -38,7 +39,7 @@ const StatCard = ({ title, count = 0, to, icon }) => (
   </Card>
 );
 
-const EmptyLine = ({ text }) => <li className="text-gray-500">— {text}</li>;
+const EmptyLine = ({ text }) => <li className="text-gray-700">— {text}</li>;
 
 export default function ProfileDashboard() {
   const [overview, setOverview] = useState(null);
@@ -94,7 +95,7 @@ export default function ProfileDashboard() {
       {/* Page heading */}
       <Section className="pb-4">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Profile Overview</h1>
-        <p className="mt-1 text-sm text-gray-600">Keep your profile fresh to increase your match quality.</p>
+        <p className="mt-1 text-sm text-gray-700" id="dashboard-description">Keep your profile fresh to increase your match quality.</p>
       </Section>
 
       {/* Profile Completeness Widget */}
@@ -113,8 +114,8 @@ export default function ProfileDashboard() {
       </Section>
 
       {/* Stats */}
-      <Section className="pt-0">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Section className="pt-0" aria-label="Profile statistics">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="region" aria-label="Key metrics">
           <StatCard
             title="Education"
             count={summary.educationCount ?? 0}
@@ -137,20 +138,20 @@ export default function ProfileDashboard() {
       </Section>
 
       {/* Recent lists */}
-      <Section className="pt-0">
+      <Section className="pt-0" aria-label="Recent activity">
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card variant="default" size="large">
+          <Card variant="default" size="large" role="region" aria-label="Recent education entries">
             <Card.Header>
               <Card.Title>Recent Education</Card.Title>
-              <Card.Description>Your latest entries</Card.Description>
+              <Card.Description className="text-gray-700">Your latest entries</Card.Description>
             </Card.Header>
             <Card.Body>
-              <ul className="space-y-2">
+              <ul className="space-y-2" role="list">
                 {educList.length === 0 && <EmptyLine text="No education yet" />}
                 {educList.map((e) => (
-                  <li key={e.id} className="rounded-md border border-gray-200 p-3">
+                  <li key={e.id} className="rounded-md border border-gray-200 p-3" role="listitem">
                     <div className="font-medium">{e.degree}</div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-700">
                       {e.institution} · {fmtDate(e.startDate) ?? 'N/A'} — {fmtDate(e.endDate) ?? 'Ongoing'}
                     </div>
                   </li>
@@ -158,30 +159,30 @@ export default function ProfileDashboard() {
               </ul>
             </Card.Body>
             <Card.Footer>
-              <Link to="/education" className="text-sm font-medium text-indigo-600 hover:underline">
+              <Link to="/education" className="text-sm font-medium text-indigo-700 hover:text-indigo-800 hover:underline" aria-label="Go to education management page">
                 Manage education
               </Link>
             </Card.Footer>
           </Card>
 
-          <Card variant="default" size="large">
+          <Card variant="default" size="large" role="region" aria-label="Recent project entries">
             <Card.Header>
               <Card.Title>Recent Projects</Card.Title>
-              <Card.Description>What you’ve been building</Card.Description>
+              <Card.Description className="text-gray-700">What you've been building</Card.Description>
             </Card.Header>
             <Card.Body>
-              <ul className="space-y-2">
+              <ul className="space-y-2" role="list">
                 {projList.length === 0 && <EmptyLine text="No projects yet" />}
                 {projList.map((p) => (
-                  <li key={p.id} className="rounded-md border border-gray-200 p-3">
+                  <li key={p.id} className="rounded-md border border-gray-200 p-3" role="listitem">
                     <div className="font-medium">{p.name}</div>
-                    <div className="text-sm text-gray-600">{p.status ?? 'Status unknown'}</div>
+                    <div className="text-sm text-gray-700">{p.status ?? 'Status unknown'}</div>
                   </li>
                 ))}
               </ul>
             </Card.Body>
             <Card.Footer>
-              <Link to="/projects" className="text-sm font-medium text-indigo-600 hover:underline">
+              <Link to="/projects" className="text-sm font-medium text-indigo-700 hover:text-indigo-800 hover:underline" aria-label="Go to projects management page">
                 Manage projects
               </Link>
             </Card.Footer>
@@ -195,11 +196,11 @@ export default function ProfileDashboard() {
       </Section>
 
       {/* Profile strength */}
-      <Section className="pt-0">
-        <Card variant="default" size="large">
+      <Section className="pt-0" aria-label="Profile strength indicator">
+        <Card variant="default" size="large" role="region" aria-label="Overall profile strength">
           <Card.Header>
             <Card.Title>Profile Strength</Card.Title>
-            <Card.Description>
+            <Card.Description className="text-gray-700">
               Complete your profile to improve matching and ATS visibility.
             </Card.Description>
           </Card.Header>
@@ -207,18 +208,19 @@ export default function ProfileDashboard() {
           <Card.Body>
             <div className="space-y-2">
               <div className="relative w-full max-w-xl">
-                <div className="h-3 w-full rounded-full bg-gray-100 ring-1 ring-inset" style={{ borderColor: 'var(--border-color, rgba(0,0,0,.08))' }} />
+                <div className="h-3 w-full rounded-full bg-gray-100 ring-1 ring-inset" style={{ borderColor: 'var(--border-color, rgba(0,0,0,.08))' }} role="progressbar" aria-valuenow={score} aria-valuemin={0} aria-valuemax={100} aria-label="Profile strength progress" />
                 <div
                   className="absolute inset-y-0 left-0 h-3 rounded-full transition-all"
                   style={{
                     width: `${score}%`,
                     background: 'var(--primary-color, #4f46e5)',
                   }}
+                  aria-hidden="true"
                 />
               </div>
               <div className="flex items-center justify-between max-w-xl text-sm">
-                <span className="font-medium text-gray-900">{score}%</span>
-                <span className="text-gray-500">
+                <span className="font-medium text-gray-900" aria-live="polite" aria-atomic="true">Profile is {score}% complete</span>
+                <span className="text-gray-700" id="profile-strength-guidance" aria-live="polite">
                   {score < 50 && 'Add more education and at least one project to boost your profile.'}
                   {score >= 50 && score < 80 && 'Great start! Add certifications and project outcomes for a stronger profile.'}
                   {score >= 80 && 'Strong profile. Keep it up by keeping entries current.'}

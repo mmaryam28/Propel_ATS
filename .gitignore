@@ -3,3 +3,6 @@
 frontend/.env
 backend/.env
 node_modules
+
+# Sentry Config File
+.sentryclirc

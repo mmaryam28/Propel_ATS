@@ -279,11 +279,23 @@ export default function GoalsDashboard() {
 
 // Overview Tab Component
 function OverviewTab({ goals, achievementData }) {
+  const summary =
+    achievementData?.summary || {
+      completedGoals: 0,
+      inProgressGoals: 0,
+      notStartedGoals: 0,
+      abandonedGoals: 0,
+      totalGoals: 0,
+      overallAchievementRate: 0,
+      avgDaysToCompletion: 0,
+    };
+  const categoryAnalysis = achievementData?.categoryAnalysis || [];
+
   const statusData = [
-    { name: 'Completed', value: achievementData.summary.completedGoals, color: STATUS_COLORS.completed },
-    { name: 'In Progress', value: achievementData.summary.inProgressGoals, color: STATUS_COLORS.in_progress },
-    { name: 'Not Started', value: achievementData.summary.notStartedGoals, color: STATUS_COLORS.not_started },
-    { name: 'Abandoned', value: achievementData.summary.abandonedGoals, color: STATUS_COLORS.abandoned },
+    { name: 'Completed', value: summary.completedGoals, color: STATUS_COLORS.completed },
+    { name: 'In Progress', value: summary.inProgressGoals, color: STATUS_COLORS.in_progress },
+    { name: 'Not Started', value: summary.notStartedGoals, color: STATUS_COLORS.not_started },
+    { name: 'Abandoned', value: summary.abandonedGoals, color: STATUS_COLORS.abandoned },
   ];
 
   return (
@@ -291,24 +303,24 @@ function OverviewTab({ goals, achievementData }) {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-6">
-          <div className="text-3xl font-bold text-blue-600">{achievementData.summary.totalGoals}</div>
+          <div className="text-3xl font-bold text-blue-600">{summary.totalGoals}</div>
           <div className="text-sm text-gray-600 mt-1">Total Goals</div>
         </Card>
         <Card className="p-6">
           <div className="text-3xl font-bold text-green-600">
-            {achievementData.summary.overallAchievementRate}%
+            {summary.overallAchievementRate}%
           </div>
           <div className="text-sm text-gray-600 mt-1">Achievement Rate</div>
         </Card>
         <Card className="p-6">
           <div className="text-3xl font-bold text-orange-600">
-            {achievementData.summary.inProgressGoals}
+            {summary.inProgressGoals}
           </div>
           <div className="text-sm text-gray-600 mt-1">Active Goals</div>
         </Card>
         <Card className="p-6">
           <div className="text-3xl font-bold text-purple-600">
-            {achievementData.summary.avgDaysToCompletion}
+            {summary.avgDaysToCompletion}
           </div>
           <div className="text-sm text-gray-600 mt-1">Avg Days to Complete</div>
         </Card>
@@ -343,7 +355,7 @@ function OverviewTab({ goals, achievementData }) {
       <Card className="p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Achievement Rate by Category</h2>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={achievementData.categoryAnalysis}>
+          <BarChart data={categoryAnalysis}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="category" angle={-45} textAnchor="end" height={100} />
             <YAxis label={{ value: 'Achievement Rate (%)', angle: -90, position: 'insideLeft' }} />
@@ -481,11 +493,13 @@ function ActiveGoalsTab({ goals, onUpdateProgress, onCompleteMilestone, onSelect
 
 // Achievement Tab Component
 function AchievementTab({ achievementData }) {
-  const priorityData = Object.entries(achievementData.priorityBreakdown).map(([priority, data]) => ({
+  const priorityBreakdown = achievementData?.priorityBreakdown || {};
+  const categoryAnalysis = achievementData?.categoryAnalysis || [];
+  const priorityData = Object.entries(priorityBreakdown).map(([priority, data]) => ({
     priority: priority.charAt(0).toUpperCase() + priority.slice(1),
-    completed: data.completed,
-    total: data.total,
-    avgProgress: data.avgProgress.toFixed(1),
+    completed: data?.completed || 0,
+    total: data?.total || 0,
+    avgProgress: Number(data?.avgProgress || 0).toFixed(1),
   }));
 
   return (
@@ -508,7 +522,7 @@ function AchievementTab({ achievementData }) {
       <Card className="p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Category Performance</h2>
         <div className="space-y-4">
-          {achievementData.categoryAnalysis.map((cat) => (
+          {categoryAnalysis.map((cat) => (
             <div key={cat.category} className="border-b pb-4">
               <div className="flex justify-between mb-2">
                 <span className="font-medium text-gray-900">{cat.category.replace('_', ' ')}</span>

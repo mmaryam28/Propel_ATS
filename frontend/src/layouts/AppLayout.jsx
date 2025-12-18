@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "../components/ui/Icon";
 import CookieConsent from "../components/CookieConsent";
+import ApiMonitoringDashboard from "../components/ApiMonitoringDashboard";
 
 const classNames = (...xs) => xs.filter(Boolean).join(" ");
 
@@ -56,7 +57,7 @@ function Breadcrumbs() {
     <nav className="px-4 sm:px-6 lg:px-8 py-2" aria-label="Breadcrumb">
       <ol className="flex items-center gap-2 text-sm text-gray-500">
         <li>
-          <Link to="/" className="hover:text-gray-900">Home</Link>
+          <Link to="/" className="text-gray-700 hover:text-gray-900">Home</Link>
         </li>
         {segments.map((seg, i) => (
           <li key={seg.href} className="flex items-center gap-2">
@@ -66,7 +67,7 @@ function Breadcrumbs() {
                 {seg.name}
               </span>
             ) : (
-              <Link to={seg.href} className="hover:text-gray-900">{seg.name}</Link>
+              <Link to={seg.href} className="text-gray-700 hover:text-gray-900">{seg.name}</Link>
             )}
           </li>
         ))}
@@ -186,7 +187,7 @@ function Navbar() {
                 alt="Propel logo"
                 className="h-7 w-7 object-contain rounded-md hover:scale-105 transition-transform duration-200"
               />
-              <span className="font-semibold whitespace-nowrap">
+              <span className="font-semibold whitespace-nowrap text-gray-900">
                 PROPEL
               </span>
             </Link>
@@ -293,6 +294,7 @@ function Navbar() {
                 {jobsOpen && (
                   <div className="absolute top-full mt-1 left-0 w-56 bg-white border border-gray-200 rounded-lg shadow-md py-2 z-50">
                     <Link to="/jobs" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Tracker</Link>
+                    <Link to="/jobs/map" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Map</Link>
                     <Link to="/jobs/calendar" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Calendar</Link>
                     <Link to="/offers" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">💼 Offer Comparison</Link>
                     <Link to="/simulation" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">📈 Career Simulation</Link>
@@ -575,6 +577,12 @@ export default function AppLayout() {
       <Navbar />
       <Breadcrumbs />
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-gray-900">
+        {/* Admin API Monitoring Dashboard (visible to admin users) */}
+        {token && JSON.parse(atob(token.split('.')[1]))?.role === 'admin' && (
+          <div className="mb-8">
+            <ApiMonitoringDashboard />
+          </div>
+        )}
         <Outlet />
       </main>
       <CookieConsent />

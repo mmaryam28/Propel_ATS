@@ -39,10 +39,10 @@ const ProfileCompletenessWidget = () => {
   };
 
   const getScoreTextColor = (percentage) => {
-    if (percentage >= 90) return 'text-green-600';
-    if (percentage >= 75) return 'text-blue-600';
-    if (percentage >= 50) return 'text-yellow-600';
-    return 'text-red-600';
+    if (percentage >= 90) return 'text-green-700';
+    if (percentage >= 75) return 'text-blue-700';
+    if (percentage >= 50) return 'text-yellow-700';
+    return 'text-red-700';
   };
 
   const getSectionIcon = (sectionName) => {
@@ -117,7 +117,7 @@ const ProfileCompletenessWidget = () => {
               style={{ width: `${overallPercentage}%` }}
             >
               {overallPercentage > 10 && (
-                <span className="text-white text-xs font-semibold">{overallPercentage}%</span>
+                <span className="text-gray-900 text-xs font-semibold">{overallPercentage}%</span>
               )}
             </div>
           </div>
@@ -184,7 +184,7 @@ const ProfileCompletenessWidget = () => {
                         {section.completed ? (
                           <Icon name="check-circle" size="sm" className="text-green-500" />
                         ) : (
-                          <span className="text-xs text-red-500 font-medium">Required fields missing</span>
+                          <span className="text-xs text-red-700 font-medium">Required fields missing</span>
                         )}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
@@ -231,7 +231,7 @@ const ProfileCompletenessWidget = () => {
                                 )}
                                 <span className={field.present ? 'text-gray-600' : 'text-gray-400'}>
                                   {field.field.replace(/_/g, ' ')}
-                                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                                  {field.required && <span className="text-red-700 ml-1">*</span>}
                                 </span>
                               </div>
                             ))}
@@ -242,7 +242,7 @@ const ProfileCompletenessWidget = () => {
                       {/* Action button */}
                       <a
                         href={getSectionLink(section.name)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-gray-900 text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         <Icon name="edit" size="sm" variant="white" />
                         Update {section.name}

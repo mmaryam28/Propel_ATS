@@ -11,6 +11,7 @@ import Jobs from './pages/Jobs';
 import JobPipeline from './pages/JobPipeline.jsx';
 import JobDetails from './pages/JobDetails';
 import JobCalendar from './pages/JobCalendar';
+import JobMap from './pages/JobMap';
 import ArchivedJobs from './pages/ArchivedJobs';
 import StatisticsPage from './pages/StatisticsPage';
 import Applications from './pages/Applications';
@@ -84,6 +85,8 @@ import TeamDashboard from './pages/TeamDashboard';
 import AcceptTeamInvitation from './pages/AcceptTeamInvitation';
 import GmailCallback from './pages/GmailCallback';
 import TimingOptimizerPage from './pages/TimingOptimizerPage';
+import SecurityDemo from './pages/SecurityDemo';
+import AccessibilityDemo from './pages/AccessibilityDemo';
 
 // Offers pages (UC-127)
 import Offers from './pages/Offers';
@@ -105,6 +108,7 @@ import './index.css';
 import './styles/globals.css';
 import './styles/theme.css';
 
+// Lazy load pages for better performance (UC-134)
 const TemplatesPage = lazy(() => import('./coverletters/pages/TemplatesPage'));
 const GeneratePage = lazy(() => import('./coverletters/pages/GeneratePage'));
 const SavedCoverLettersPage = lazy(() => import('./coverletters/pages/SavedCoverLettersPage'));
@@ -139,6 +143,7 @@ const router = createBrowserRouter([
       { path: '/jobs/duplicates', element: <DuplicatesPage /> },
       { path: '/jobs/pipeline', element: <JobPipeline /> },
       { path: '/jobs/calendar', element: <JobCalendar /> },
+      { path: '/jobs/map', element: <JobMap /> },
       { path: '/jobs/archived', element: <ArchivedJobs /> },
       { path: '/jobs/statistics', element: <StatisticsPage /> },
       { path: '/jobs/:jobId', element: <JobDetails /> },
@@ -161,6 +166,10 @@ const router = createBrowserRouter([
       { path: '/employment', element: <EmploymentHistoryPage /> },
       { path: '/cards', element: <CardPreview /> },
       { path: '/typography', element: <TypographyPreview /> },
+      
+      { path: '/security', element: <SecurityDemo /> }, // UC-135: Security demo
+      { path: '/accessibility', element: <AccessibilityDemo /> }, // UC-144: Accessibility testing
+
       { path: '/resumes', element: <ResumeDashboard /> },
       { path: '/resumes/templates', element: <TemplateManager /> },
       { path: '/resumes/ai', element: <AIResumeGenerator /> },

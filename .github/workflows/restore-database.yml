@@ -130,15 +130,16 @@ jobs:
       - name: Decompress backup
         run: |
           echo "📦 Decompressing backup..."
-          gunzip "${{ github.event.inputs.backup_filename }}"
-          DECOMPRESSED="${{ github.event.inputs.backup_filename }%.gz}"
+          BACKUP_FILE="${{ github.event.inputs.backup_filename }}"
+          gunzip "${BACKUP_FILE}"
+          DECOMPRESSED="${BACKUP_FILE%.gz}"
           echo "filename=${DECOMPRESSED}" >> $GITHUB_ENV
           ls -lh "${DECOMPRESSED}"
       
       - name: Verify backup integrity
         run: |
           echo "🔍 Verifying backup file..."
-          if ! grep -q "PostgreSQL database dump" "${{ env.filename }}"; then
+          if ! grep -q "PostgreSQL database dump" "${DECOMPRESSED}"; then
             echo "❌ Backup file appears corrupted"
             exit 1
           fi
