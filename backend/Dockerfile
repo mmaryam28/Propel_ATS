@@ -46,8 +46,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
-# Copy startup script
-COPY --chown=nestjs:nodejs start.sh ./start.sh
+# Copy startup script (it's in the same directory as Dockerfile)
+COPY --chown=nestjs:nodejs ./start.sh ./start.sh
 RUN chmod +x ./start.sh
 
 # Expose ports
