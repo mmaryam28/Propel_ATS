@@ -59,7 +59,7 @@ export default function QualityCheck() {
   const fetchJobs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/jobs', {
+      const response = await axios.get((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + '/jobs', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setJobs(response.data || []);
@@ -70,7 +70,7 @@ export default function QualityCheck() {
 
   const fetchResumes = async () => {
     try {
-      const response = await axios.get(`http://localhost:3000/resume?userId=${userId}`, {
+      const response = await axios.get((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/resume?userId=${userId}`, {
         withCredentials: true
       });
       const resumeData = Array.isArray(response.data) ? response.data : (response.data && response.data.resumes) || [];
@@ -82,7 +82,7 @@ export default function QualityCheck() {
 
   const fetchCoverLetters = async () => {
     try {
-      const response = await axios.get(`http://localhost:3000/coverletters?userId=${userId}`, {
+      const response = await axios.get((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/coverletters?userId=${userId}`, {
         withCredentials: true
       });
       const clData = Array.isArray(response.data) ? response.data : response.data?.coverLetters || [];
@@ -96,7 +96,7 @@ export default function QualityCheck() {
     if (!userId) return;
     setHistoryLoading(true);
     try {
-      const response = await axios.get(`http://localhost:3000/application-quality/history/${userId}`, {
+      const response = await axios.get((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/application-quality/history/${userId}`, {
         params: jobId ? { jobId } : {},
       });
       setHistory(response.data || []);
@@ -110,7 +110,7 @@ export default function QualityCheck() {
   const fetchStatistics = async () => {
     if (!userId) return;
     try {
-      const response = await axios.get(`http://localhost:3000/application-quality/statistics/${userId}`);
+      const response = await axios.get((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/application-quality/statistics/${userId}`);
       setStatistics(response.data);
     } catch (err) {
       console.error('Error fetching statistics:', err);
@@ -128,7 +128,7 @@ export default function QualityCheck() {
   const handleResumeSelect = async (resumeId) => {
     setSelectedResumeId(resumeId);
     try {
-      const response = await axios.get(`http://localhost:3000/resume/${resumeId}`, {
+      const response = await axios.get((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/resume/${resumeId}`, {
         withCredentials: true
       });
       const resumeData = response.data;
@@ -151,7 +151,7 @@ export default function QualityCheck() {
   const handleCoverLetterSelect = async (coverLetterId) => {
     setSelectedCoverLetterId(coverLetterId);
     try {
-      const response = await axios.get(`http://localhost:3000/coverletters/${coverLetterId}`);
+      const response = await axios.get((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/coverletters/${coverLetterId}`);
       setCoverLetter(response.data.content || '');
     } catch (err) {
       console.error('Error fetching cover letter:', err);
@@ -181,7 +181,7 @@ export default function QualityCheck() {
     setResult(null);
 
     try {
-      const response = await axios.post('http://localhost:3000/application-quality/score', {
+      const response = await axios.post((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + '/application-quality/score', {
         userId,
         jobId: selectedJobId || undefined,
         resume,

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
 export default function Offers() {
   const navigate = useNavigate();

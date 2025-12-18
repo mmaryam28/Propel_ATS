@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Card } from '../components/ui/Card';
 import { Icon } from '../components/ui/Icon';
 
-const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
+const API = import.meta?.env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
 export default function Mentors() {
   const [activeTab, setActiveTab] = useState('mentors'); // 'mentors', 'feedback', 'progress'

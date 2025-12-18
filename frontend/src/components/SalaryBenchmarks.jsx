@@ -23,7 +23,7 @@ export const SalaryBenchmarks = ({ jobTitle, location, benchmark, jobSalary }) =
       setError(null);
       try {
         const response = await fetch(
-          `http://localhost:3000/salary/benchmarks?jobTitle=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}`
+          (import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/salary/benchmarks?jobTitle=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}`
         );
         if (!response.ok) throw new Error('Failed to fetch salary data');
         const result = await response.json();

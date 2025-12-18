@@ -7,7 +7,7 @@ function getToken() {
   return window.localStorage.getItem('token');
 }
 
-const API = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+const API = (import.meta as any).env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
 export function getEducationCompleteness(entries: any[]): number {
   return entries.length > 0 ? 20 : 0;

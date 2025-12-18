@@ -53,7 +53,7 @@ function JobCardWithPlatforms({
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:3000/platforms/job/${job.id}`,
+        (import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/platforms/job/${job.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

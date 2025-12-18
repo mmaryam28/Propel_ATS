@@ -3,7 +3,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import ResumeTemplatePreview from "./ResumeTemplatePreview";
 
-const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const BACKEND = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
 const API = `${BACKEND}/resume`;
 
 function getToken() {

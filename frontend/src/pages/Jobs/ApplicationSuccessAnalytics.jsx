@@ -18,7 +18,7 @@ import {
 import { Card } from '../../components/ui/Card';
 import { Icon } from '../../components/ui/Icon';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
 const ApplicationSuccessAnalytics = () => {
   const [activeTab, setActiveTab] = useState('overview');

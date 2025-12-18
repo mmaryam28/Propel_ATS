@@ -13,7 +13,7 @@ import axios from '../api/axiosConfig';
  * - Recommendations for addressing missing requirements
  */
 export default function JobRequirementsMatch({ jobId, userId }) {
-  const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
+  const API = import.meta?.env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
   const [matchData, setMatchData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

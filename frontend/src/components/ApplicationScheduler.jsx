@@ -18,7 +18,7 @@ export default function ApplicationScheduler() {
   const fetchSchedules = async () => {
     try {
       setLoading(true);
-      const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+      const API_URL = (import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com').replace(/\/$/, '');
       const token = localStorage.getItem('token');
       const headers = {
         'Authorization': `Bearer ${token}`,
@@ -54,7 +54,7 @@ export default function ApplicationScheduler() {
     if (!newTime) return;
 
     try {
-      const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+      const API_URL = (import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com').replace(/\/$/, '');
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/timing-optimizer/schedule/${scheduleId}`, {
         method: 'PUT',
@@ -80,7 +80,7 @@ export default function ApplicationScheduler() {
     if (!confirm('Are you sure you want to cancel this scheduled submission?')) return;
 
     try {
-      const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+      const API_URL = (import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com').replace(/\/$/, '');
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/timing-optimizer/schedule/${scheduleId}`, {
         method: 'DELETE',

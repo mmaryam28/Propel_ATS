@@ -8,7 +8,7 @@ import AddPlatformModal from "../components/AddPlatformModal";
 import { Plus } from "lucide-react";
 import { listJobs, createJob, bulkArchiveJobs, restoreJob } from "../lib/api";
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
 // Platform badge colors and labels
 const platformColors = {

@@ -18,7 +18,7 @@ function DuplicatesPage() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/duplicates/pending', {
+      const response = await fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + '/duplicates/pending', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -41,7 +41,7 @@ function DuplicatesPage() {
   const handleMerge = async (masterJobId, duplicateJobIds) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/duplicates/merge', {
+      const response = await fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + '/duplicates/merge', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ function DuplicatesPage() {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:3000/duplicates/dismiss/${duplicateId}`,
+        (import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/duplicates/dismiss/${duplicateId}`,
         {
           method: 'POST',
           headers: {

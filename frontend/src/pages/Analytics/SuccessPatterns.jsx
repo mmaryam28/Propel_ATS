@@ -136,12 +136,8 @@ function SuccessPatterns() {
   const fetchDashboard = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/patterns/dashboard', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
+      // Use central API client so base URL and auth handling are consistent
+      const { data } = await api.api.get('/patterns/dashboard', { withCredentials: true });
       setDashboardData(data);
       setLoading(false);
     } catch (error) {
@@ -153,14 +149,9 @@ function SuccessPatterns() {
   const fetchJobs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/jobs', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: 'include',
-      });
-      const data = await response.json();
-      setJobsList(data);
+      // Use helper which applies base URL and credentials
+      const jobs = await api.listJobs();
+      setJobsList(jobs);
     } catch (error) {
       console.error('Error fetching jobs:', error);
     }
@@ -185,17 +176,8 @@ function SuccessPatterns() {
   const getPrediction = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:3000/patterns/predictive-model${
-          predictionInput ? `?opportunityId=${predictionInput}` : ''
-        }`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
+      const query = predictionInput ? `?opportunityId=${encodeURIComponent(predictionInput)}` : '';
+      const { data } = await api.api.get(`/patterns/predictive-model${query}`, { withCredentials: true });
       setPrediction(data);
     } catch (error) {
       console.error('Error getting prediction:', error);
@@ -289,7 +271,7 @@ function SuccessPatterns() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/application-quality/score', {
+      const response = await fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + '/application-quality/score', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

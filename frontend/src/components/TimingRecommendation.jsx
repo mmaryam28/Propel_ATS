@@ -17,7 +17,7 @@ export default function TimingRecommendation({ applicationId, industry, companyS
   const fetchRecommendation = async () => {
     try {
       setLoading(true);
-      const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+      const API_URL = (import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com').replace(/\/$/, '');
       const token = localStorage.getItem('token');
       
       const response = await fetch(`${API_URL}/timing-optimizer/recommendation`, {
@@ -182,7 +182,7 @@ function ScheduleSubmissionModal({ applicationId, recommendedDay, recommendedTim
     try {
       setSubmitting(true);
       const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
-      const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+      const API_URL = (import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com').replace(/\/$/, '');
       const token = localStorage.getItem('token');
 
       const response = await fetch(`${API_URL}/timing-optimizer/schedule`, {

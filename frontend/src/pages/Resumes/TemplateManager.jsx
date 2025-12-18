@@ -30,7 +30,7 @@ export default function TemplateManager() {
   });
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/resume/templates")
+    fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + "/api/resume/templates")
       .then(res => res.json())
       .then(data => {
         console.log("Fetched templates:", data);
@@ -65,7 +65,7 @@ export default function TemplateManager() {
   // Create a new resume using selected template
   function handleUseTemplate(template) {
     console.log("Creating resume with template:", template);
-    fetch("http://localhost:3000/resume", {
+    fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + "/resume", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -81,7 +81,7 @@ export default function TemplateManager() {
 
   // Save custom style (colors/fonts/layout)
   function handleSaveCustomization() {
-    fetch(`http://localhost:3000/api/resume/templates/${selectedTemplate.id}`, {
+    fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/api/resume/templates/${selectedTemplate.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ colors: { primary: customSettings.color }, font: customSettings.font, layout: customSettings.layout }),
@@ -95,7 +95,7 @@ export default function TemplateManager() {
 
   // Set template as default
   function handleSetDefault(template) {
-    fetch(`http://localhost:3000/api/resume/templates/${template.id}/default`, {
+    fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/api/resume/templates/${template.id}/default`, {
       method: "POST",
     })
       .then(() => alert(`${template.name} set as default template!`))
@@ -104,7 +104,7 @@ export default function TemplateManager() {
 
   // Share template (stub)
   function handleShareTemplate(email) {
-    fetch(`http://localhost:3000/api/resume/templates/${selectedTemplate.id}/share`, {
+    fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/api/resume/templates/${selectedTemplate.id}/share`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),

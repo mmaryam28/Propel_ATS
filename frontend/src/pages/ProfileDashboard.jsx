@@ -8,7 +8,7 @@ import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import ProfileCompletenessWidget from '../components/profile/ProfileCompletenessWidget';
 import ProfileExternalCertifications from '../components/profile/ProfileExternalCertifications';
 
-const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
+const API = import.meta?.env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
 function fmtDate(d) {
   if (!d) return null;

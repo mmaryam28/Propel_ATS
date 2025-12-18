@@ -4,7 +4,7 @@ import { Card } from '../components/ui/Card';
 import { Icon } from '../components/ui/Icon';
 import { useParams, useNavigate } from 'react-router-dom';
 
-const API = import.meta?.env?.VITE_API_URL || 'http://localhost:3000';
+const API = import.meta?.env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
 export default function MentorDashboard() {
   const { menteeId } = useParams();

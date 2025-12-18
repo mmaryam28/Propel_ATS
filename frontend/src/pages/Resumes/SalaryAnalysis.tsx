@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import axios from "axios";
 import { generateSalaryAnalytics } from "../../lib/api";
 
+const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+
 const SalaryAnalysis: React.FC = () => {
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
@@ -31,7 +33,7 @@ const SalaryAnalysis: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:3000/salary/ranges", {
+      const response = await axios.get(`${base}/salary/ranges`, {
         params: { 
           title, 
           location: location || undefined, 
@@ -56,7 +58,7 @@ const SalaryAnalysis: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:3000/salary/total-compensation", {
+      const response = await axios.get(`${base}/salary/total-compensation`, {
         params: { 
           title, 
           location: location || undefined, 
@@ -81,7 +83,7 @@ const SalaryAnalysis: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:3000/salary/compare-companies", {
+      const response = await axios.get(`${base}/salary/compare-companies`, {
         params: { 
           title, 
           location: location || undefined,
@@ -105,7 +107,7 @@ const SalaryAnalysis: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:3000/salary/trends", {
+      const response = await axios.get(`${base}/salary/trends`, {
         params: { title, location: location || undefined },
       });
       setSalaryTrends(response.data);
@@ -135,12 +137,12 @@ const SalaryAnalysis: React.FC = () => {
       };
 
       const [rangesRes, compensationRes, companiesRes, trendsRes] = await Promise.all([
-        axios.get("http://localhost:3000/salary/ranges", { params }),
-        axios.get("http://localhost:3000/salary/total-compensation", { params }),
-        axios.get("http://localhost:3000/salary/compare-companies", { 
+        axios.get(`${base}/salary/ranges`, { params }),
+        axios.get(`${base}/salary/total-compensation`, { params }),
+        axios.get(`${base}/salary/compare-companies`, { 
           params: { title, location: location || undefined, benefits: benefits || undefined } 
         }),
-        axios.get("http://localhost:3000/salary/trends", { 
+        axios.get(`${base}/salary/trends`, { 
           params: { title, location: location || undefined } 
         }),
       ]);
@@ -153,13 +155,13 @@ const SalaryAnalysis: React.FC = () => {
       if (currentSalary !== "") {
         try {
           const [negotiationRes, comparisonRes] = await Promise.all([
-            axios.post("http://localhost:3000/salary/negotiation-recommendations", {
+            axios.post(`${base}/salary/negotiation-recommendations`, {
               title,
               currentSalary: Number(currentSalary),
               location: location || undefined,
               experienceLevel: experienceLevel || undefined,
             }),
-            axios.post("http://localhost:3000/salary/compare-with-current", {
+            axios.post(`${base}/salary/compare-with-current`, {
               title,
               userCurrentSalary: Number(currentSalary),
               userBonusPercentage: bonusPercentage ? Number(bonusPercentage) : undefined,
@@ -203,7 +205,7 @@ const SalaryAnalysis: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post("http://localhost:3000/salary/negotiation-recommendations", {
+      const response = await axios.post(`${base}/salary/negotiation-recommendations`, {
         title,
         currentSalary: Number(currentSalary),
         location: location || undefined,
@@ -226,7 +228,7 @@ const SalaryAnalysis: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post("http://localhost:3000/salary/compare-with-current", {
+      const response = await axios.post(`${base}/salary/compare-with-current`, {
         title,
         userCurrentSalary: Number(currentSalary),
         userBonusPercentage: bonusPercentage ? Number(bonusPercentage) : undefined,
@@ -247,7 +249,7 @@ const SalaryAnalysis: React.FC = () => {
       return;
     }
     try {
-      const response = await axios.get("http://localhost:3000/salary/export", {
+      const response = await axios.get(`${base}/salary/export`, {
         params: { title, location: location || undefined, format: "json" },
       });
       const dataStr = JSON.stringify(response.data, null, 2);

@@ -39,10 +39,10 @@ const InterviewPerformanceAnalytics = () => {
     setFollowUpError(null);
     try {
       const [dashboardRes, followUpsRes] = await Promise.all([
-        axios.get(`http://localhost:3000/interview/analytics/dashboard`, {
+        axios.get((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/interview/analytics/dashboard`, {
           params: { userId },
         }),
-        axios.get(`http://localhost:3000/interview/analytics/follow-up-stats`, {
+        axios.get((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + `/interview/analytics/follow-up-stats`, {
           params: { userId },
         }),
       ]);

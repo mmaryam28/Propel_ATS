@@ -23,8 +23,9 @@ export class PatternsService {
     const { data: applications } = await supabase
       .from('jobs')
       .select('*')
-      .eq('userId', userId)
-      .in('status', ['Applied', 'Phone Screen', 'Interview', 'Offer', 'Rejected']);
+      .eq('userId', userId);
+
+    console.info('[PatternsService] getApplicationSuccessPatterns fetched jobs count:', (applications || []).length);
 
     if (!applications || applications.length === 0) {
       return {
@@ -122,8 +123,9 @@ export class PatternsService {
     const { data: applications } = await supabase
       .from('jobs')
       .select('id, status, createdAt, company')
-      .eq('userId', userId)
-      .in('status', ['Applied', 'Phone Screen', 'Interview', 'Offer', 'Rejected']);
+      .eq('userId', userId);
+
+    console.info('[PatternsService] getPreparationCorrelation fetched jobs count:', (applications || []).length);
 
     // Get productivity tracking data (time entries)
     const { data: productivity } = await supabase
@@ -201,8 +203,9 @@ export class PatternsService {
     const { data: applications } = await supabase
       .from('jobs')
       .select('*')
-      .eq('userId', userId)
-      .in('status', ['Applied', 'Phone Screen', 'Interview', 'Offer', 'Rejected']);
+      .eq('userId', userId);
+
+    console.info('[PatternsService] getTimingPatterns fetched jobs count:', (applications || []).length);
 
     if (!applications || applications.length === 0) {
       return {
@@ -305,8 +308,9 @@ export class PatternsService {
     const { data: applications } = await supabase
       .from('jobs')
       .select('*')
-      .eq('userId', userId)
-      .in('status', ['Applied', 'Phone Screen', 'Interview', 'Offer', 'Rejected']);
+      .eq('userId', userId);
+
+    console.info('[PatternsService] getStrategyEffectiveness fetched jobs count:', (applications || []).length);
 
     if (!applications || applications.length === 0) {
       return {
@@ -391,8 +395,9 @@ export class PatternsService {
     const { data: applications } = await supabase
       .from('jobs')
       .select('*')
-      .eq('userId', userId)
-      .in('status', ['Applied', 'Phone Screen', 'Interview', 'Offer', 'Rejected']);
+      .eq('userId', userId);
+
+    console.info('[PatternsService] getPersonalSuccessFactors fetched jobs count:', (applications || []).length);
 
     // Fetch skills from Supabase skills table
     const { data: skills } = await supabase
@@ -473,8 +478,9 @@ export class PatternsService {
     const { data: applications } = await supabase
       .from('jobs')
       .select('*')
-      .eq('userId', userId)
-      .in('status', ['Applied', 'Phone Screen', 'Interview', 'Offer', 'Rejected']);
+      .eq('userId', userId);
+
+    console.info('[PatternsService] getPredictiveModel fetched jobs count:', (applications || []).length);
 
     // Get the target opportunity (if provided)
     let targetJob = null;

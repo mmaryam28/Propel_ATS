@@ -16,7 +16,8 @@ const CompanyResearch: React.FC = () => {
     setResult(null);
 
     try {
-      const res = await axios.get(`http://localhost:3000/research?company=${encodeURIComponent(company)}`);
+      const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+      const res = await axios.get(`${base}/research?company=${encodeURIComponent(company)}`);
       if (res?.data?.error) {
         setError(res.data.error);
         setResult(null);

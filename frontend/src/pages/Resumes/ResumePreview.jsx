@@ -11,7 +11,8 @@ export default function ResumePreview() {
   useEffect(() => {
     if (!id) return;
     const token = localStorage.getItem('token');
-    fetch(`http://localhost:3000/resume/${id}`, {
+    const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+    fetch(`${base}/resume/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
