@@ -1,5 +1,6 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { ApiMonitoringService } from '../api-monitoring/api-monitoring.service';
 import axios from 'axios';
 
 @Injectable()
@@ -8,7 +9,10 @@ export class LinkedinAuthService {
   private readonly clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
   private readonly redirectUri = process.env.LINKEDIN_REDIRECT_URI || 'http://localhost:3000/linkedin-auth/callback';
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly apiMonitoringService: ApiMonitoringService,
+  ) {}
 
   /**
    * Generate LinkedIn OAuth URL
@@ -24,6 +28,10 @@ export class LinkedinAuthService {
    * Exchange authorization code for access token
    */
   async getAccessToken(code: string): Promise<any> {
+    const start = Date.now();
+    const serviceName = 'LinkedIn API';
+    const quota = 500; // LinkedIn API quota varies by app, typically 500 calls/day
+
     try {
       const response = await axios.post(
         'https://www.linkedin.com/oauth/v2/accessToken',
@@ -42,8 +50,10 @@ export class LinkedinAuthService {
         }
       );
 
+      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
       return response.data;
     } catch (error) {
+      this.apiMonitoringService.recordError(serviceName, error?.response?.data?.message || error?.message || String(error));
       console.error('LinkedIn token exchange error:', error.response?.data || error.message);
       throw new HttpException(
         'Failed to exchange authorization code',
@@ -56,6 +66,10 @@ export class LinkedinAuthService {
    * Fetch LinkedIn profile data using OpenID Connect
    */
   async getLinkedInProfile(accessToken: string): Promise<any> {
+    const start = Date.now();
+    const serviceName = 'LinkedIn API';
+    const quota = 500;
+
     try {
       const profileResponse = await axios.get(
         'https://api.linkedin.com/v2/userinfo',
@@ -66,8 +80,10 @@ export class LinkedinAuthService {
         }
       );
 
+      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
       return profileResponse.data;
     } catch (error) {
+      this.apiMonitoringService.recordError(serviceName, error?.response?.data?.message || error?.message || String(error));
       console.error('LinkedIn profile fetch error:', error.response?.data || error.message);
       throw new HttpException(
         'Failed to fetch LinkedIn profile',

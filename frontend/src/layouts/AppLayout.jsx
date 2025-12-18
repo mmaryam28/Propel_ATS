@@ -571,8 +571,8 @@ export default function AppLayout() {
       <Navbar />
       <Breadcrumbs />
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-gray-900">
-        {/* Admin API Monitoring Dashboard (visible to admin users) */}
-        {token && JSON.parse(atob(token.split('.')[1]))?.role === 'admin' && (
+        {/* API Monitoring Dashboard (visible to all authenticated users) */}
+        {token && (
           <div className="mb-8">
             <ApiMonitoringDashboard />
           </div>
