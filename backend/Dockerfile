@@ -1,5 +1,5 @@
 # Backend Dockerfile for Railway deployment with Ollama support
-# Uses multi-stage build to optimize image size and security
+# Multi-stage build for optimized image size and security
 
 # Stage 1: Build the application
 FROM node:20-alpine AS builder
@@ -46,9 +46,12 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
+# List files to debug (will show if start.sh exists in build context)
+RUN ls -la /app || true
+
 # Copy startup script from build context (Railway root is backend/)
-COPY --chown=nestjs:nodejs start.sh start.sh
-RUN chmod +x start.sh
+COPY --chown=nestjs:nodejs ./start.sh ./start.sh
+RUN chmod +x ./start.sh
 
 # Expose ports
 # 3000 for NestJS API
