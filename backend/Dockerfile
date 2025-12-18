@@ -46,9 +46,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
-# Copy startup script from build context
-COPY --chown=nestjs:nodejs start.sh ./start.sh
-RUN chmod +x ./start.sh
+# Copy startup script from build context (Railway root is backend/)
+COPY --chown=nestjs:nodejs start.sh start.sh
+RUN chmod +x start.sh
 
 # Expose ports
 # 3000 for NestJS API
