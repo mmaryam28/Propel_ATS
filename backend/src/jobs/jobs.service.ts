@@ -107,10 +107,10 @@ function toApi(row: any) {
 export class JobsService {
   constructor(
     private supabase: SupabaseService,
+    private geocodingService: GeocodingService,
     @Inject(forwardRef(() => ApiMonitoringService))
     private apiMonitoringService: ApiMonitoringService,
   ) {}
-  constructor(private supabase: SupabaseService, private geocodingService: GeocodingService) {}
 
   async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string, showArchived?: boolean) {
     const client = this.supabase.getClient();

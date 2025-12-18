@@ -1,0 +1,35 @@
+# Railway ignore file - prevents uploading unnecessary files to Railway
+
+# Frontend (if deploying backend only)
+frontend/
+
+# Documentation
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Tests
+*.test.ts
+*.spec.ts
+coverage/
+
+# Build artifacts (will be built on Railway)
+dist/
+build/
+
+# Dependencies (will be installed on Railway)
+node_modules/
