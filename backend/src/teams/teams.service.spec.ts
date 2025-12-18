@@ -32,6 +32,10 @@ describe('TeamsService', () => {
           provide: SupabaseService,
           useValue: mockSupabaseService,
         },
+        {
+          provide: 'MailService',
+          useValue: { sendEmail: jest.fn() },
+        },
       ],
     }).compile();
 

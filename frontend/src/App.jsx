@@ -39,6 +39,14 @@ import TeamManagement from "./pages/TeamManagement";
 import TeamMembers from "./pages/TeamMembers";
 import TeamDashboard from "./pages/TeamDashboard";
 
+// Offers Pages
+import Offers from "./pages/Offers";
+import OfferComparison from "./pages/OfferComparison";
+
+// Career Simulation Pages
+import CareerSimulation from "./pages/CareerSimulation";
+import SimulationDetail from "./pages/SimulationDetail";
+
 const TemplatesPage = React.lazy(() =>
   import("./coverletters/pages/TemplatesPage")
 );
@@ -91,6 +99,14 @@ export default function App() {
         <Route path="/teams" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
         <Route path="/teams/:teamId/members" element={<ProtectedRoute><TeamMembers /></ProtectedRoute>} />
         <Route path="/teams/:teamId/dashboard" element={<ProtectedRoute><TeamDashboard /></ProtectedRoute>} />
+
+        {/* Offers */}
+        <Route path="/offers" element={<ProtectedRoute><Offers /></ProtectedRoute>} />
+        <Route path="/offers/compare" element={<ProtectedRoute><OfferComparison /></ProtectedRoute>} />
+
+        {/* Career Simulation (UC-128) */}
+        <Route path="/simulation" element={<ProtectedRoute><CareerSimulation /></ProtectedRoute>} />
+        <Route path="/simulation/:id" element={<ProtectedRoute><SimulationDetail /></ProtectedRoute>} />
 
         <Route
           path="/coverletters/templates"

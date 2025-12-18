@@ -44,7 +44,10 @@ describe('JobsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [JobsController],
-      providers: [{ provide: JobsService, useValue: service }],
+      providers: [
+        { provide: JobsService, useValue: service },
+        { provide: 'SalaryService', useValue: {} },
+      ],
     }).compile();
 
     controller = module.get<JobsController>(JobsController);

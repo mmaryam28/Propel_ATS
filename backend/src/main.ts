@@ -1,13 +1,35 @@
+// IMPORTANT: Make sure to import `instrument.ts` at the top of your file.
+import './instrument';
+
+// All other imports below
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import session from 'express-session';
+import * as bodyParser from 'body-parser';
 import helmet from 'helmet';
 
 console.log('Loaded SUPABASE_URL:', process.env.SUPABASE_URL);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Enable body parsing
+  app.use(bodyParser.json({ limit: '50mb' }));
+  app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+  
+  // Log all requests
+  app.use((req, res, next) => {
+    if (req.path === '/responses' && req.method === 'POST') {
+      console.log('=== RAW REQUEST DEBUG ===');
+      console.log('Method:', req.method);
+      console.log('Path:', req.path);
+      console.log('Headers:', req.headers);
+      console.log('Body:', req.body);
+      console.log('========================');
+    }
+    next();
+  });
   
   // UC-135: Security Headers
   app.use(helmet({
@@ -31,8 +53,14 @@ async function bootstrap() {
     xssFilter: true,
   }));
   
+  // CORS Configuration - Allow both local and production frontends
+  const allowedOrigins = [
+    'http://localhost:5173', // Local development
+    process.env.FRONTEND_URL, // Production frontend
+  ].filter(Boolean); // Remove undefined values
+
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: allowedOrigins,
     credentials: true,
   });
   
@@ -65,7 +93,10 @@ async function bootstrap() {
   // CSRF protection is demonstrated via /security/test-csrf endpoint
   // In production, apply CSRF selectively to state-changing operations
   
-  await app.listen(3000);
+  // Railway deployment: Use PORT environment variable or default to 3000
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`🚀 Application is running on port ${port}`);
 }
 
 bootstrap();

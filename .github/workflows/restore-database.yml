@@ -1,0 +1,299 @@
+name: Restore Database from Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to restore'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      backup_filename:
+        description: 'Backup filename (e.g., backup-daily-2025-12-16-020000.sql.gz)'
+        required: true
+        type: string
+      restore_type:
+        description: 'Type of restore'
+        required: true
+        type: choice
+        options:
+          - full
+          - tables_only
+          - data_only
+      confirmation:
+        description: 'Type "RESTORE" to confirm (case-sensitive)'
+        required: true
+        type: string
+
+jobs:
+  validate:
+    name: Validate Restore Request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "RESTORE" ]; then
+            echo "❌ Confirmation failed. You must type 'RESTORE' exactly."
+            exit 1
+          fi
+          echo "✅ Confirmation validated"
+      
+      - name: Validate inputs
+        run: |
+          echo "⚠️  RESTORE INITIATED"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Backup: ${{ github.event.inputs.backup_filename }}"
+          echo "Type: ${{ github.event.inputs.restore_type }}"
+          echo "Initiated by: ${{ github.actor }}"
+          echo ""
+          echo "⏰ Waiting 10 seconds before proceeding..."
+          sleep 10
+
+  restore:
+    name: Restore Database
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+      
+      - name: Download backup from S3
+        working-directory: backend
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_FILENAME: ${{ github.event.inputs.backup_filename }}
+        run: |
+          # Create download script
+          cat > download-backup.js << 'EOF'
+          const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+          const fs = require('fs');
+          const path = require('path');
+          
+          async function downloadBackup() {
+            const s3Client = new S3Client({
+              region: process.env.AWS_REGION || 'us-east-1',
+              credentials: {
+                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+              }
+            });
+            
+            const filename = process.env.BACKUP_FILENAME;
+            const command = new GetObjectCommand({
+              Bucket: process.env.S3_BUCKET,
+              Key: `database-backups/${filename}`
+            });
+            
+            const response = await s3Client.send(command);
+            const filepath = path.join('..', filename);
+            
+            const stream = response.Body;
+            const writeStream = fs.createWriteStream(filepath);
+            
+            await new Promise((resolve, reject) => {
+              stream.pipe(writeStream);
+              stream.on('error', reject);
+              writeStream.on('finish', resolve);
+            });
+            
+            console.log('✅ Backup downloaded from S3');
+          }
+          
+          downloadBackup().catch(console.error);
+          EOF
+          
+          npm install @aws-sdk/client-s3 || true
+          node download-backup.js
+          ls -lh ../${{ github.event.inputs.backup_filename }}
+      
+      - name: Decompress backup
+        run: |
+          echo "📦 Decompressing backup..."
+          BACKUP_FILE="${{ github.event.inputs.backup_filename }}"
+          gunzip "${BACKUP_FILE}"
+          DECOMPRESSED="${BACKUP_FILE%.gz}"
+          echo "filename=${DECOMPRESSED}" >> $GITHUB_ENV
+          ls -lh "${DECOMPRESSED}"
+      
+      - name: Verify backup integrity
+        run: |
+          echo "🔍 Verifying backup file..."
+          if ! grep -q "PostgreSQL database dump" "${DECOMPRESSED}"; then
+            echo "❌ Backup file appears corrupted"
+            exit 1
+          fi
+          echo "✅ Backup file verified"
+      
+      - name: Create pre-restore backup
+        env:
+          DATABASE_URL: ${{ github.event.inputs.environment == 'production' && secrets.SUPABASE_DATABASE_URL_PROD || secrets.SUPABASE_DATABASE_URL_STAGING }}
+        run: |
+          echo "📦 Creating safety backup before restore..."
+          TIMESTAMP=$(date +%Y-%m-%d-%H%M%S)
+          SAFETY_BACKUP="safety-backup-before-restore-${TIMESTAMP}.sql"
+          pg_dump "$DATABASE_URL" \
+            --no-owner \
+            --no-acl \
+            --clean \
+            --if-exists \
+            --format=plain \
+            --file="$SAFETY_BACKUP"
+          
+          gzip "$SAFETY_BACKUP"
+          echo "✅ Safety backup created: ${SAFETY_BACKUP}.gz"
+          echo "safety_backup=${SAFETY_BACKUP}.gz" >> $GITHUB_ENV
+      
+      - name: Restore database
+        env:
+          DATABASE_URL: ${{ github.event.inputs.environment == 'production' && secrets.SUPABASE_DATABASE_URL_PROD || secrets.SUPABASE_DATABASE_URL_STAGING }}
+          RESTORE_TYPE: ${{ github.event.inputs.restore_type }}
+        run: |
+          echo "🔄 Starting database restore..."
+          
+          if [ "$RESTORE_TYPE" == "full" ]; then
+            psql "$DATABASE_URL" < "${{ env.filename }}"
+          elif [ "$RESTORE_TYPE" == "tables_only" ]; then
+            psql "$DATABASE_URL" --section=pre-data --section=post-data < "${{ env.filename }}"
+          elif [ "$RESTORE_TYPE" == "data_only" ]; then
+            psql "$DATABASE_URL" --section=data < "${{ env.filename }}"
+          fi
+          
+          echo "✅ Database restore completed"
+      
+      - name: Verify restore
+        env:
+          DATABASE_URL: ${{ github.event.inputs.environment == 'production' && secrets.SUPABASE_DATABASE_URL_PROD || secrets.SUPABASE_DATABASE_URL_STAGING }}
+        run: |
+          echo "🔍 Verifying restore..."
+          
+          # Check table count
+          TABLE_COUNT=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
+          echo "Tables found: $TABLE_COUNT"
+          
+          if [ "$TABLE_COUNT" -lt 10 ]; then
+            echo "❌ Restore verification failed: too few tables"
+            exit 1
+          fi
+          
+          # Check key tables exist
+          REQUIRED_TABLES=("users" "jobs" "job_applications")
+          for table in "${REQUIRED_TABLES[@]}"; do
+            EXISTS=$(psql "$DATABASE_URL" -t -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '$table');")
+            if [ "$EXISTS" != " t" ]; then
+              echo "❌ Required table missing: $table"
+              exit 1
+            fi
+          done
+          
+          echo "✅ Restore verification passed"
+      
+      - name: Record restore event
+        if: success()
+        working-directory: backend
+        env:
+          SUPABASE_URL: ${{ github.event.inputs.environment == 'production' && secrets.SUPABASE_URL_PROD || secrets.SUPABASE_URL_STAGING }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cat > record-restore.js << 'EOF'
+          const { createClient } = require('@supabase/supabase-js');
+          
+          async function recordRestore() {
+            const supabase = createClient(
+              process.env.SUPABASE_URL,
+              process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+            
+            const { error } = await supabase
+              .from('restore_history')
+              .insert({
+                environment: process.env.ENVIRONMENT,
+                backupFilename: process.env.BACKUP_FILENAME,
+                restoreType: process.env.RESTORE_TYPE,
+                restoredBy: process.env.RESTORED_BY,
+                status: 'completed',
+                safetyBackupFilename: process.env.SAFETY_BACKUP
+              });
+            
+            if (error) throw error;
+            console.log('✅ Restore recorded in database');
+          }
+          
+          recordRestore().catch(console.error);
+          EOF
+          
+          npm install @supabase/supabase-js || true
+          
+          ENVIRONMENT="${{ github.event.inputs.environment }}" \
+          BACKUP_FILENAME="${{ github.event.inputs.backup_filename }}" \
+          RESTORE_TYPE="${{ github.event.inputs.restore_type }}" \
+          RESTORED_BY="${{ github.actor }}" \
+          SAFETY_BACKUP="${{ env.safety_backup }}" \
+          node record-restore.js
+      
+      - name: Upload safety backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-backup-${{ github.run_id }}
+          path: ${{ env.safety_backup }}
+          retention-days: 30
+      
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Database restore completed successfully"
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{
+          #     "text": "✅ Database restore SUCCESSFUL",
+          #     "blocks": [
+          #       {
+          #         "type": "section",
+          #         "text": {
+          #           "type": "mrkdwn",
+          #           "text": "*Environment:* ${{ github.event.inputs.environment }}\n*Backup:* ${{ github.event.inputs.backup_filename }}\n*By:* ${{ github.actor }}"
+          #         }
+          #       }
+          #     ]
+          #   }'
+      
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Database restore failed"
+          echo "Safety backup available: ${{ env.safety_backup }}"
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{
+          #     "text": "🚨 Database restore FAILED!",
+          #     "blocks": [
+          #       {
+          #         "type": "section",
+          #         "text": {
+          #           "type": "mrkdwn",
+          #           "text": "*Environment:* ${{ github.event.inputs.environment }}\n*Safety backup:* ${{ env.safety_backup }}\n*Check logs immediately!*"
+          #         }
+          #       }
+          #     ]
+          #   }'

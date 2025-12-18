@@ -10,6 +10,7 @@ describe('ProfileController', () => {
       controllers: [ProfileController],
       providers: [
         { provide: SupabaseService, useValue: { getClient: jest.fn() } },
+        { provide: 'ProfileCompletenessService', useValue: {} },
       ],
     }).compile();
     controller = module.get<ProfileController>(ProfileController);

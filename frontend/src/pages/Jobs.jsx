@@ -4,9 +4,58 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import JobForm from "../components/JobForm";
 import { Toast } from "../components/Toast";
+import AddPlatformModal from "../components/AddPlatformModal";
+import { Plus } from "lucide-react";
 import { listJobs, createJob, bulkArchiveJobs, restoreJob } from "../lib/api";
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+// Platform badge colors and labels
+const platformColors = {
+  linkedin: 'bg-blue-100 text-blue-700',
+  indeed: 'bg-green-100 text-green-700',
+  glassdoor: 'bg-teal-100 text-teal-700',
+  ziprecruiter: 'bg-purple-100 text-purple-700',
+  monster: 'bg-pink-100 text-pink-700',
+  careerbuilder: 'bg-orange-100 text-orange-700',
+  dice: 'bg-red-100 text-red-700',
+  company_site: 'bg-gray-100 text-gray-700',
+  handshake: 'bg-indigo-100 text-indigo-700',
+  angellist: 'bg-yellow-100 text-yellow-700',
+  referral: 'bg-emerald-100 text-emerald-700',
+  recruiter: 'bg-cyan-100 text-cyan-700',
+  networking: 'bg-violet-100 text-violet-700',
+  cold_application: 'bg-slate-100 text-slate-700',
+  other: 'bg-gray-100 text-gray-600',
+};
+
+const platformLabels = {
+  linkedin: 'LinkedIn',
+  indeed: 'Indeed',
+  glassdoor: 'Glassdoor',
+  ziprecruiter: 'ZipRecruiter',
+  monster: 'Monster',
+  careerbuilder: 'CareerBuilder',
+  dice: 'Dice',
+  company_site: 'Company Site',
+  handshake: 'Handshake',
+  angellist: 'AngelList',
+  referral: 'Referral',
+  recruiter: 'Recruiter',
+  networking: 'Networking',
+  cold_application: 'Cold Application',
+  other: 'Other',
+};
+
+function PlatformBadge({ platform }) {
+  if (!platform) return null;
+  
+  return (
+    <span className={`inline-flex items-center text-xs font-medium px-2 py-1 rounded-md ${platformColors[platform] || platformColors.other}`}>
+      {platformLabels[platform] || platform}
+    </span>
+  );
+}
 
 export default function Jobs() {
   // Load saved preferences from localStorage
@@ -54,6 +103,9 @@ export default function Jobs() {
   const [skillReqLevel, setSkillReqLevel] = React.useState(3);
   const [skillWeight, setSkillWeight] = React.useState(1.0);
   const [skillsMessage, setSkillsMessage] = React.useState(null);
+  const [showAddPlatformModal, setShowAddPlatformModal] = React.useState(false);
+  const [selectedJobForPlatform, setSelectedJobForPlatform] = React.useState(null);
+  const [jobPlatforms, setJobPlatforms] = React.useState({});
 
   React.useEffect(() => {
     fetchTeams();
@@ -95,6 +147,18 @@ export default function Jobs() {
       setShareMessage({ text: 'Failed to share job', type: 'error' });
       setTimeout(() => setShareMessage(null), 3000);
     }
+  }
+
+  async function handleAddPlatform(job) {
+    setSelectedJobForPlatform(job);
+    setShowAddPlatformModal(true);
+  }
+
+  async function handlePlatformAdded(newPlatform) {
+    // Refresh the job list to show new platform
+    await load();
+    setShowAddPlatformModal(false);
+    setSelectedJobForPlatform(null);
   }
 
   async function handleManageSkills(job) {
@@ -193,10 +257,35 @@ export default function Jobs() {
         sortOrder || undefined
       );
       setJobs(data);
+      
+      // Fetch platforms for all jobs
+      await fetchAllPlatforms(data);
     } catch (e) {
       setError("Failed to load jobs.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchAllPlatforms(jobsList) {
+    try {
+      const token = localStorage.getItem('token');
+      const platformPromises = jobsList.map(job =>
+        axios.get(`${API}/platforms/job/${job.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: [] })) // Return empty array on error
+      );
+      
+      const platformsResults = await Promise.all(platformPromises);
+      const platformsMap = {};
+      
+      jobsList.forEach((job, index) => {
+        platformsMap[job.id] = platformsResults[index].data || [];
+      });
+      
+      setJobPlatforms(platformsMap);
+    } catch (error) {
+      console.error('Error fetching platforms:', error);
     }
   }
 
@@ -288,7 +377,50 @@ export default function Jobs() {
   async function handleCreate(payload) {
     try {
       setCreateError("");
-      await createJob(payload);
+      const newJob = await createJob(payload);
+      
+      // If a source/platform was selected, add it to the application_platforms table
+      if (payload.source && newJob?.id) {
+        // Check if it's a trackable platform (not referral, networking, etc.)
+        const trackablePlatforms = ['linkedin', 'indeed', 'glassdoor', 'ziprecruiter', 
+                                     'monster', 'careerbuilder', 'dice', 'company_site', 
+                                     'handshake', 'angellist', 'other'];
+        
+        if (trackablePlatforms.includes(payload.source)) {
+          try {
+            const token = localStorage.getItem('token');
+            await axios.post(
+              `${API}/platforms/job/${newJob.id}`,
+              {
+                platform: payload.source,
+                application_url: payload.postingUrl || '',
+              },
+              {
+                headers: { Authorization: `Bearer ${token}` }
+              }
+            );
+          } catch (platformError) {
+            console.error('Error adding platform:', platformError);
+            // Continue even if platform fails
+          }
+        }
+
+        // Check for duplicates
+        try {
+          const token = localStorage.getItem('token');
+          await axios.post(
+            `${API}/duplicates/detect/${newJob.id}`,
+            {},
+            {
+              headers: { Authorization: `Bearer ${token}` }
+            }
+          );
+        } catch (duplicateError) {
+          console.error('Error detecting duplicates:', duplicateError);
+          // Continue even if duplicate detection fails
+        }
+      }
+      
       setOpen(false);
       await load();
     } catch (e) {
@@ -361,11 +493,12 @@ export default function Jobs() {
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link className="btn btn-secondary" to="/jobs/pipeline">Pipeline View</Link>
             <Link className="btn btn-secondary" to="/jobs/calendar">📅 Calendar</Link>
             <Link className="btn btn-secondary" to="/jobs/archived">📦 Archived</Link>
             <Link className="btn btn-secondary" to="/jobs/statistics">📊 Statistics</Link>
+            <Link className="btn btn-secondary" to="/jobs/duplicates">🔄 Duplicates</Link>
           </div>
           <button className="btn btn-primary w-full" onClick={() => setOpen(true)}>+ Add Job</button>
         </div>
@@ -588,18 +721,45 @@ export default function Jobs() {
                     </div>
                   )}
                 </div>
+                
+                {/* Platform Badges - Show source and additional platforms */}
+                {(j.source || (jobPlatforms[j.id] && jobPlatforms[j.id].length > 0)) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {/* Show source if it exists */}
+                    {j.source && <PlatformBadge platform={j.source} />}
+                    
+                    {/* Show additional platforms added via "Add Platform" */}
+                    {jobPlatforms[j.id]?.map((platformData) => (
+                      // Only show if it's different from the source
+                      platformData.platform !== j.source && (
+                        <PlatformBadge key={platformData.id} platform={platformData.platform} />
+                      )
+                    ))}
+                  </div>
+                )}
+                
                 <div className="mt-3 flex flex-wrap gap-2 text-sm">
                   {j.location && <span className="rounded-md bg-gray-100 px-2 py-1">{j.location}</span>}
                   {j.jobType && <span className="rounded-md bg-gray-100 px-2 py-1">{j.jobType}</span>}
                   {j.industry && <span className="rounded-md bg-gray-100 px-2 py-1">{j.industry}</span>}
                 </div>
-                <div className="mt-3 flex items-center gap-3">
+                <div className="mt-3 flex items-center gap-3 flex-wrap">
                   {j.postingUrl && (
                     <a className="inline-block text-sm font-medium text-[var(--primary-color)]"
                        href={j.postingUrl} target="_blank" rel="noreferrer">
                       View posting →
                     </a>
                   )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddPlatform(j);
+                    }}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    <Plus size={14} />
+                    Add Platform
+                  </button>
                   {teams.length > 0 && (
                     <button
                       onClick={(e) => {
@@ -880,6 +1040,19 @@ export default function Jobs() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Platform Modal */}
+      {showAddPlatformModal && selectedJobForPlatform && (
+        <AddPlatformModal
+          isOpen={showAddPlatformModal}
+          onClose={() => {
+            setShowAddPlatformModal(false);
+            setSelectedJobForPlatform(null);
+          }}
+          job={selectedJobForPlatform}
+          onPlatformAdded={handlePlatformAdded}
+        />
       )}
     </div>
   );

@@ -1,0 +1,188 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production Environment
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://yourapp.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      # Create Release Tag
+      - name: Create Release Tag
+        id: tag
+        run: |
+          TAG="v$(date +'%Y.%m.%d')-${{ github.run_number }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          git tag $TAG
+          git push origin $TAG
+      
+      # Backend Deployment
+      - name: Deploy Backend to Railway (Production)
+        run: |
+          echo "🚀 Deploying backend to Railway production..."
+          # Railway CLI deployment
+          # npx railway link --project ${{ secrets.RAILWAY_PROJECT_ID_PROD }}
+          # npx railway up --service backend --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
+      
+      # Database Migrations (with backup)
+      - name: Backup Database
+        run: |
+          echo "💾 Creating database backup before migration..."
+          # pg_dump or Supabase backup command
+      
+      - name: Run Database Migrations
+        working-directory: backend
+        run: |
+          echo "📦 Running database migrations..."
+          npm ci
+          # If using Prisma: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL_PROD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_PROD }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_PROD }}
+      
+      # Frontend Deployment
+      - name: Build Frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: https://api.yourapp.com
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL_PROD }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_PROD }}
+      
+      - name: Deploy Frontend to Vercel (Production)
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: frontend
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+      
+      # Comprehensive Health Check
+      - name: Health Check
+        run: |
+          echo "🏥 Performing production health check..."
+          sleep 45
+          
+          # Backend health
+          if ! curl -f https://api.yourapp.com/health; then
+            echo "❌ Backend health check failed!"
+            exit 1
+          fi
+          
+          # Frontend health
+          if ! curl -f https://yourapp.com; then
+            echo "❌ Frontend health check failed!"
+            exit 1
+          fi
+          
+          # API smoke test
+          if ! curl -f https://api.yourapp.com/api/status; then
+            echo "❌ API smoke test failed!"
+            exit 1
+          fi
+          
+          echo "✅ All health checks passed"
+      
+      # Record Deployment
+      - name: Record Deployment to Database
+        run: |
+          echo "📝 Recording production deployment..."
+          # curl -X POST https://api.yourapp.com/deployments \
+          #   -H "Content-Type: application/json" \
+          #   -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_API_KEY }}" \
+          #   -d '{
+          #     "environment": "production",
+          #     "version": "${{ steps.tag.outputs.tag }}",
+          #     "commit_sha": "${{ github.sha }}",
+          #     "commit_message": "${{ github.event.head_commit.message }}",
+          #     "deployed_by": "${{ github.actor }}",
+          #     "status": "success",
+          #     "deployment_time": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+          #   }'
+      
+      # Create GitHub Release
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          release_name: Release ${{ steps.tag.outputs.tag }}
+          body: |
+            ## Changes
+            ${{ github.event.head_commit.message }}
+            
+            **Deployed by:** ${{ github.actor }}
+            **Commit:** ${{ github.sha }}
+            **Environment:** Production
+          draft: false
+          prerelease: false
+      
+      # Notify Team
+      - name: Notify Team (Success)
+        if: success()
+        run: |
+          echo "✅ Production deployment successful!"
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{
+          #     "text": "✅ *PRODUCTION DEPLOYMENT SUCCESSFUL*",
+          #     "blocks": [
+          #       {
+          #         "type": "section",
+          #         "text": {
+          #           "type": "mrkdwn",
+          #           "text": "*Version:* ${{ steps.tag.outputs.tag }}\n*Deployed by:* ${{ github.actor }}\n*Commit:* ${{ github.sha }}"
+          #         }
+          #       }
+          #     ]
+          #   }'
+      
+      - name: Notify Team (Failure)
+        if: failure()
+        run: |
+          echo "❌ Production deployment failed!"
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{
+          #     "text": "🚨 *PRODUCTION DEPLOYMENT FAILED*",
+          #     "blocks": [
+          #       {
+          #         "type": "section",
+          #         "text": {
+          #           "type": "mrkdwn",
+          #           "text": "*Commit:* ${{ github.sha }}\n*Deployed by:* ${{ github.actor }}\n*Check logs:* https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          #         }
+          #       }
+          #     ]
+          #   }'
+      
+      # Rollback on Failure
+      - name: Rollback on Failure
+        if: failure()
+        run: |
+          echo "🔄 Initiating rollback..."
+          # Implement rollback logic here
+          # This could involve reverting to the previous deployment or running a rollback script

@@ -107,6 +107,7 @@ function toApi(row: any) {
 export class JobsService {
   constructor(
     private supabase: SupabaseService,
+    private geocodingService: GeocodingService,
     @Inject(forwardRef(() => ApiMonitoringService))
     private apiMonitoringService: ApiMonitoringService,
     private geocodingService: GeocodingService,
