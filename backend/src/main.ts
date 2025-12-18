@@ -6,12 +6,30 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import session from 'express-session';
+import * as bodyParser from 'body-parser';
 import helmet from 'helmet';
 
 console.log('Loaded SUPABASE_URL:', process.env.SUPABASE_URL);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Enable body parsing
+  app.use(bodyParser.json({ limit: '50mb' }));
+  app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+  
+  // Log all requests
+  app.use((req, res, next) => {
+    if (req.path === '/responses' && req.method === 'POST') {
+      console.log('=== RAW REQUEST DEBUG ===');
+      console.log('Method:', req.method);
+      console.log('Path:', req.path);
+      console.log('Headers:', req.headers);
+      console.log('Body:', req.body);
+      console.log('========================');
+    }
+    next();
+  });
   
   // UC-135: Security Headers
   app.use(helmet({

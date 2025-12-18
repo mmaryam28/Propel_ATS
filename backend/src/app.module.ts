@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { SecurityHeadersMiddleware } from './security/security-headers.middleware';
+import { RateLimiterMiddleware, AuthRateLimiter, ApiRateLimiter, UploadRateLimiter } from './security/rate-limiter.middleware';
 import { ApplicationsModule } from './applications/applications.module';
 import { EducationModule } from './education/education.module';
 import { CertificationModule } from './certification/certification.module';
@@ -43,6 +45,11 @@ import { ExternalCertificationsModule } from './external-certifications/external
 import { EmailIntegrationModule } from './email-integration/email-integration.module';
 
 import { TimingOptimizerModule } from './timing-optimizer/timing-optimizer.module';
+import { ResponsesModule } from './responses/responses.module';
+import { OffersModule } from './offers/offers.module';
+import { PlatformsModule } from './platforms/platforms.module';
+import { DuplicatesModule } from './duplicates/duplicates.module';
+import { SimulationModule } from './simulation/simulation.module';
 import { SecurityModule } from './security/security.module';
 import { ApiMonitoringModule } from './api-monitoring/api-monitoring.module';
 
@@ -92,11 +99,42 @@ import { ApiMonitoringModule } from './api-monitoring/api-monitoring.module';
   ExternalCertificationsModule,
   EmailIntegrationModule,
   TimingOptimizerModule,
-  SecurityModule, // UC-135: Security hardening
-    ApiMonitoringModule,
+  ResponsesModule,
+  OffersModule,
+  PlatformsModule,
+  DuplicatesModule,
+  SimulationModule,
+  SecurityModule,
+  ApiMonitoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],
   exports: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Apply security headers globally to all routes
+    consumer
+      .apply(SecurityHeadersMiddleware)
+      .forRoutes('*');
+
+    // Rate limiting temporarily disabled for testing
+    // Uncomment below when you want to enable rate limiting:
+    
+    // Apply authentication rate limiting to auth routes (5 requests per 15 minutes)
+    // consumer
+    //   .apply(AuthRateLimiter)
+    //   .forRoutes('auth/login', 'auth/register', 'auth/reset-password');
+
+    // Apply API rate limiting to all routes except auth
+    // consumer
+    //   .apply(ApiRateLimiter)
+    //   .exclude('auth/(.*)')
+    //   .forRoutes('*');
+    
+    // Apply upload rate limiting to file upload routes
+    // consumer
+    //   .apply(UploadRateLimiter)
+    //   .forRoutes('resume/upload', 'coverletters/upload');
+  }
+}

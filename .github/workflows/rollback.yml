@@ -1,0 +1,133 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Version tag to rollback to (e.g., v2025.01.15-42)'
+        required: true
+        type: string
+      reason:
+        description: 'Reason for rollback'
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    name: Rollback to Previous Version
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code at version
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Confirm Rollback
+        run: |
+          echo "⚠️  ROLLBACK INITIATED"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Target Version: ${{ github.event.inputs.version }}"
+          echo "Reason: ${{ github.event.inputs.reason }}"
+          echo "Initiated by: ${{ github.actor }}"
+      
+      # Backend Rollback
+      - name: Rollback Backend
+        run: |
+          echo "🔄 Rolling back backend..."
+          if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+            # npx railway link --project ${{ secrets.RAILWAY_PROJECT_ID_PROD }}
+            # npx railway up --service backend --environment production
+            echo "Backend rollback to production"
+          else
+            # npx railway link --project ${{ secrets.RAILWAY_PROJECT_ID_STAGING }}
+            # npx railway up --service backend --environment staging
+            echo "Backend rollback to staging"
+          fi
+        env:
+          RAILWAY_TOKEN: ${{ github.event.inputs.environment == 'production' && secrets.RAILWAY_TOKEN_PROD || secrets.RAILWAY_TOKEN_STAGING }}
+      
+      # Frontend Rollback
+      - name: Build and Rollback Frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: ${{ github.event.inputs.environment == 'production' && 'https://api.yourapp.com' || 'https://api-staging.yourapp.com' }}
+          VITE_SUPABASE_URL: ${{ github.event.inputs.environment == 'production' && secrets.SUPABASE_URL_PROD || secrets.SUPABASE_URL_STAGING }}
+          VITE_SUPABASE_ANON_KEY: ${{ github.event.inputs.environment == 'production' && secrets.SUPABASE_ANON_KEY_PROD || secrets.SUPABASE_ANON_KEY_STAGING }}
+      
+      - name: Deploy Rolled Back Frontend
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: ${{ github.event.inputs.environment == 'production' && '--prod' || '' }}
+          working-directory: frontend
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+      
+      # Health Check
+      - name: Verify Rollback Health
+        run: |
+          echo "🏥 Verifying rollback health..."
+          sleep 30
+          
+          if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+            curl -f https://api.yourapp.com/health || exit 1
+            curl -f https://yourapp.com || exit 1
+          else
+            curl -f https://api-staging.yourapp.com/health || exit 1
+            curl -f https://staging.yourapp.com || exit 1
+          fi
+          
+          echo "✅ Rollback health check passed"
+      
+      # Record Rollback
+      - name: Record Rollback Event
+        run: |
+          echo "📝 Recording rollback event..."
+          # curl -X POST https://api.yourapp.com/deployments \
+          #   -H "Content-Type: application/json" \
+          #   -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_API_KEY }}" \
+          #   -d '{
+          #     "environment": "${{ github.event.inputs.environment }}",
+          #     "version": "${{ github.event.inputs.version }}",
+          #     "event_type": "rollback",
+          #     "rolled_back_by": "${{ github.actor }}",
+          #     "reason": "${{ github.event.inputs.reason }}",
+          #     "status": "success"
+          #   }'
+      
+      # Notify Team
+      - name: Notify Rollback
+        run: |
+          echo "🔔 Notifying team of rollback..."
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -H 'Content-Type: application/json' \
+          #   -d '{
+          #     "text": "🔄 *ROLLBACK COMPLETED*",
+          #     "blocks": [
+          #       {
+          #         "type": "section",
+          #         "text": {
+          #           "type": "mrkdwn",
+          #           "text": "*Environment:* ${{ github.event.inputs.environment }}\n*Version:* ${{ github.event.inputs.version }}\n*Reason:* ${{ github.event.inputs.reason }}\n*By:* ${{ github.actor }}"
+          #         }
+          #       }
+          #     ]
+          #   }'

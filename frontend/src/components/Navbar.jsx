@@ -51,6 +51,7 @@ export default function Navbar() {
                 active={jobsActive}
                 items={[
                   { to: '/jobs', label: 'Job Tracker' },
+                  { to: '/jobs/duplicates', label: 'Manage Duplicates' },
                   { to: '/jobs/calendar', label: 'Calendar' },
                   { to: '/resumes', label: 'Resumes' },
                   { to: '/coverletters', label: 'Cover Letters' },

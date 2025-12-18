@@ -296,6 +296,9 @@ function Navbar() {
                     <Link to="/jobs" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Tracker</Link>
                     <Link to="/jobs/map" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Job Map</Link>
                     <Link to="/jobs/calendar" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Calendar</Link>
+                    <Link to="/offers" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">💼 Offer Comparison</Link>
+                    <Link to="/simulation" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">📈 Career Simulation</Link>
+                    <Link to="/responses" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">📚 Response Library</Link>
                     <Link to="/quality-check" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Quality Check</Link>
                     <Link to="/timing-optimizer" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 font-medium">⏰ Timing Optimizer</Link>
                     <Link to="/application-success" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">Application Analytics</Link>
@@ -476,6 +479,9 @@ function Navbar() {
                 <div className="pl-6 flex flex-col">
                   <Link to="/jobs" className="py-1 text-sm text-gray-700 hover:underline">Job Tracker</Link>
                   <Link to="/jobs/calendar" className="py-1 text-sm text-gray-700 hover:underline">Calendar</Link>
+                  <Link to="/offers" className="py-1 text-sm text-gray-700 hover:underline font-medium">💼 Offer Comparison</Link>
+                  <Link to="/simulation" className="py-1 text-sm text-gray-700 hover:underline font-medium">📈 Career Simulation</Link>
+                  <Link to="/responses" className="py-1 text-sm text-gray-700 hover:underline font-medium">📚 Response Library</Link>
                   <Link to="/quality-check" className="py-1 text-sm text-gray-700 hover:underline">Quality Check</Link>
                   <Link to="/application-success" className="py-1 text-sm text-gray-700 hover:underline">Application Analytics</Link>
                   <Link to="/productivity-tracker" className="py-1 text-sm text-gray-700 hover:underline">Productivity Tracker</Link>
