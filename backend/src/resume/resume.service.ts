@@ -9,22 +9,8 @@ import { UpdateResumeDto } from './dto/update-resume.dto';
 import { GenerateAIDto } from './dto/generate-ai.dto';
 import axios from 'axios';
 import * as fs from 'fs/promises';
+const pdfParse = require('pdf-parse');
 import mammoth from 'mammoth';
-
-// Lazy load pdf-parse with polyfills to avoid DOMMatrix errors in production
-let pdfParse: any;
-async function getPdfParse() {
-  if (!pdfParse) {
-    try {
-      pdfParse = require('pdf-parse');
-    } catch (e: any) {
-      // If pdf-parse fails to load, we'll handle it gracefully
-      console.warn('Warning: pdf-parse module failed to load:', e.message);
-      return null;
-    }
-  }
-  return pdfParse;
-}
 import type { Multer } from 'multer';
 import { PostgrestError } from '@supabase/supabase-js';
 import PDFDocument from 'pdfkit';
@@ -37,7 +23,7 @@ export class ResumeService {
   private ollamaUrl: string;
 
   constructor(private readonly supabase: SupabaseService) {
-    this.ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+    this.ollamaUrl = process.env.OLLAMA_URL || 'http://18.223.166.97:11434';
   }
   private readonly model = process.env.OLLAMA_MODEL || 'phi3';
 
@@ -901,17 +887,9 @@ Provide constructive, actionable feedback. Return ONLY valid JSON.`;
     let extractedText = '';
 
     if (ext === 'pdf') {
-      try {
-        const buf = await fs.readFile(filePath);
-        const parser = await getPdfParse();
-        if (!parser) {
-          throw new BadRequestException('PDF parsing is temporarily unavailable');
-        }
-        const parsed = await parser(buf);
-        extractedText = parsed.text;
-      } catch (e: any) {
-        throw new BadRequestException(`Failed to parse PDF: ${e.message}`);
-      }
+      const buf = await fs.readFile(filePath);
+      const parsed = await pdfParse(buf);
+      extractedText = parsed.text;
     } else if (ext === 'docx') {
       const result = await mammoth.extractRawText({ path: filePath });
       extractedText = result.value;
