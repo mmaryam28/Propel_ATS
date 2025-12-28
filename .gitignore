@@ -4,5 +4,22 @@ frontend/.env
 backend/.env
 node_modules
 
+# Build outputs
+dist/
+build/
+
+# Uploads
+backend/uploads/
+frontend/uploads/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Security testing
+.zap/
+
 # Sentry Config File
 .sentryclirc
