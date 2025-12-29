@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "../components/ui/Icon";
 import CookieConsent from "../components/CookieConsent";
-import ApiMonitoringDashboard from "../components/ApiMonitoringDashboard";
 
 const classNames = (...xs) => xs.filter(Boolean).join(" ");
 
@@ -577,12 +576,6 @@ export default function AppLayout() {
       <Navbar />
       <Breadcrumbs />
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-gray-900">
-        {/* API Monitoring Dashboard (visible to all authenticated users) */}
-        {token && (
-          <div className="mb-8">
-            <ApiMonitoringDashboard />
-          </div>
-        )}
         <Outlet />
       </main>
       <CookieConsent />

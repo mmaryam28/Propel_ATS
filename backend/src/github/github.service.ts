@@ -1,6 +1,5 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { ApiMonitoringService } from '../api-monitoring/api-monitoring.service';
 import axios from 'axios';
 
 @Injectable()
@@ -11,7 +10,6 @@ export class GitHubService {
 
   constructor(
     private supabase: SupabaseService,
-    private apiMonitoringService: ApiMonitoringService,
   ) {}
 
   // Generate GitHub OAuth URL
@@ -93,13 +91,8 @@ export class GitHubService {
       // Trigger initial sync
       await this.syncRepositories(userId);
 
-      // Record successful API usage
-      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
-
       return { success: true, connection: data };
     } catch (error) {
-      // Record API error
-      this.apiMonitoringService.recordError(serviceName, error?.message || String(error));
       console.error('GitHub OAuth error:', error);
       throw new HttpException(
         'Failed to connect GitHub account',
@@ -276,13 +269,8 @@ export class GitHubService {
         .update({ last_synced_at: new Date().toISOString() })
         .eq('user_id', userId);
 
-      // Record successful API usage
-      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
-
       return { success: true, count: repos.length };
     } catch (error) {
-      // Record error
-      this.apiMonitoringService.recordError(serviceName, error?.message || String(error));
       console.error('Sync repositories error:', error);
       throw new HttpException(
         'Failed to sync repositories',

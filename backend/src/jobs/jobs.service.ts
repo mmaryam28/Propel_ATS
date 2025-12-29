@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
-import { ApiMonitoringService } from '../api-monitoring/api-monitoring.service';
 import { v4 as uuidv4 } from 'uuid';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateJobDto, JOB_STATUSES, JobStatus } from './dto/create-job.dto';
@@ -108,8 +107,6 @@ export class JobsService {
   constructor(
     private supabase: SupabaseService,
     private geocodingService: GeocodingService,
-    @Inject(forwardRef(() => ApiMonitoringService))
-    private apiMonitoringService: ApiMonitoringService,
   ) {}
 
   async list(userId: string, status?: JobStatus, search?: string, industry?: string, location?: string, salaryMin?: string, salaryMax?: string, deadlineFrom?: string, deadlineTo?: string, sortBy?: string, sortOrder?: string, showArchived?: boolean) {
@@ -691,9 +688,6 @@ export class JobsService {
         const res = await fetch(url.toString(), { headers: { 'X-Api-Key': apiKey } });
         const json = await res.json();
 
-        // Record API usage
-        this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
-
         if (res.ok && Array.isArray(json.articles) && json.articles.length) {
           const articles = json.articles.map((a: any) => ({
             title: a.title,
@@ -705,8 +699,6 @@ export class JobsService {
           return { company, articles };
         }
       } catch (error) {
-        // Record error
-        this.apiMonitoringService.recordError(serviceName, error?.message || String(error));
         /* fall through to RSS */
       }
     }
