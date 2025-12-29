@@ -20,7 +20,6 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -46,7 +45,6 @@
     "express-session": "^1.18.2",
     "google-auth-library": "^10.5.0",
     "googleapis": "^168.0.0",
-    "groq-sdk": "^0.37.0",
     "helmet": "^8.1.0",
     "html2canvas": "^1.4.1",
     "isomorphic-dompurify": "^2.34.0",
@@ -54,7 +52,6 @@
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
-    "litellm": "^0.12.0",
     "mammoth": "^1.11.0",
     "multer": "^2.0.2",
     "node-fetch": "^2.7.0",

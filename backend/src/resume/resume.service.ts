@@ -15,17 +15,21 @@ import type { Multer } from 'multer';
 import { PostgrestError } from '@supabase/supabase-js';
 import PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
+import OpenAI from 'openai';
 
 
 
 @Injectable()
 export class ResumeService {
-  private ollamaUrl: string;
+  private openai: OpenAI;
+  private readonly model: string;
 
   constructor(private readonly supabase: SupabaseService) {
-    this.ollamaUrl = process.env.OLLAMA_URL || 'http://18.223.166.97:11434';
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+    this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   }
-  private readonly model = process.env.OLLAMA_MODEL || 'phi3';
 
   //----------------------------------------------------
   // UTILITIES
@@ -65,31 +69,29 @@ export class ResumeService {
     return data;
   }
 
-  async checkOllamaConnection() {
-    console.log('\n🔍 [Health Check] Testing Ollama connection...');
+  async checkOpenAIConnection() {
+    console.log('\n🔍 [Health Check] Testing OpenAI connection...');
     try {
       const startTime = Date.now();
-      const response = await axios.get(`${this.ollamaUrl}/api/tags`, {
-        timeout: 5000,
-      });
+      const response = await this.openai.models.list();
       const elapsed = Date.now() - startTime;
       
-      console.log(`✅ Ollama is running at ${this.ollamaUrl}`);
-      console.log(`📦 Available models:`, response.data?.models?.map(m => m.name) || []);
+      console.log(`✅ OpenAI connection successful`);
+      console.log(`📦 Available models:`, response.data.map(m => m.id).slice(0, 5));
       
       return {
         status: 'connected',
-        url: this.ollamaUrl,
+        service: 'OpenAI',
         responseTime: `${elapsed}ms`,
-        models: response.data?.models || [],
+        model: this.model,
       };
     } catch (err) {
-      console.error(`❌ Cannot connect to Ollama:`, err.message);
+      console.error(`❌ Cannot connect to OpenAI:`, err.message);
       return {
         status: 'error',
-        url: this.ollamaUrl,
+        service: 'OpenAI',
         error: err.message,
-        suggestion: 'Make sure Ollama is running with: ollama serve',
+        suggestion: 'Check your OPENAI_API_KEY environment variable',
       };
     }
   }
@@ -116,34 +118,35 @@ export class ResumeService {
   }
 
   //----------------------------------------------------
-  // AI ENGINE - Your enhanced version with logging
+  // AI ENGINE - OpenAI Integration
   //----------------------------------------------------
   private async askAI(prompt: string) {
     const startTime = Date.now();
-    console.log('\n [AI Request] Starting Ollama API call...');
-    console.log(` Prompt length: ${prompt.length} characters`);
+    console.log('\n🤖 [AI Request] Starting OpenAI API call...');
+    console.log(`📝 Prompt length: ${prompt.length} characters`);
+    console.log(`🎯 Model: ${this.model}`);
     
     try {
-      console.log(`🌐 Connecting to: ${this.ollamaUrl}/api/generate`);
-      console.log(`🎯 Model: ${this.model}`);
-      
-      const response = await axios.post(`${this.ollamaUrl}/api/generate`, {
+      const completion = await this.openai.chat.completions.create({
         model: this.model,
-        prompt: prompt,
-        stream: false,
-        options: {
-          temperature: 0.7,
-          num_predict: 2048, // Increased from 512 to avoid truncation
-          num_ctx: 4096, // Context window size
-        }
-      }, {
-        timeout: 300000, // 5 minutes timeout for larger responses
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional resume writer and career advisor. Always respond with valid JSON when requested.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2048,
       });
 
       const elapsed = Date.now() - startTime;
       console.log(`✅ [AI Response] Received in ${elapsed}ms (${(elapsed / 1000).toFixed(2)}s)`);
       
-      const raw = response.data?.response ?? '';
+      const raw = completion.choices[0]?.message?.content ?? '';
       console.log(`📝 Response length: ${raw.length} characters`);
       
       const sanitized = this.sanitizeAIResponse(raw);
@@ -153,46 +156,22 @@ export class ResumeService {
     } catch (err) {
       const elapsed = Date.now() - startTime;
       console.error(`❌ [AI Error] Failed after ${elapsed}ms:`, err.message);
-      if (err.code === 'ECONNREFUSED') {
-        console.error('🚨 Cannot connect to Ollama. Is it running on', this.ollamaUrl, '?');
+      
+      if (err.code === 'insufficient_quota') {
+        console.error('💳 OpenAI API quota exceeded. Please check your billing.');
+      } else if (err.status === 401) {
+        console.error('🔑 Invalid OpenAI API key. Check your OPENAI_API_KEY environment variable.');
       }
-      if (err.code === 'ETIMEDOUT' || err.code === 'ECONNABORTED') {
-        console.error('⏱️  Request timed out after 5 minutes. The phi3 model may be too slow.');
-        console.error('💡 Suggestion: Try using a faster model like "llama3.2" or "mistral"');
-        console.error('   Set OLLAMA_MODEL=llama3.2 in your .env file');
-      }
-      return { error: 'AI parsing failed', raw: err.message };
+      
+      return { error: 'AI generation failed', raw: err.message };
     }
   }
 
   //----------------------------------------------------
-  // AI ENGINE - Teammate's fetch-based version for compatibility
+  // Legacy callAI method for compatibility
   //----------------------------------------------------
   private async callAI(prompt: string) {
-    try {
-      const res = await fetch(`${this.ollamaUrl}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.model,
-          prompt,
-          stream: false,
-        }),
-      });
-
-      if (!res.ok) {
-        console.error('Ollama API Error:', await res.text());
-        return { error: 'Failed to generate AI content.' };
-      }
-
-      const data: any = await res.json();
-      const raw = (data.response || '').trim();
-
-      return this.sanitizeAIResponse(raw);
-    } catch (err) {
-      console.error('AI Error:', err);
-      return { error: 'AI request failed', raw: err.message };
-    }
+    return this.askAI(prompt);
   }
 
 

@@ -44,10 +44,10 @@ export class ResumeController {
     return this.resumeService.validateResume(profile);
   }
 
-  // Health check for Ollama connection
-  @Get('ollama-status')
-  async checkOllamaStatus() {
-    return this.resumeService.checkOllamaConnection();
+  // Health check for OpenAI connection
+  @Get('openai-status')
+  async checkOpenAIStatus() {
+    return this.resumeService.checkOpenAIConnection();
   }
 
   // --- AI Resume Generator ---
