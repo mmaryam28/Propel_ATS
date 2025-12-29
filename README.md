@@ -1,102 +1,250 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Propel — Applicant Tracking System for Candidates
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Propel is a candidate-centric Applicant Tracking System (ATS) designed to give job seekers the same organizational, analytical, and automation tools traditionally reserved for employers. Instead of managing hiring pipelines, Propel empowers candidates to manage their own job search with AI-powered automation, application tracking, and data-driven insights.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This project was developed as a CS 490 Capstone and is fully deployed as a production-ready, full-stack web application.
 
-## Description
+## 🌐 Live Application
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**Frontend (Vercel):**  
+https://cs-490-project.vercel.app/
 
-## Project setup
+**Backend API (Render):**  
+https://cs490-backend.onrender.com
 
-```bash
-$ npm install
+The application is publicly accessible. Users can create an account and immediately begin using all features.
+
+## 🎯 Project Overview
+
+Traditional Applicant Tracking Systems are built for employers, leaving candidates to manage job searches with spreadsheets, notes, and generic resumes. Propel flips this model by providing job seekers with a centralized, intelligent platform to:
+
+- Organize applications
+- Generate tailored resumes and cover letters
+- Track progress through the hiring pipeline
+- Prepare for interviews
+- Analyze job search performance
+
+The goal is to transform job searching from a chaotic process into a strategic, data-driven workflow.
+
+## ✨ Key Features
+
+### Candidate Profile Management
+- Centralized professional profile
+- Resume, portfolio, and document uploads
+- Career timeline tracking
+
+### AI-Powered Content Generation
+- Custom resume generation per role
+- Personalized cover letters
+- ATS keyword optimization
+- Professional communication templates
+
+### Job Application Tracking
+- Visual pipeline for application stages
+- Status tracking and reminders
+- Outcome analytics and insights
+
+### Interview Preparation
+- AI-generated company research
+- Role-specific interview questions
+- Mock interview preparation workflows
+
+### Authentication & Security
+- Email/password authentication
+- Google, LinkedIn, and GitHub OAuth
+- Secure JWT-based sessions
+
+### Analytics & Monitoring
+- Application success metrics
+- Profile completeness scoring
+- Usage analytics and error tracking
+
+## 🏗️ Architecture Overview
+
+Propel is a full-stack TypeScript monorepo with a clear separation between frontend and backend.
+
+**Frontend**
+- React 18 with TypeScript
+- Vite build system
+- Redux + Thunk for state management
+- Tailwind CSS for styling
+- Deployed on Vercel
+
+**Backend**
+- NestJS v11 (Node.js)
+- RESTful API architecture
+- Supabase (PostgreSQL) with Prisma ORM
+- Redis for caching
+- AI integration via Google Gemini, OpenAI, Groq SDK, and LiteLLM
+- Deployed on Render
+
+### Repository Structure
+```
+/
+├── frontend/          # React + Vite frontend
+├── backend/           # NestJS backend API
+├── documentation/     # Project documentation
+├── load-tests/        # Performance testing scripts
+└── .github/           # CI/CD workflows
 ```
 
-### Environment Configuration
+## 🧰 Technology Stack
 
-1. Copy the example environment file:
+### Backend
+
+- **Framework**: NestJS (v11)
+- **Language**: TypeScript (ES2023)
+- **Database**: Supabase (PostgreSQL) with Prisma ORM (v6.18.0)
+- **Authentication**: Passport.js (JWT, Google OAuth, LinkedIn OAuth, GitHub OAuth), bcrypt
+- **AI Services**: OpenAI (GPT-4o-mini)
+- **Caching**: Redis (v5.10.0)
+- **Email**: Nodemailer
+- **File Processing**: 
+  - PDF: pdfkit, pdf-parse, jspdf
+  - Word: mammoth, docx
+  - File uploads: multer
+- **Web Scraping**: Cheerio
+- **Security**: Helmet, csurf, xss protection, isomorphic-dompurify
+- **Monitoring**: Sentry, PostHog
+- **Testing**: Jest
+- **Other**: Axios, jsonrepair, uuid, validator
+
+### Frontend
+
+- **Framework**: React (v18.3.1)
+- **Build Tool**: Vite (v7.1.7)
+- **Language**: TypeScript
+- **Routing**: React Router DOM (v7.9.4)
+- **State Management**: Redux + Redux Thunk
+- **Styling**: Tailwind CSS (v3.4.18)
+- **UI Components**: 
+  - Icons: Heroicons, Lucide React, React Icons
+  - Rich Text: React Quill
+  - Charts: Recharts
+  - Maps: Leaflet + React Leaflet
+  - Drag & Drop: @dnd-kit
+- **Utilities**: 
+  - HTTP: Axios
+  - Database: Supabase client
+  - Date handling: date-fns
+  - PDF generation: html2canvas, jspdf
+  - Excel: xlsx
+  - Notifications: React Toastify
+  - Analytics: PostHog
+- **Testing**: Vitest, React Testing Library
+
+## 🚀 Local Development Setup
+
+### Prerequisites
+
+- Node.js 24+ and npm 11+
+- Redis (optional, for caching)
+- Supabase project
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Khalid-Itani/ATS.git
+   cd ATS
+   ```
+
+2. **Backend Setup**
+   ```bash
+   cd backend
+   npm install
+   cp .env.example .env
+   # Edit .env and fill in your actual values
+   npm run start:dev
+   ```
+   
+   Backend will run at: `http://localhost:3000`
+
+3. **Frontend Setup** (in a new terminal)
+   ```bash
+   cd frontend
+   npm install
+   cp .env.example .env
+   # Edit .env and fill in your actual values
+   npm run dev
+   ```
+   
+   Frontend will run at: `http://localhost:5173`
+
+### Environment Variables
+
+#### Backend (`backend/.env`)
+
+Required environment variables for:
+- Supabase configuration (URL, keys)
+- JWT authentication (secret, expiration)
+- OAuth providers (Google, LinkedIn, GitHub)
+- Email (SMTP configuration)
+- AI services (Google Gemini, OpenAI, Groq, etc.)
+- Optional monitoring services (Sentry, PostHog)
+
+See `backend/.env.example` for the complete list and descriptions.
+
+#### Frontend (`frontend/.env`)
+
+Required environment variables for:
+- Backend API URL
+- Supabase public credentials
+- Optional analytics configuration (PostHog)
+
+See `frontend/.env.example` for details.
+
+**Important Security Note**: Frontend environment variables must be prefixed with `VITE_` to be exposed to the browser. Never include backend secrets in the frontend.
+
+## 🧪 Testing
+
+### Backend
 ```bash
-$ cp backend/.env.example backend/.env
+cd backend
+npm run test           # Unit tests
+npm run test:e2e       # End-to-end tests
+npm run test:cov       # Test coverage
 ```
 
-2. Fill in your environment variables (see `backend/.env.example` for required values)
-
-3. For GitHub OAuth integration setup, see [GITHUB-PRODUCTION-SETUP.md](./GITHUB-PRODUCTION-SETUP.md)
-
-## Compile and run the project
-
+### Frontend
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cd frontend
+npm run test           # Run tests with Vitest
+npm run test:ui        # Run tests with UI
+npm run test:coverage  # Test coverage
 ```
 
-## Run tests
+## ☁️ Deployment
 
-```bash
-# unit tests
-$ npm run test
+- **Frontend**: Deployed via Vercel (auto-deploy on main branch)
+- **Backend**: Deployed via Render (auto-deploy on main branch)
+- **CI/CD**: GitHub Actions workflows for security scanning, backup management, and deployment validation
 
-# e2e tests
-$ npm run test:e2e
+## 📚 Documentation
 
-# test coverage
-$ npm run test:cov
-```
+Additional documentation can be found in the [`documentation/`](documentation/) folder:
+- Feature implementation guides
+- Testing guides
+- Security documentation
+- Deployment guides
+- Use case documentation
 
-## Deployment
+## 📌 Project Status
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+The project is feature-complete and deployed. Ongoing work focuses on:
+- Performance optimization (Lighthouse scores)
+- AI output accuracy
+- Profile completeness and prediction quality
+- General polish and stability improvements
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 📄 License
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+This project is licensed under the MIT License.
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 🤝 Contributors
 
-## Resources
+Developed as a CS 490 Capstone project.
 
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
 
 ## Stay in touch
 
