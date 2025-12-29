@@ -236,10 +236,6 @@ The project is feature-complete and deployed. Ongoing work focuses on:
 - Profile completeness and prediction quality
 - General polish and stability improvements
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
 ## 🤝 Contributors
 
 Khalid Itani, Luis Duarte, Michelle Zambrano, Nikoleta Sino, Maryam Mughal, Domenic Toscano
