@@ -131,6 +131,10 @@ function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const API = import.meta?.env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
+  
+  const profileRef = React.useRef(null);
+  const jobsRef = React.useRef(null);
+  const prepareRef = React.useRef(null);
 
   useEffect(() => {
     const fetchProfilePicture = async () => {
@@ -162,17 +166,45 @@ function Navbar() {
     fetchProfilePicture();
   }, [location.pathname]);
 
-  useEffect(() => setOpen(false), [location.pathname]);
+  // Close all dropdowns when route changes
+  useEffect(() => {
+    setOpen(false);
+    setProfileOpen(false);
+    setJobsOpen(false);
+    setPrepareOpen(false);
+  }, [location.pathname]);
 
+  // Close dropdowns on Escape key
   useEffect(() => {
     function onKey(e) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        setProfileOpen(false);
+        setJobsOpen(false);
+        setPrepareOpen(false);
+      }
     }
-    if (open) {
-      window.addEventListener("keydown", onKey);
-      return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileOpen(false);
+      }
+      if (jobsRef.current && !jobsRef.current.contains(event.target)) {
+        setJobsOpen(false);
+      }
+      if (prepareRef.current && !prepareRef.current.contains(event.target)) {
+        setPrepareOpen(false);
+      }
     }
-  }, [open]);
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur">
@@ -180,7 +212,7 @@ function Navbar() {
         <div className="flex h-14 items-center justify-between">
           {/* Left side: Logo + Nav */}
           <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/dashboard" className="flex items-center gap-2">
               <img
                 src="../public/propel-logo.png"
                 alt="Propel logo"
@@ -229,7 +261,7 @@ function Navbar() {
               </NavLink>
 
               {/* Profile Dropdown */}
-              <div className="relative">
+              <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setProfileOpen((v) => !v)}
                   className={classNames(
@@ -266,7 +298,7 @@ function Navbar() {
               </div>
 
               {/* Jobs Dropdown */}
-              <div className="relative">
+              <div className="relative" ref={jobsRef}>
                 <button
                   onClick={() => setJobsOpen((v) => !v)}
                   className={classNames(
@@ -316,7 +348,7 @@ function Navbar() {
               </div>
 
               {/* ⚡ Prepare Dropdown */}
-              <div className="relative">
+              <div className="relative" ref={prepareRef}>
                 <button
                   onClick={() => setPrepareOpen((v) => !v)}
                   className={classNames(
