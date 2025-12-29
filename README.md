@@ -66,16 +66,15 @@ Propel is a full-stack TypeScript monorepo with a clear separation between front
 **Frontend**
 - React 18 with TypeScript
 - Vite build system
-- Redux + Thunk for state management
 - Tailwind CSS for styling
 - Deployed on Vercel
 
 **Backend**
 - NestJS v11 (Node.js)
 - RESTful API architecture
-- Supabase (PostgreSQL) with Prisma ORM
+- Supabase (PostgreSQL)
 - Redis for caching
-- AI integration via Google Gemini, OpenAI, Groq SDK, and LiteLLM
+- AI integration via OpenAI
 - Deployed on Render
 
 ### Repository Structure
@@ -94,7 +93,7 @@ Propel is a full-stack TypeScript monorepo with a clear separation between front
 
 - **Framework**: NestJS (v11)
 - **Language**: TypeScript (ES2023)
-- **Database**: Supabase (PostgreSQL) with Prisma ORM (v6.18.0)
+- **Database**: Supabase (PostgreSQL)
 - **Authentication**: Passport.js (JWT, Google OAuth, LinkedIn OAuth, GitHub OAuth), bcrypt
 - **AI Services**: OpenAI (GPT-4o-mini)
 - **Caching**: Redis (v5.10.0)
@@ -145,7 +144,7 @@ Propel is a full-stack TypeScript monorepo with a clear separation between front
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Khalid-Itani/ATS.git
+   git clone https://github.com/Khalid-Itani/CS490-Project.git
    cd ATS
    ```
 
@@ -180,7 +179,7 @@ Required environment variables for:
 - JWT authentication (secret, expiration)
 - OAuth providers (Google, LinkedIn, GitHub)
 - Email (SMTP configuration)
-- AI services (Google Gemini, OpenAI, Groq, etc.)
+- AI services (OpenAI API Key)
 - Optional monitoring services (Sentry, PostHog)
 
 See `backend/.env.example` for the complete list and descriptions.
@@ -243,15 +242,6 @@ This project is licensed under the MIT License.
 
 ## 🤝 Contributors
 
+Khalid Itani, Luis Duarte, Michelle Zambrano, Nikoleta Sino, Maryam Mughal, Domenic Toscano
+
 Developed as a CS 490 Capstone project.
-
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
