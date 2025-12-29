@@ -77,9 +77,39 @@ function Breadcrumbs() {
 
 function NetworkingDropdown() {
   const [networkingOpen, setNetworkingOpen] = useState(false);
+  const networkingRef = React.useRef(null);
+  const location = useLocation();
+  
+  // Close dropdown when route changes
+  useEffect(() => {
+    setNetworkingOpen(false);
+  }, [location.pathname]);
+
+  // Close dropdown on Escape key
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape") {
+        setNetworkingOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (networkingRef.current && !networkingRef.current.contains(event.target)) {
+        setNetworkingOpen(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   
   return (
-    <div className="relative">
+    <div className="relative" ref={networkingRef}>
       <button
         onClick={() => setNetworkingOpen((v) => !v)}
         className={classNames(
