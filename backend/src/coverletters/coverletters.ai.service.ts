@@ -1,10 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import fetch from 'node-fetch';
+import OpenAI from 'openai';
 
 @Injectable()
 export class CoverletterAIService {
-  private readonly ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434/api/generate';
-  private readonly model = process.env.OLLAMA_MODEL || 'phi3';
+  private openai: OpenAI;
+  private readonly model: string;
+
+  constructor() {
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+    this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  }
 
   async generateCoverLetter({
     templateBody,
@@ -22,7 +29,6 @@ export class CoverletterAIService {
     industry?: string;
   }) {
     try {
-      // shorter, more focused prompt = faster token generation
       const prompt = `
         You are an expert career assistant writing for the ${industry} industry.
         Generate a ${tone} 3-paragraph cover letter tailored for the role described below.
@@ -43,26 +49,26 @@ export class CoverletterAIService {
         Return only the completed cover letter text.
         `;
 
-
-      const res = await fetch(this.ollamaUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.model,
-          prompt,
-          stream: false,
-        }),
+      const completion = await this.openai.chat.completions.create({
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert career assistant specializing in writing tailored, professional cover letters.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
       });
 
-      if (!res.ok) {
-        console.error('Ollama API Error:', await res.text());
-        return 'Error: Failed to generate AI content.';
-      }
-
-      const data: any = await res.json();
-      return (data.response || '').trim() || 'Error: No content returned.';
+      const content = completion.choices[0]?.message?.content?.trim();
+      return content || 'Error: No content returned.';
     } catch (err) {
-      console.error('Ollama API Error:', err);
+      console.error('OpenAI API Error:', err);
       return 'Error: Failed to generate AI content.';
     }
   }

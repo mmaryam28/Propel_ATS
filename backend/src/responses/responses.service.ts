@@ -513,7 +513,7 @@ export class ResponsesService {
         score: 5,
         feedback: {
           strengths: ['Practice session recorded'],
-          improvements: ['AI feedback temporarily unavailable. Make sure Ollama is running with llama3.2 model'],
+          improvements: ['AI feedback temporarily unavailable. Please try again later.'],
           score_breakdown: {
             clarity: 5,
             structure: 5,
@@ -521,7 +521,7 @@ export class ResponsesService {
             delivery: 5,
           },
         },
-        comparison_to_original: 'AI analysis unavailable - check Ollama service',
+        comparison_to_original: 'AI analysis temporarily unavailable',
       };
     }
 

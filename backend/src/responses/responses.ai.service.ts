@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import OpenAI from 'openai';
 
 interface AIFeedback {
   clarity_score: number; // 0-10
@@ -35,55 +36,40 @@ interface PracticeFeedback {
 
 @Injectable()
 export class ResponsesAIService {
-  private ollamaUrl = 'http://localhost:11434';
+  private openai: OpenAI;
+  private readonly model: string;
 
   constructor() {
-    console.log('Using Ollama AI at', this.ollamaUrl);
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+    this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    console.log('Using OpenAI for interview response analysis');
   }
 
-  private async callOllama(prompt: string, maxTokens: number = 1500): Promise<any> {
+  private async callAI(prompt: string, maxTokens: number = 1500): Promise<any> {
     try {
-      const response = await fetch(`${this.ollamaUrl}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'llama3.2',
-          prompt: prompt + '\n\nIMPORTANT: Respond with ONLY valid JSON, no markdown, no explanations, no code blocks.',
-          stream: false,
-          options: {
-            temperature: 0.7,
-            num_predict: maxTokens,
+      const completion = await this.openai.chat.completions.create({
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert interview coach and career advisor. Always respond with valid JSON only, no markdown formatting or explanations.'
+          },
+          {
+            role: 'user',
+            content: prompt
           }
-        })
+        ],
+        temperature: 0.7,
+        max_tokens: maxTokens,
+        response_format: { type: 'json_object' }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Ollama request failed: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      let rawText = data.response || '';
-      
-      // Remove markdown code blocks if present
-      rawText = rawText
-        .replace(/```json\s*/g, '')
-        .replace(/```\s*/g, '')
-        .trim();
-      
-      // Extract JSON object or array (get the outermost one)
-      const jsonMatch = rawText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-      if (jsonMatch) {
-        rawText = jsonMatch[0];
-      }
-      
-      // Only fix trailing commas - leave the rest as is since Ollama generates valid JSON
-      const cleaned = rawText.replace(/,(\s*[}\]])/g, '$1');
-      
-      // Parse and return
-      return JSON.parse(cleaned);
+      const rawText = completion.choices[0]?.message?.content || '{}';
+      return JSON.parse(rawText);
     } catch (error) {
-      console.error('Ollama API error:', error);
+      console.error('OpenAI API error:', error);
       throw error;
     }
   }
@@ -105,7 +91,7 @@ Provide your analysis in JSON format with:
 9. Response in JSON format only, no additional text.`;
 
     try {
-      const analysis = await this.callOllama(prompt, 1500);
+      const analysis = await this.callAI(prompt, 1500);
       
       // Calculate word count and estimated duration
       const wordCount = text.trim().split(/\s+/).length;
@@ -166,8 +152,8 @@ Provide feedback in JSON format with:
 Response in JSON format only, no additional text.`;
 
     try {
-      console.log('Calling Ollama for practice feedback...');
-      const result = await this.callOllama(prompt, 1500);
+      console.log('Calling OpenAI for practice feedback...');
+      const result = await this.callAI(prompt, 1500);
       console.log('Practice feedback received:', JSON.stringify(result, null, 2));
       return result;
     } catch (error) {
@@ -208,7 +194,7 @@ Provide your analysis in JSON format with:
 Response in JSON format only, no additional text.`;
 
     try {
-      return await this.callOllama(prompt, 1200);
+      return await this.callAI(prompt, 1200);
     } catch (error) {
       console.error('Error validating STAR method:', error);
       
@@ -239,7 +225,7 @@ Provide actionable suggestions as a JSON array of strings. Focus on:
 Response in JSON format only (array of strings), no additional text.`;
 
     try {
-      return await this.callOllama(prompt, 800);
+      return await this.callAI(prompt, 800);
     } catch (error) {
       console.error('Error suggesting improvements:', error);
       return ['AI suggestions temporarily unavailable'];

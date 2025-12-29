@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import fetch from 'node-fetch';
+import OpenAI from 'openai';
 import { jsonrepair } from 'jsonrepair';
 
 // ------------ Types ------------
@@ -37,17 +37,21 @@ export type InterviewPrepData = {
   technicalPrep: TechnicalPrep;
 };
 
-// ------------ Ollama config ------------
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const rawModel = process.env.LITELLM_MODEL || 'phi3';
-const OLLAMA_MODEL = rawModel.replace('ollama/', '');
+// ------------ OpenAI config ------------
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
-// Timeout for generation (60 seconds per section - increased for phi3)
+// Timeout for generation (60 seconds per section)
 const GENERATION_TIMEOUT_MS = 60000;
 
 @Injectable()
 export class InterviewPrepService {
-  constructor(private readonly supabase: SupabaseService) {}
+  private openai: OpenAI;
+
+  constructor(private readonly supabase: SupabaseService) {
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
 
   // ---------------- Public API -----------------
 
@@ -175,7 +179,7 @@ Brief description
 - Question 2`;
 
     try {
-      return await this.callOllamaText(prompt);
+      return await this.callAIText(prompt);
     } catch (err) {
       console.error('⚠️ Company research timed out, using fallback');
       return this.getFallbackCompanyResearch(companyName, roleTitle);
@@ -250,7 +254,7 @@ COMPANY-SPECIFIC:
 - Question 3`;
 
     try {
-      const text = await this.callOllamaText(prompt);
+      const text = await this.callAIText(prompt);
       return this.parseQuestionBank(text, company);
     } catch (err) {
       console.error('⚠️ Question bank failed, using fallback');
@@ -342,7 +346,7 @@ Q5 [behavioral]: [question text]
 SUMMARY: [closing advice]`;
 
     try {
-      const text = await this.callOllamaText(prompt);
+      const text = await this.callAIText(prompt);
       return this.parseMockInterview(text, company, role);
     } catch (err) {
       console.error('⚠️ Mock interview failed, using fallback');
@@ -414,7 +418,7 @@ Key points:
 - Point 3`;
 
     try {
-      const text = await this.callOllamaText(prompt);
+      const text = await this.callAIText(prompt);
       return this.parseTechnicalPrep(text, company, role);
     } catch (err) {
       console.error('⚠️ Technical prep failed, using fallback');
@@ -496,36 +500,62 @@ Key points:
     };
   }
 
-  // ---------------- Ollama Helpers -----------------
+  // ---------------- OpenAI Helpers -----------------
 
-  private async callOllamaText(prompt: string): Promise<string> {
-    const res = await this.basicOllamaCall(prompt);
-    let text = res.trim();
+  private async callAIText(prompt: string): Promise<string> {
+    const completion = await this.openai.chat.completions.create({
+      model: OPENAI_MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert career coach and interview preparation assistant. Provide clear, actionable, and professional guidance.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+    });
 
-    if (text.startsWith("```")) {
-      text = text.replace(/```[a-zA-Z]*\s*/, "").replace(/```/, "").trim();
-    }
-
-    return text;
+    return completion.choices[0]?.message?.content?.trim() || '';
   }
 
-  private async callOllamaJson<T>(prompt: string): Promise<T> {
-    const res = await this.basicOllamaCall(prompt);
+  private async callAIJson<T>(prompt: string): Promise<T> {
+    const completion = await this.openai.chat.completions.create({
+      model: OPENAI_MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert career coach and interview preparation assistant. Always respond with valid JSON only, no markdown formatting or explanations.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+      response_format: { type: 'json_object' }
+    });
 
+    const rawText = completion.choices[0]?.message?.content || '{}';
+    
     try {
-      return this.extractJson(res) as T;
+      return this.extractJson(rawText) as T;
     } catch (err) {
-      console.error("⚠️ JSON extraction failed. Raw LLM output:\n", res);
+      console.error("⚠️ JSON extraction failed. Raw AI output:\n", rawText);
       throw err;
     }
   }
 
   // Retry wrapper specialized for stubborn sections like mock interview
-  private async callOllamaJsonWithRetry<T>(prompt: string, attempts = 2, delayMs = 1000): Promise<T> {
+  private async callAIJsonWithRetry<T>(prompt: string, attempts = 2, delayMs = 1000): Promise<T> {
     let lastErr: any;
     for (let i = 0; i < attempts; i++) {
       try {
-        return await this.callOllamaJson<T>(prompt);
+        return await this.callAIJson<T>(prompt);
       } catch (err) {
         lastErr = err;
         if (i < attempts - 1) {
@@ -534,42 +564,6 @@ Key points:
       }
     }
     throw lastErr;
-  }
-
-  private async basicOllamaCall(prompt: string): Promise<string> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(`${OLLAMA_URL}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          model: OLLAMA_MODEL, 
-          prompt, 
-          stream: false,
-          options: {
-            temperature: 0.3,  // Lower = more consistent/predictable
-            num_predict: 500,  // Shorter responses = faster generation
-          },
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Ollama error: ${response.status}`);
-      }
-
-      const wrapper = await response.json();
-      return wrapper.response || '';
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        throw new Error(`Generation timed out after ${GENERATION_TIMEOUT_MS / 1000}s`);
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
-    }
   }
 
   // ---------------- Auto-Fixing JSON Extractor -----------------
