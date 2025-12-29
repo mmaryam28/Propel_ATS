@@ -1,16 +1,20 @@
+# Root-level monorepo ignores
+# Note: frontend/ and backend/ have their own .gitignore files for project-specific patterns
 
+# Environment variables
 .env
-frontend/.env
-backend/.env
-node_modules
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
 
 # Build outputs
 dist/
 build/
 
-# Uploads
-backend/uploads/
-frontend/uploads/
+# User uploads
+**/uploads/
 
 # OS files
 .DS_Store
@@ -23,3 +27,7 @@ Thumbs.db
 
 # Sentry Config File
 .sentryclirc
+
+# IDE
+.vscode/
+.idea/
