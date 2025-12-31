@@ -8,11 +8,30 @@ import { ValidationPipe } from '@nestjs/common';
 import session from 'express-session';
 import * as bodyParser from 'body-parser';
 import helmet from 'helmet';
+import passport from 'passport';
 
 console.log('Loaded SUPABASE_URL:', process.env.SUPABASE_URL);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Session configuration for Passport OAuth (must be before passport.initialize())
+  app.use(
+    session({
+      secret: process.env.JWT_SECRET || 'fallback-secret-key',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        maxAge: 3600000, // 1 hour
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+      },
+    }),
+  );
+  
+  // Initialize Passport
+  app.use(passport.initialize());
+  app.use(passport.session());
   
   // Enable body parsing
   app.use(bodyParser.json({ limit: '50mb' }));
@@ -83,20 +102,6 @@ async function bootstrap() {
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,
-      },
-    }),
-  );
-  
-  app.use(
-    session({
-      secret: process.env.JWT_SECRET || 'your-session-secret',
-      resave: false,
-      saveUninitialized: false,
-      cookie: { 
-        secure: false, // set to true if using HTTPS in production
-        httpOnly: true, // Prevent XSS access to session cookie
-        sameSite: 'strict', // CSRF protection
-        maxAge: 1000 * 60 * 60 * 24, // 24 hours
       },
     }),
   );

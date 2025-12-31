@@ -109,16 +109,24 @@ export class AuthController {
   // ---------- LinkedIn OAuth ----------
   @Get('linkedin')
   @UseGuards(AuthGuard('linkedin'))
-  async linkedinAuth() {}
+  async linkedinAuth() {
+    console.log('LinkedIn auth initiated');
+  }
 
   @Get('linkedin/callback')
   @UseGuards(AuthGuard('linkedin'))
   async linkedinCallback(@Req() req, @Res() res: any) {
+    console.log('LinkedIn callback hit, user:', req.user);
     const frontend = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
     try {
+      if (!req.user) {
+        console.error('No user in request after LinkedIn auth');
+        return res.redirect(`${frontend}/login?error=${encodeURIComponent('Authentication failed')}`);
+      }
       const result = await this.authService.loginOrCreateOAuthUser('linkedin', req.user);
       return res.redirect(`${frontend}/login?token=${encodeURIComponent(result.token)}`);
     } catch (e: any) {
+      console.error('LinkedIn callback error:', e);
       return res.redirect(`${frontend}/login?error=${encodeURIComponent(e?.message || 'LinkedIn login failed')}`);
     }
   }

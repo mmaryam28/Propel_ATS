@@ -4,7 +4,7 @@ import { Strategy as OAuth2Strategy } from 'passport-oauth2';
 import axios from 'axios';
 
 @Injectable()
-export class LinkedInStrategy extends PassportStrategy(OAuth2Strategy, 'linkedin') {
+export class LinkedInOAuthStrategy extends PassportStrategy(OAuth2Strategy, 'linkedin') {
   constructor() {
     const clientID = process.env.LINKEDIN_CLIENT_ID;
     const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
@@ -21,26 +21,41 @@ export class LinkedInStrategy extends PassportStrategy(OAuth2Strategy, 'linkedin
     });
   }
 
-  async validate(accessToken: string, refreshToken: string, profile: any, done: Function) {
+  async userProfile(accessToken: string, done: (err?: Error | null, profile?: any) => void) {
     try {
-      // Fetch user profile using OpenID Connect userinfo endpoint
       const { data } = await axios.get('https://api.linkedin.com/v2/userinfo', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-
-      // LinkedIn OpenID Connect returns: sub, name, given_name, family_name, email, picture
-      const user = {
-        email: data.email,
-        firstname: data.given_name || data.name?.split(' ')?.[0] || '',
-        lastname: data.family_name || data.name?.split(' ')?.slice(1).join(' ') || '',
-      };
-
-      done(null, user);
-    } catch (error) {
-      console.error('LinkedIn profile fetch error:', error);
-      done(error, null);
+      
+      console.log('LinkedIn userinfo response:', JSON.stringify(data, null, 2));
+      done(null, data);
+    } catch (error: any) {
+      console.error('LinkedIn userinfo fetch error:', error.response?.data || error.message);
+      done(error);
     }
+  }
+
+  async validate(accessToken: string, refreshToken: string, profile: any) {
+    console.log('LinkedIn validate - Profile:', JSON.stringify(profile, null, 2));
+    
+    // LinkedIn OpenID Connect returns: sub, name, given_name, family_name, email, picture
+    const email = profile.email || '';
+    
+    if (!email) {
+      console.error('LinkedIn profile missing email');
+      throw new Error('Email not provided by LinkedIn');
+    }
+    
+    const user = {
+      email,
+      firstname: profile.given_name || profile.name?.split(' ')?.[0] || '',
+      lastname: profile.family_name || profile.name?.split(' ')?.slice(1).join(' ') || '',
+      profilePicture: profile.picture || undefined,
+    };
+
+    console.log('LinkedIn user extracted:', user);
+    return user;
   }
 }
