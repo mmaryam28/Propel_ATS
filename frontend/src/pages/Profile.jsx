@@ -369,9 +369,9 @@ export default function Profile() {
               <label className="form-label" htmlFor="linkedin_url">LinkedIn URL</label>
               <input
                 id="linkedin_url"
-                type="url"
+                type="text"
                 className="input w-full border-gray-300 rounded-md px-3 py-2"
-                placeholder="https://linkedin.com/in/username"
+                placeholder="linkedin.com/in/username or https://linkedin.com/in/username"
                 value={profile.linkedin_url}
                 onChange={(e) => setProfile({ ...profile, linkedin_url: e.target.value })}
               />
@@ -380,9 +380,9 @@ export default function Profile() {
               <label className="form-label" htmlFor="github_url">GitHub URL</label>
               <input
                 id="github_url"
-                type="url"
+                type="text"
                 className="input w-full border-gray-300 rounded-md px-3 py-2"
-                placeholder="https://github.com/username"
+                placeholder="github.com/username or https://github.com/username"
                 value={profile.github_url}
                 onChange={(e) => setProfile({ ...profile, github_url: e.target.value })}
               />
@@ -391,29 +391,26 @@ export default function Profile() {
               <label className="form-label" htmlFor="portfolio_url">Portfolio URL</label>
               <input
                 id="portfolio_url"
-                type="url"
+                type="text"
                 className="input w-full border-gray-300 rounded-md px-3 py-2"
-                placeholder="https://yourportfolio.com"
+                placeholder="yourportfolio.com or https://yourportfolio.com"
                 value={profile.portfolio_url}
                 onChange={(e) => setProfile({ ...profile, portfolio_url: e.target.value })}
               />
             </div>
           </div>
 
-          {/* Bio area */}
+          {/* Bio */}
           <div>
             <label className="form-label" htmlFor="bio">Bio</label>
             <textarea
               id="bio"
-              rows={4}
+              rows={2}
               className="input w-full border-gray-300 rounded-md px-3 py-2"
               placeholder="A short bio about yourself..."
               value={profile.bio}
               onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
             />
-            <p className="form-help text-sm text-gray-500 mt-1">
-              This appears on your profile.
-            </p>
           </div>
 
           {/* Buttons */}

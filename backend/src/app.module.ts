@@ -51,7 +51,6 @@ import { PlatformsModule } from './platforms/platforms.module';
 import { DuplicatesModule } from './duplicates/duplicates.module';
 import { SimulationModule } from './simulation/simulation.module';
 import { SecurityModule } from './security/security.module';
-import { ApiMonitoringModule } from './api-monitoring/api-monitoring.module';
 
 @Module({
   imports: [
@@ -105,7 +104,6 @@ import { ApiMonitoringModule } from './api-monitoring/api-monitoring.module';
   DuplicatesModule,
   SimulationModule,
   SecurityModule,
-  ApiMonitoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],

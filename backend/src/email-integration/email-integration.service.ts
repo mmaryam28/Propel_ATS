@@ -1,5 +1,4 @@
 import { Injectable, BadRequestException, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
-import { ApiMonitoringService } from '../api-monitoring/api-monitoring.service';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -10,8 +9,6 @@ export class EmailIntegrationService {
 
   constructor(
     private supabase: SupabaseService,
-    @Inject(forwardRef(() => ApiMonitoringService))
-    private apiMonitoringService: ApiMonitoringService,
   ) {
     const clientId = process.env.GMAIL_CLIENT_ID;
     const clientSecret = process.env.GMAIL_CLIENT_SECRET;
@@ -181,7 +178,6 @@ export class EmailIntegrationService {
       });
 
       if (!listResponse.data.messages) {
-        this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
         return { emails: [], nextPageToken: null };
       }
 
@@ -219,13 +215,11 @@ export class EmailIntegrationService {
 
       const emails = await Promise.all(emailPromises);
 
-      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
       return {
         emails,
         nextPageToken: listResponse.data.nextPageToken || null,
       };
     } catch (error) {
-      this.apiMonitoringService.recordError(serviceName, error?.message || String(error));
       console.error('Error searching emails:', error);
       throw new BadRequestException('Failed to search emails. Please try again.');
     }

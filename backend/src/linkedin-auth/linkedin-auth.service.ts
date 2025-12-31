@@ -1,6 +1,5 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { ApiMonitoringService } from '../api-monitoring/api-monitoring.service';
 import axios from 'axios';
 
 @Injectable()
@@ -11,7 +10,6 @@ export class LinkedinAuthService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly apiMonitoringService: ApiMonitoringService,
   ) {}
 
   /**
@@ -50,10 +48,8 @@ export class LinkedinAuthService {
         }
       );
 
-      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
       return response.data;
     } catch (error) {
-      this.apiMonitoringService.recordError(serviceName, error?.response?.data?.message || error?.message || String(error));
       console.error('LinkedIn token exchange error:', error.response?.data || error.message);
       throw new HttpException(
         'Failed to exchange authorization code',
@@ -80,10 +76,8 @@ export class LinkedinAuthService {
         }
       );
 
-      this.apiMonitoringService.recordUsage(serviceName, quota, Date.now() - start);
       return profileResponse.data;
     } catch (error) {
-      this.apiMonitoringService.recordError(serviceName, error?.response?.data?.message || error?.message || String(error));
       console.error('LinkedIn profile fetch error:', error.response?.data || error.message);
       throw new HttpException(
         'Failed to fetch LinkedIn profile',

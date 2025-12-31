@@ -6,13 +6,11 @@ import { ApplicationAnalyticsService } from './application-analytics.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { GeocodingModule } from '../geocoding/geocoding.module';
 import { SalaryModule } from '../salary/salary.module';
-import { ApiMonitoringModule } from '../api-monitoring/api-monitoring.module';
 
 @Module({
   imports: [
     SupabaseModule,
     SalaryModule,
-    forwardRef(() => ApiMonitoringModule),
     GeocodingModule
   ],
   controllers: [JobsController, ApplicationAnalyticsController],

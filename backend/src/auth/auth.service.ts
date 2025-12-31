@@ -130,12 +130,20 @@ export class AuthService {
   }
 
   async updateUserProfile(userId: string, data: any) {
-    const allowed = ['firstname', 'lastname', 'email', 'bio', 'phone', 'role'];
+    const allowed = ['firstname', 'lastname', 'email', 'bio', 'phone', 'role', 'title', 'location', 'linkedin_url', 'github_url', 'portfolio_url'];
     const update: any = {};
     for (const key of allowed) {
       if (data[key] !== undefined) update[key] = data[key];
     }
     if (update.email) update.email = update.email.trim().toLowerCase();
+    
+    // Auto-add https:// to URLs if they don't have a protocol
+    const urlFields = ['linkedin_url', 'github_url', 'portfolio_url'];
+    for (const field of urlFields) {
+      if (update[field] && update[field].trim() && !update[field].match(/^https?:\/\//i)) {
+        update[field] = 'https://' + update[field].trim();
+      }
+    }
     
     const client = this.supabase.getClient();
     const { data: updatedUser, error } = await client

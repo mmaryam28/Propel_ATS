@@ -188,7 +188,7 @@ body {
     print-color-adjust: exact;
   }
 
-  textarea.input { min-height:6rem; resize:vertical; }
+  textarea.input { min-height:6rem; resize:vertical; font-size:1rem; }
 
   /* Input errors */
   .input-error { border-color:#ef4444; box-shadow:0 0 0 2px rgba(239,68,68,.15); }
