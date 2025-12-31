@@ -400,20 +400,17 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Bio area */}
+          {/* Bio */}
           <div>
             <label className="form-label" htmlFor="bio">Bio</label>
             <textarea
               id="bio"
-              rows={4}
+              rows={2}
               className="input w-full border-gray-300 rounded-md px-3 py-2"
               placeholder="A short bio about yourself..."
               value={profile.bio}
               onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
             />
-            <p className="form-help text-sm text-gray-500 mt-1">
-              This appears on your profile.
-            </p>
           </div>
 
           {/* Buttons */}
