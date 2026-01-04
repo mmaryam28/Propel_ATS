@@ -3,7 +3,8 @@ import { EducationLevel } from './education-level.enum';
 
 export class CreateEducationValidation {
   @IsNotEmpty()
-  userId: number;
+  @IsString()
+  userId: string;
 
   @IsNotEmpty()
   @IsString()

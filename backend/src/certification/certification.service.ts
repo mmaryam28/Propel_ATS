@@ -22,9 +22,9 @@ export class CertificationService {
       expiration_date: data?.doesNotExpire ? null : this.toIsoOrNull(data.expirationDate),
       does_not_expire: !!data?.doesNotExpire,
       certification_number: data.certificationNumber,
+      credential_url: data.credentialUrl,
       document_url: data.documentUrl,
       category: data.category,
-      renewal_reminder_days: data.renewalReminderDays,
     };
     
     console.log('CertificationService.create called with userId:', data.userId);
@@ -42,11 +42,31 @@ export class CertificationService {
         throw error;
       }
       
-      return certification;
+      return this.transformCertification(certification);
     } catch (err) {
       console.error('Error during certification.create:', err);
       throw err;
     }
+  }
+
+  private transformCertification(cert: any) {
+    if (!cert) return cert;
+    return {
+      id: cert.id,
+      userId: cert.user_id,
+      name: cert.name,
+      issuingOrganization: cert.issuing_organization,
+      dateEarned: cert.date_earned,
+      expirationDate: cert.expiration_date,
+      doesNotExpire: cert.does_not_expire,
+      certificationNumber: cert.certification_number,
+      credentialUrl: cert.credential_url,
+      documentUrl: cert.document_url,
+      category: cert.category,
+      verificationStatus: cert.verification_status,
+      createdAt: cert.created_at,
+      updatedAt: cert.updated_at,
+    };
   }
 
   async findAllByUser(userId: string) {
@@ -58,7 +78,7 @@ export class CertificationService {
       .order('date_earned', { ascending: false });
     
     if (error) throw error;
-    return data || [];
+    return (data || []).map(cert => this.transformCertification(cert));
   }
 
   async findOne(id: number) {
@@ -70,7 +90,7 @@ export class CertificationService {
       .single();
     
     if (error) throw error;
-    return data;
+    return this.transformCertification(data);
   }
 
   async update(id: number, data: any) {
@@ -85,9 +105,9 @@ export class CertificationService {
       payload.expiration_date = data.doesNotExpire ? null : this.toIsoOrNull(data.expirationDate);
     }
     if (data.certificationNumber !== undefined) payload.certification_number = data.certificationNumber;
+    if (data.credentialUrl !== undefined) payload.credential_url = data.credentialUrl;
     if (data.documentUrl !== undefined) payload.document_url = data.documentUrl;
     if (data.category !== undefined) payload.category = data.category;
-    if (data.renewalReminderDays !== undefined) payload.renewal_reminder_days = data.renewalReminderDays;
     
     const { data: certification, error } = await client
       .from('certifications')
@@ -97,7 +117,7 @@ export class CertificationService {
       .single();
     
     if (error) throw error;
-    return certification;
+    return this.transformCertification(certification);
   }
 
   async remove(id: number) {
@@ -110,7 +130,7 @@ export class CertificationService {
       .single();
     
     if (error) throw error;
-    return data;
+    return this.transformCertification(data);
   }
 
   async searchOrganizations(q: string) {

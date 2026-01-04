@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import ExternalCertificationsTab from '../components/ExternalCertificationsTab';
 
 // Helper to get JWT token from localStorage
 function getToken() {
@@ -17,11 +16,10 @@ export default function CertificationsPage({ userId }: Props) {
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [debugToken, setDebugToken] = useState<string | null>(null);
   const [debugError, setDebugError] = useState<string | null>(null);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(userId || null);
 
-  // Use userId from props, or fallback to localStorage
-  const currentUserId = userId || window.localStorage.getItem('userId');
-
-  // Fetch current user info from backend
+  // Fetch current user info from backend and extract userId from JWT
   useEffect(() => {
     const token = getToken();
     setDebugToken(token || null);
@@ -29,11 +27,27 @@ export default function CertificationsPage({ userId }: Props) {
       navigate('/login');
       return;
     }
+    
+    // Decode JWT to get userId if not provided via props
+    if (!userId) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const extractedUserId = payload.sub || payload.userId || payload.id;
+        if (extractedUserId) {
+          setCurrentUserId(extractedUserId);
+        }
+      } catch (err) {
+        console.error('Failed to parse JWT token:', err);
+      }
+    }
+    
     axios
       .get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => {
         if (r.data?.user) {
           setCurrentUser({ id: r.data.user.id, email: r.data.user.email });
+          // Use the user ID from the API response as the authoritative source
+          setCurrentUserId(r.data.user.id);
           setDebugError(null);
         } else {
           setCurrentUser(null);
@@ -45,21 +59,21 @@ export default function CertificationsPage({ userId }: Props) {
         setDebugError(
           err?.response?.data?.error || err?.message || 'Unknown error fetching user info.'
         );
-      });
+      })
+      .finally(() => setHasAttemptedLoad(true));
   }, []);
 
   const [items, setItems] = useState<any[]>([]);
   const [form, setForm] = useState<any>({
-    userId: currentUserId,
     name: '',
     issuingOrganization: '',
     dateEarned: '',
     expirationDate: '',
     doesNotExpire: false,
     certificationNumber: '',
+    credentialUrl: '',
     documentUrl: '',
     category: '',
-    renewalReminderDays: 30,
   });
   const [orgQuery, setOrgQuery] = useState('');
   const [orgOptions, setOrgOptions] = useState<string[]>([]);
@@ -67,7 +81,6 @@ export default function CertificationsPage({ userId }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<any | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'traditional' | 'external'>('traditional');
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -115,16 +128,15 @@ export default function CertificationsPage({ userId }: Props) {
 
   function resetForm() {
     setForm({
-      userId: currentUserId,
       name: '',
       issuingOrganization: '',
       dateEarned: '',
       expirationDate: '',
       doesNotExpire: false,
       certificationNumber: '',
+      credentialUrl: '',
       documentUrl: '',
       category: '',
-      renewalReminderDays: 30,
     });
     setUploadPreview(null);
   }
@@ -132,7 +144,7 @@ export default function CertificationsPage({ userId }: Props) {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       {/* Debug info */}
-      {!currentUser ? (
+      {hasAttemptedLoad && !currentUser ? (
         <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
           <strong>No user info found.</strong> Check your login session.
           <div className="mt-2">
@@ -146,54 +158,15 @@ export default function CertificationsPage({ userId }: Props) {
             <strong>Error:</strong> {debugError}
           </div>
         </div>
-      ) : (
-        <div className="rounded-md bg-gray-50 p-3 text-sm text-gray-700">
-          <strong>Logged in as:</strong> {currentUser.email}
-          <br />
-          <strong>User ID:</strong> {currentUser.id}
-        </div>
-      )}
+      ) : null}
 
       {/* Page header */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-gray-900">Certifications</h2>
         <p className="text-sm text-gray-600">
-          Track your professional certifications and external platform achievements.
+          Track your professional certifications and achievements.
         </p>
       </div>
-
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-4" aria-label="Tabs">
-          <button
-            onClick={() => setActiveTab('traditional')}
-            className={`py-2 px-4 text-sm font-medium border-b-2 transition ${
-              activeTab === 'traditional'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-            }`}
-          >
-            Traditional Certifications
-          </button>
-          <button
-            onClick={() => setActiveTab('external')}
-            className={`py-2 px-4 text-sm font-medium border-b-2 transition ${
-              activeTab === 'external'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-            }`}
-          >
-            External Platforms
-          </button>
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'external' ? (
-        <ExternalCertificationsTab userId={currentUserId || ''} />
-      ) : (
-        <>
-          {/* Traditional Certifications Content */}
 
       {/* Add certification form */}
       <div className="rounded-xl border border-[var(--border-color)] bg-[var(--panel-bg)] p-4 sm:p-6">
@@ -237,10 +210,21 @@ export default function CertificationsPage({ userId }: Props) {
               className="input"
             >
               <option value="">Select category</option>
-              <option>Cloud</option>
-              <option>Security</option>
-              <option>Data</option>
+              <option>IT & Technology</option>
+              <option>Cloud Computing</option>
+              <option>Cybersecurity</option>
+              <option>Data & Analytics</option>
+              <option>Software Development</option>
               <option>Project Management</option>
+              <option>Agile & Scrum</option>
+              <option>Business & Finance</option>
+              <option>Healthcare</option>
+              <option>Legal</option>
+              <option>Education & Teaching</option>
+              <option>Human Resources</option>
+              <option>Marketing & Sales</option>
+              <option>Manufacturing & Quality</option>
+              <option>Construction & Safety</option>
               <option>Other</option>
             </select>
           </div>
@@ -248,7 +232,7 @@ export default function CertificationsPage({ userId }: Props) {
           <div className="grid gap-2">
             <label className="text-sm text-gray-600">Date Earned</label>
             <input
-              type="date"
+              type="month"
               value={form.dateEarned}
               onChange={(e) => setForm({ ...form, dateEarned: e.target.value })}
               className="input"
@@ -259,7 +243,7 @@ export default function CertificationsPage({ userId }: Props) {
             <div className="grid gap-2">
               <label className="text-sm text-gray-600">Expiration Date</label>
               <input
-                type="date"
+                type="month"
                 value={form.expirationDate}
                 onChange={(e) => setForm({ ...form, expirationDate: e.target.value })}
                 className="input"
@@ -278,19 +262,18 @@ export default function CertificationsPage({ userId }: Props) {
           </div>
 
           <div className="grid gap-2">
-            <label className="text-sm text-gray-600">Renewal Reminder (days)</label>
+            <label className="text-sm text-gray-600">Credential URL</label>
             <input
-              type="number"
-              min={0}
-              value={form.renewalReminderDays}
-              onChange={(e) => setForm({ ...form, renewalReminderDays: Number(e.target.value) })}
-              placeholder="Reminder (days)"
+              type="url"
+              placeholder="https://..."
+              value={form.credentialUrl}
+              onChange={(e) => setForm({ ...form, credentialUrl: e.target.value })}
               className="input"
             />
           </div>
 
           <div className="grid gap-2">
-            <label className="text-sm text-gray-600">Document</label>
+            <label className="text-sm text-gray-600">Document (optional)</label>
             <input
               type="file"
               accept="image/*,application/pdf"
@@ -336,8 +319,17 @@ export default function CertificationsPage({ userId }: Props) {
                 setErrorMsg('Please fill in all required fields (Name, Organization, Date Earned).');
                 return;
               }
+              
+              // Convert YYYY-MM to YYYY-MM-01 for backend
+              const payload = {
+                ...form,
+                userId: currentUserId,
+                dateEarned: form.dateEarned ? `${form.dateEarned}-01` : form.dateEarned,
+                expirationDate: form.expirationDate ? `${form.expirationDate}-01` : form.expirationDate || null,
+              };
+              
               axios
-                .post(`${API}/certifications`, { ...form, userId: currentUserId })
+                .post(`${API}/certifications`, payload)
                 .then(() =>
                   axios
                     .get(`${API}/certifications/user/${currentUserId}`)
@@ -415,8 +407,8 @@ export default function CertificationsPage({ userId }: Props) {
                         <div className="grid gap-2">
                           <label className="text-sm text-gray-600">Date Earned</label>
                           <input
-                            type="date"
-                            value={editForm.dateEarned?.slice(0, 10) ?? ''}
+                            type="month"
+                            value={editForm.dateEarned?.slice(0, 7) ?? ''}
                             onChange={(e) => setEditForm({ ...editForm, dateEarned: e.target.value })}
                             className="input"
                           />
@@ -426,8 +418,8 @@ export default function CertificationsPage({ userId }: Props) {
                           <div className="grid gap-2">
                             <label className="text-sm text-gray-600">Expiration Date</label>
                             <input
-                              type="date"
-                              value={editForm.expirationDate?.slice(0, 10) ?? ''}
+                              type="month"
+                              value={editForm.expirationDate?.slice(0, 7) ?? ''}
                               onChange={(e) =>
                                 setEditForm({ ...editForm, expirationDate: e.target.value })
                               }
@@ -449,6 +441,19 @@ export default function CertificationsPage({ userId }: Props) {
                         </div>
 
                         <div className="grid gap-2">
+                          <label className="text-sm text-gray-600">Credential URL</label>
+                          <input
+                            type="url"
+                            placeholder="https://..."
+                            value={editForm.credentialUrl ?? ''}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, credentialUrl: e.target.value })
+                            }
+                            className="input"
+                          />
+                        </div>
+
+                        <div className="grid gap-2">
                           <label className="text-sm text-gray-600">Category</label>
                           <select
                             value={editForm.category ?? ''}
@@ -456,10 +461,21 @@ export default function CertificationsPage({ userId }: Props) {
                             className="input"
                           >
                             <option value="">Select category</option>
-                            <option>Cloud</option>
-                            <option>Security</option>
-                            <option>Data</option>
+                            <option>IT & Technology</option>
+                            <option>Cloud Computing</option>
+                            <option>Cybersecurity</option>
+                            <option>Data & Analytics</option>
+                            <option>Software Development</option>
                             <option>Project Management</option>
+                            <option>Agile & Scrum</option>
+                            <option>Business & Finance</option>
+                            <option>Healthcare</option>
+                            <option>Legal</option>
+                            <option>Education & Teaching</option>
+                            <option>Human Resources</option>
+                            <option>Marketing & Sales</option>
+                            <option>Manufacturing & Quality</option>
+                            <option>Construction & Safety</option>
                             <option>Other</option>
                           </select>
                         </div>
@@ -484,7 +500,18 @@ export default function CertificationsPage({ userId }: Props) {
                       <div className="flex items-center gap-2 mt-4">
                         <button
                           onClick={() => {
-                            axios.put(`${API}/certifications/${c.id}`, editForm).then(() => {
+                            // Convert YYYY-MM to YYYY-MM-01 for backend
+                            const payload = {
+                              ...editForm,
+                              dateEarned: editForm.dateEarned?.includes('-') && editForm.dateEarned.split('-').length === 2
+                                ? `${editForm.dateEarned}-01`
+                                : editForm.dateEarned,
+                              expirationDate: editForm.expirationDate && editForm.expirationDate.split('-').length === 2
+                                ? `${editForm.expirationDate}-01`
+                                : editForm.expirationDate,
+                            };
+                            
+                            axios.put(`${API}/certifications/${c.id}`, payload).then(() => {
                               setEditingId(null);
                               setEditForm(null);
                               axios
@@ -518,16 +545,29 @@ export default function CertificationsPage({ userId }: Props) {
                             </span>
                           </div>
                           <div className="text-sm text-gray-600 mt-1">
-                            Earned: {c.dateEarned?.slice(0, 10)}{' '}
+                            Earned: {new Date(c.dateEarned).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}{' '}
                             {c.doesNotExpire
                               ? '(Does not expire)'
                               : c.expirationDate
-                              ? `• Expires: ${c.expirationDate?.slice(0, 10)}`
+                              ? `• Expires: ${new Date(c.expirationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}`
                               : ''}
                           </div>
                           {c.certificationNumber && (
                             <div className="text-sm text-gray-700 mt-1">
                               <strong>ID:</strong> {c.certificationNumber}
+                            </div>
+                          )}
+                          {c.credentialUrl && (
+                            <div className="text-sm text-gray-700 mt-1">
+                              <strong>Credential:</strong>{' '}
+                              <a
+                                href={c.credentialUrl.startsWith('http') ? c.credentialUrl : `https://${c.credentialUrl}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[var(--primary-color)] hover:underline"
+                              >
+                                Verify online
+                              </a>
                             </div>
                           )}
                           {c.category && (
@@ -599,8 +639,6 @@ export default function CertificationsPage({ userId }: Props) {
           </ul>
         )}
       </div>
-        </>
-      )}
     </div>
   );
 }
