@@ -13,7 +13,6 @@ export default function ProjectsPage() {
     userId: '',
     name: '',
     description: '',
-    role: '',
     startDate: '',
     endDate: '',
     technologies: '',
@@ -22,7 +21,6 @@ export default function ProjectsPage() {
     industry: '',
     status: 'Planned',
   });
-  const [mediaFile, setMediaFile] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<any | null>(null);
 
@@ -63,11 +61,19 @@ export default function ProjectsPage() {
 
   // Transform snake_case to camelCase
   const transformProject = (project: any) => {
+    // Capitalize status (COMPLETED -> Completed)
+    const capitalizeStatus = (status: string) => {
+      if (!status) return status;
+      const lower = status.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    };
+    
     return {
       ...project,
       userId: project.user_id,
       startDate: project.start_date,
       endDate: project.end_date,
+      status: capitalizeStatus(project.status),
     };
   };
 
@@ -79,13 +85,6 @@ export default function ProjectsPage() {
       setItems(transformed);
     });
   }, [currentUserId]);
-
-  const handleMedia = (file: File | null) => {
-    if (!file) return setMediaFile(null);
-    const reader = new FileReader();
-    reader.onloadend = () => setMediaFile(reader.result as string);
-    reader.readAsDataURL(file);
-  };
 
   // Sort projects by start date (newest first)
   const sortedItems = [...items].sort((a, b) => {
@@ -120,7 +119,8 @@ export default function ProjectsPage() {
       <div className="rounded-xl border border-[var(--border-color)] bg-[var(--panel-bg)] p-4 sm:p-6">
         <h3 className="mb-4 text-lg font-semibold text-gray-900">Add Project</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-2">
+          {/* Project Name */}
+          <div className="grid gap-2 sm:col-span-2">
             <label className="text-sm text-gray-600">Project name <span className="text-red-500">*</span></label>
             <input
               placeholder="Name"
@@ -130,16 +130,9 @@ export default function ProjectsPage() {
               required
             />
           </div>
-          <div className="grid gap-2">
-            <label className="text-sm text-gray-600">Role</label>
-            <input
-              placeholder="Role"
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="input"
-            />
-          </div>
-          <div className="grid gap-2 lg:col-span-1 md:col-span-2">
+
+          {/* Description */}
+          <div className="grid gap-2 sm:col-span-2">
             <label className="text-sm text-gray-600">Description</label>
             <textarea
               placeholder="Brief project description..."
@@ -150,6 +143,7 @@ export default function ProjectsPage() {
             />
           </div>
 
+          {/* Start Date */}
           <div className="grid gap-2">
             <label className="text-sm text-gray-600">Start date <span className="text-red-500">*</span></label>
             <input
@@ -160,6 +154,8 @@ export default function ProjectsPage() {
               required
             />
           </div>
+
+          {/* End Date */}
           <div className="grid gap-2">
             <label className="text-sm text-gray-600">End date</label>
             <input
@@ -169,7 +165,9 @@ export default function ProjectsPage() {
               className="input"
             />
           </div>
-          <div className="grid gap-2 lg:col-span-1 md:col-span-2">
+
+          {/* Technologies */}
+          <div className="grid gap-2 sm:col-span-2">
             <label className="text-sm text-gray-600">Technologies (comma separated)</label>
             <input
               placeholder="React, Node, PostgreSQL…"
@@ -179,6 +177,7 @@ export default function ProjectsPage() {
             />
           </div>
 
+          {/* Project URL */}
           <div className="grid gap-2">
             <label className="text-sm text-gray-600">Project URL</label>
             <input
@@ -188,6 +187,8 @@ export default function ProjectsPage() {
               className="input"
             />
           </div>
+
+          {/* Industry */}
           <div className="grid gap-2">
             <label className="text-sm text-gray-600">Industry</label>
             <select
@@ -213,7 +214,9 @@ export default function ProjectsPage() {
               <option value="Other">Other</option>
             </select>
           </div>
-          <div className="grid gap-2 lg:col-span-1 md:col-span-2">
+
+          {/* Outcomes */}
+          <div className="grid gap-2 sm:col-span-2">
             <label className="text-sm text-gray-600">Outcomes & achievements</label>
             <textarea
               placeholder="Impact, metrics, results…"
@@ -224,6 +227,7 @@ export default function ProjectsPage() {
             />
           </div>
 
+          {/* Status */}
           <div className="grid gap-2">
             <label className="text-sm text-gray-600">Status</label>
             <select
@@ -235,15 +239,6 @@ export default function ProjectsPage() {
               <option>Ongoing</option>
               <option>Completed</option>
             </select>
-          </div>
-          <div className="grid gap-2">
-            <label className="text-sm text-gray-600">Media (image)</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleMedia(e.target.files?.[0] || null)}
-              className="file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-gray-700 hover:file:bg-gray-200"
-            />
           </div>
         </div>
 
@@ -280,15 +275,10 @@ export default function ProjectsPage() {
               };
               const res = await axios.post(`${API}/projects`, payload);
               const proj = transformProject(res.data);
-              if (mediaFile && proj?.id) {
-                await axios.post(`${API}/projects/${proj.id}/media`, { url: mediaFile, type: 'IMAGE' });
-              }
-              setMediaFile(null);
               setForm({
                 userId: currentUserId || '',
                 name: '',
                 description: '',
-                role: '',
                 startDate: '',
                 endDate: '',
                 technologies: '',
@@ -323,12 +313,6 @@ export default function ProjectsPage() {
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   className="input"
                 />
-                <input
-                  value={editForm.role ?? ''}
-                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                  placeholder="Role"
-                  className="input"
-                />
                 <textarea
                   value={editForm.description}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
@@ -336,7 +320,7 @@ export default function ProjectsPage() {
                   rows={2}
                 />
                 <select
-                  value={editForm.status ?? 'Planned'}
+                  value={editForm.status || 'Planned'}
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                   className="input"
                 >
@@ -384,7 +368,6 @@ export default function ProjectsPage() {
             ) : (
               <div>
                 <h3 className="mb-1 text-lg font-semibold text-gray-900">{p.name}</h3>
-                {p.role && <div className="text-sm text-gray-600">{p.role}</div>}
                 {p.description && <div className="mt-2 text-sm text-gray-800">{p.description}</div>}
 
                 {Array.isArray(p.technologies) && p.technologies.length > 0 && (
