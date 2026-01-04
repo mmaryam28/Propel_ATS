@@ -13,6 +13,7 @@ export class EmploymentService {
 
   async create(data: any) {
     const client = this.supabase.getClient();
+
     const payload: any = {
       user_id: String(data.userId),
       title: data.title,
@@ -22,11 +23,13 @@ export class EmploymentService {
       end_date: data.current ? null : this.toIsoOrNull(data.endDate),
       current: !!data.current,
       description: data.description,
-      employment_type: data.employmentType || null,
-      responsibilities: data.responsibilities || [],
-      skills: data.skills || [],
-      display_order: data.displayOrder || 0
+      employment_type: data.employmentType ?? null,
+      responsibilities: Array.isArray(data.responsibilities) ? data.responsibilities : [],
+      skills: Array.isArray(data.skills) ? data.skills : [],
+      display_order: data.displayOrder ?? 0,
     };
+
+    console.log('Creating employment with payload:', JSON.stringify(payload, null, 2));
 
     const { data: employment, error } = await client
       .from('employment')
@@ -34,12 +37,17 @@ export class EmploymentService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error:', error);
+      throw error;
+    }
+
     return employment;
   }
 
   async findAllByUser(userId: string) {
     const client = this.supabase.getClient();
+
     const { data, error } = await client
       .from('employment')
       .select('*')
@@ -53,6 +61,7 @@ export class EmploymentService {
 
   async findOne(id: number) {
     const client = this.supabase.getClient();
+
     const { data, error } = await client
       .from('employment')
       .select('*')
@@ -66,21 +75,30 @@ export class EmploymentService {
   async update(id: number, updateData: any) {
     const client = this.supabase.getClient();
     const payload: any = {};
-    
+
     if (updateData.title !== undefined) payload.title = updateData.title;
     if (updateData.company !== undefined) payload.company = updateData.company;
     if (updateData.location !== undefined) payload.location = updateData.location;
     if (updateData.startDate !== undefined) payload.start_date = this.toIsoOrNull(updateData.startDate);
-    if (updateData.endDate !== undefined) payload.end_date = updateData.current ? null : this.toIsoOrNull(updateData.endDate);
+
     if (updateData.current !== undefined) {
       payload.current = !!updateData.current;
-      if (payload.current) payload.end_date = null;
+      payload.end_date = payload.current ? null : this.toIsoOrNull(updateData.endDate);
     }
+
     if (updateData.description !== undefined) payload.description = updateData.description;
     if (updateData.employmentType !== undefined) payload.employment_type = updateData.employmentType;
-    if (updateData.responsibilities !== undefined) payload.responsibilities = updateData.responsibilities;
-    if (updateData.skills !== undefined) payload.skills = updateData.skills;
+    if (updateData.responsibilities !== undefined) {
+      payload.responsibilities = Array.isArray(updateData.responsibilities)
+        ? updateData.responsibilities
+        : [];
+    }
+    if (updateData.skills !== undefined) {
+      payload.skills = Array.isArray(updateData.skills) ? updateData.skills : [];
+    }
     if (updateData.displayOrder !== undefined) payload.display_order = updateData.displayOrder;
+
+    console.log(`Updating employment ${id} with payload:`, JSON.stringify(payload, null, 2));
 
     const { data, error } = await client
       .from('employment')
@@ -89,12 +107,17 @@ export class EmploymentService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase update error:', error);
+      throw error;
+    }
+
     return data;
   }
 
   async delete(id: number) {
     const client = this.supabase.getClient();
+
     const { error } = await client
       .from('employment')
       .delete()

@@ -237,6 +237,7 @@
   margin: 0 0 4px;
   font-weight: 700;
   font-size: 1.05rem;
+  color: #111827 !important;
 }
 .company {
   font-weight: 600;
@@ -325,17 +326,20 @@
   flex-direction: column;
   gap: 10px;
   margin-top: 8px;
+  width: 100%;
 }
 
 .bullet-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
   align-items: flex-start;
-  gap: 10px;
   padding: 12px 14px;
   background: #f9fafb;
   border-radius: 8px;
   border-left: 3px solid #3b82f6;
   transition: background 0.15s ease;
+  width: 100%;
 }
 
 .bullet-item:hover {
@@ -346,15 +350,15 @@
   color: #3b82f6;
   font-weight: 700;
   font-size: 1.2rem;
-  line-height: 1.4;
-  flex-shrink: 0;
+  line-height: 1.5;
 }
 
 .bullet-text {
-  flex: 1;
   font-size: 0.95rem;
   color: #374151;
   line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .remove-bullet-btn {

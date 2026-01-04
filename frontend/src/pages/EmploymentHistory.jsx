@@ -4,7 +4,8 @@ import axios from "axios";
 import "../components/ProfileForm.css";
 
 export default function EmploymentHistoryPage() {
-  const API = import.meta?.env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
+  const API = 'http://localhost:3000';
+  console.log('🔥 API URL:', API);
   const [employment, setEmployment] = useState({
     title: "",
     company: "",
@@ -27,6 +28,7 @@ export default function EmploymentHistoryPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Fetch current user info on mount
   useEffect(() => {
@@ -46,11 +48,25 @@ export default function EmploymentHistoryPage() {
 
   const handleEmploymentSubmit = async () => {
     const { title, company, startDate, endDate, current, employmentType } = employment;
+    
+    if (!userId) {
+      setEmploymentError("User not authenticated. Please refresh the page.");
+      setEmploymentSuccess("");
+      return;
+    }
+    
     if (!title || !company || !startDate) {
       setEmploymentError("Please fill in all required fields (Title, Company, Start Date).");
       setEmploymentSuccess("");
       return;
     }
+    
+    if (!employmentType) {
+      setEmploymentError("Please select an employment type.");
+      setEmploymentSuccess("");
+      return;
+    }
+    
     if (!current && endDate && new Date(startDate) > new Date(endDate)) {
       setEmploymentError("Start date cannot be after end date.");
       setEmploymentSuccess("");
@@ -61,17 +77,37 @@ export default function EmploymentHistoryPage() {
       setEmploymentSuccess("");
       return;
     }
+    
+    const payload = {
+      title: employment.title,
+      company: employment.company,
+      location: employment.location,
+      startDate: employment.startDate,
+      endDate: employment.endDate,
+      current: employment.current,
+      description: employment.description,
+      employmentType: employment.employmentType,
+      responsibilities: employment.responsibilities,
+      skills: employment.skills,
+      displayOrder: employment.displayOrder,
+      userId
+    };
+    
+    console.log('Submitting employment data:', payload);
+    
     try {
       if (editingIndex !== null && employmentHistory[editingIndex]?.id) {
         // Update existing entry
-        await axios.put(`${API}/employment/${employmentHistory[editingIndex].id}`, employment);
+        await axios.put(`${API}/employment/${employmentHistory[editingIndex].id}`, payload);
       } else {
         // Add new entry
-        await axios.post(`${API}/employment`, { ...employment, userId });
+        await axios.post(`${API}/employment`, payload);
       }
       // Refresh history
   const res = await axios.get(`${API}/employment/${userId}`);
-  setEmploymentHistory(Array.isArray(res.data) ? res.data : []);
+  console.log('Fetched employment history:', res.data);
+  setEmploymentHistory([...res.data]); // Force new array reference
+  setRefreshKey(prev => prev + 1); // Force re-render
       setEditingIndex(null);
       setEmployment({
         title: "",
@@ -91,6 +127,7 @@ export default function EmploymentHistoryPage() {
       setEmploymentError("");
       setEmploymentSuccess("Employment entry saved successfully!");
     } catch (err) {
+      console.error('Error saving employment:', err);
       setEmploymentError("Failed to save employment entry.");
       setEmploymentSuccess("");
     }
@@ -119,11 +156,28 @@ export default function EmploymentHistoryPage() {
 
   const handleEditEmployment = (index) => {
     const job = employmentHistory[index];
+    
+    // Helper to format date from ISO to YYYY-MM format for month input
+    const formatToMonthInput = (dateStr) => {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return `${year}-${month}`;
+    };
+    
     setEmployment({
-      ...job,
-      responsibilities: job.responsibilities || [],
-      skills: job.skills || [],
-      employmentType: job.employment_type || job.employmentType || ""
+      title: job.title || "",
+      company: job.company || "",
+      location: job.location || "",
+      startDate: formatToMonthInput(job.start_date || job.startDate),
+      endDate: formatToMonthInput(job.end_date || job.endDate),
+      current: job.current || false,
+      description: job.description || "",
+      employmentType: job.employment_type || job.employmentType || "",
+      responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
+      skills: Array.isArray(job.skills) ? job.skills : [],
+      displayOrder: job.display_order || job.displayOrder || 0
     });
     setEditingIndex(index);
     setEmploymentError("");
@@ -282,35 +336,7 @@ export default function EmploymentHistoryPage() {
             value={employment.location}
             onChange={(e) => setEmployment({ ...employment, location: e.target.value })}
             placeholder="e.g., San Francisco, CA or Remote"
-            list="location-suggestions"
           />
-          <datalist id="location-suggestions">
-            <option value="Remote" />
-            <option value="New York, NY" />
-            <option value="Los Angeles, CA" />
-            <option value="Chicago, IL" />
-            <option value="Houston, TX" />
-            <option value="Phoenix, AZ" />
-            <option value="Philadelphia, PA" />
-            <option value="San Antonio, TX" />
-            <option value="San Diego, CA" />
-            <option value="Dallas, TX" />
-            <option value="San Jose, CA" />
-            <option value="Austin, TX" />
-            <option value="Jacksonville, FL" />
-            <option value="San Francisco, CA" />
-            <option value="Columbus, OH" />
-            <option value="Indianapolis, IN" />
-            <option value="Seattle, WA" />
-            <option value="Denver, CO" />
-            <option value="Boston, MA" />
-            <option value="Portland, OR" />
-            <option value="Atlanta, GA" />
-            <option value="Miami, FL" />
-            <option value="Detroit, MI" />
-            <option value="Minneapolis, MN" />
-            <option value="Tampa, FL" />
-          </datalist>
 
           <div className="date-row">
             <div>
@@ -362,7 +388,6 @@ export default function EmploymentHistoryPage() {
                   }
                 }}
                 placeholder="e.g., Led a team of 5 developers to deliver project 2 weeks ahead of schedule"
-                maxLength={200}
               />
               <button 
                 type="button" 
@@ -457,15 +482,17 @@ export default function EmploymentHistoryPage() {
           {employmentHistory.length === 0 ? (
             <p>No employment history added yet.</p>
           ) : (
-            employmentHistory.map((job, index) => (
+            employmentHistory.map((job, index) => {
+              console.log(`Rendering job ${index}:`, job.title, job.location);
+              return (
               <div
-                key={job.id || index}
+                key={`${job.id}-${refreshKey}`}
                 className={`employment-entry ${job.current ? "current-role" : "past-role"}`}
               >
                 <div className="employment-header">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h4>{job.title}</h4>
+                      <h4 key={`title-${job.id}-${refreshKey}`}>{job.title || 'NO TITLE'}</h4>
                       <p className="company">{job.company} {job.employment_type && `• ${job.employment_type}`}</p>
                       <p className="dates">
                         {formatDate(job.start_date || job.startDate)} – {job.current ? "Present" : formatDate(job.end_date || job.endDate)}
@@ -538,7 +565,8 @@ export default function EmploymentHistoryPage() {
                   </button>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
