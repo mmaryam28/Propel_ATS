@@ -251,12 +251,16 @@ export default function EducationPage() {
           <button
             type="button"
             onClick={() => {
+              console.log('Current User ID:', currentUserId);
+              console.log('Current User:', currentUser);
+              
               if (!form.degree || !form.institution || !form.startDate || !form.educationLevel) {
                 setFormError('Please fill all required fields.');
                 return;
               }
-              if (!currentUserId) {
-                setFormError('User ID not available. Please refresh the page.');
+              if (!currentUserId || currentUserId === 'NaN' || currentUserId === 'undefined') {
+                setFormError('User ID not available. Please refresh the page and try again.');
+                console.error('Invalid currentUserId:', currentUserId);
                 return;
               }
               setFormError(null);
@@ -268,10 +272,12 @@ export default function EducationPage() {
                   : [],
                 gpa: form.gpa === '' ? null : Number(form.gpa),
               };
+              console.log('Sending payload:', payload);
               axios.post(`${API}/education`, payload).then(() => {
                 axios.get(`${API}/education/user/${currentUserId}`).then((r) => setItems(r.data));
                 resetForm();
               }).catch((err) => {
+                console.error('Error adding education:', err);
                 setFormError(err.response?.data?.message || 'Failed to add education entry');
               });
             }}

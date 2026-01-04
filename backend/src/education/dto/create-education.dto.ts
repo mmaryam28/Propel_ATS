@@ -1,7 +1,7 @@
 import { EducationLevel } from './education-level.enum';
 
 export class CreateEducationDto {
-  userId: number;
+  userId: string;
   degree: string;
   institution: string;
   fieldOfStudy?: string;

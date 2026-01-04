@@ -1,5 +1,5 @@
 export class CreateCertificationDto {
-  userId: number;
+  userId: string;
   name: string;
   issuingOrganization: string;
   dateEarned: string;
