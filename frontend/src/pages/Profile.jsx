@@ -496,7 +496,11 @@ export default function Profile() {
             </div>
             <div className="md:col-span-2 text-xs text-gray-500">
               <span className="font-medium">Member since:</span>
-              <span className="ml-2">{savedProfile.created_at ? new Date(savedProfile.created_at).toLocaleDateString() : 'Unknown'}</span>
+              <span className="ml-2">
+                {savedProfile.created_at 
+                  ? new Date(savedProfile.created_at.split('T')[0]).toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC' })
+                  : 'Unknown'}
+              </span>
             </div>
           </div>
         </div>
