@@ -11,6 +11,17 @@ export class ProjectsService {
     return isNaN(d.getTime()) ? null : d.toISOString();
   }
 
+  // Transform snake_case to camelCase
+  private transformProject(project: any) {
+    if (!project) return null;
+    return {
+      ...project,
+      userId: project.user_id,
+      startDate: project.start_date,
+      endDate: project.end_date,
+    };
+  }
+
   async create(data: any) {
     const client = this.supabase.getClient();
     
@@ -45,7 +56,6 @@ export class ProjectsService {
       end_date: this.toIsoOrNull(data.endDate),
       technologies: data.technologies ?? [],
       url: data.url || null,
-      team_size: data.teamSize || null,
       outcomes: data.outcomes,
       industry: data.industry,
       status: statusEnum,
@@ -58,7 +68,7 @@ export class ProjectsService {
       .single();
     
     if (error) throw error;
-    return project;
+    return this.transformProject(project);
   }
 
   async findAllByUser(userId: string) {
@@ -70,7 +80,7 @@ export class ProjectsService {
       .order('start_date', { ascending: false });
     
     if (error) throw error;
-    return data || [];
+    return (data || []).map(p => this.transformProject(p));
   }
 
   async findOne(id: number) {
@@ -91,15 +101,37 @@ export class ProjectsService {
     
     if (mediaError) throw mediaError;
     
-    return { ...project, media: media || [] };
+    const transformed = this.transformProject(project);
+    return { ...transformed, media: media || [] };
   }
 
   async update(id: number, data: any) {
     const client = this.supabase.getClient();
-    const payload: any = { ...data };
-    if (data.startDate) payload.start_date = new Date(data.startDate).toISOString();
+    
+    // Map camelCase to snake_case
+    const payload: any = {};
+    
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.description !== undefined) payload.description = data.description;
+    if (data.role !== undefined) payload.role = data.role;
+    if (data.status !== undefined) {
+      const statusMap: Record<string, string> = {
+        'Completed': 'COMPLETED',
+        'Ongoing': 'ONGOING',
+        'Planned': 'PLANNED',
+      };
+      payload.status = statusMap[data.status] || data.status;
+    }
+    if (data.technologies !== undefined) payload.technologies = data.technologies;
+    if (data.url !== undefined) payload.url = data.url;
+    if (data.outcomes !== undefined) payload.outcomes = data.outcomes;
+    if (data.industry !== undefined) payload.industry = data.industry;
+    
+    if (data.startDate !== undefined) {
+      payload.start_date = this.toIsoOrNull(data.startDate);
+    }
     if (data.endDate !== undefined) {
-      payload.end_date = data.endDate ? new Date(data.endDate).toISOString() : null;
+      payload.end_date = this.toIsoOrNull(data.endDate);
     }
     
       const { data: project, error } = await client
@@ -110,7 +142,7 @@ export class ProjectsService {
       .single();
     
     if (error) throw error;
-    return project;
+    return this.transformProject(project);
   }
 
   async remove(id: number) {
@@ -131,7 +163,7 @@ export class ProjectsService {
       .single();
     
     if (error) throw error;
-    return data;
+    return this.transformProject(data);
   }
 
   async addMedia(projectId: number, url: string, type = 'IMAGE', caption?: string) {
