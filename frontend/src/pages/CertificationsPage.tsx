@@ -17,11 +17,10 @@ export default function CertificationsPage({ userId }: Props) {
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [debugToken, setDebugToken] = useState<string | null>(null);
   const [debugError, setDebugError] = useState<string | null>(null);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(userId || null);
 
-  // Use userId from props, or fallback to localStorage
-  const currentUserId = userId || window.localStorage.getItem('userId');
-
-  // Fetch current user info from backend
+  // Fetch current user info from backend and extract userId from JWT
   useEffect(() => {
     const token = getToken();
     setDebugToken(token || null);
@@ -29,11 +28,27 @@ export default function CertificationsPage({ userId }: Props) {
       navigate('/login');
       return;
     }
+    
+    // Decode JWT to get userId if not provided via props
+    if (!userId) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const extractedUserId = payload.sub || payload.userId || payload.id;
+        if (extractedUserId) {
+          setCurrentUserId(extractedUserId);
+        }
+      } catch (err) {
+        console.error('Failed to parse JWT token:', err);
+      }
+    }
+    
     axios
       .get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => {
         if (r.data?.user) {
           setCurrentUser({ id: r.data.user.id, email: r.data.user.email });
+          // Use the user ID from the API response as the authoritative source
+          setCurrentUserId(r.data.user.id);
           setDebugError(null);
         } else {
           setCurrentUser(null);
@@ -45,12 +60,12 @@ export default function CertificationsPage({ userId }: Props) {
         setDebugError(
           err?.response?.data?.error || err?.message || 'Unknown error fetching user info.'
         );
-      });
+      })
+      .finally(() => setHasAttemptedLoad(true));
   }, []);
 
   const [items, setItems] = useState<any[]>([]);
   const [form, setForm] = useState<any>({
-    userId: currentUserId,
     name: '',
     issuingOrganization: '',
     dateEarned: '',
@@ -115,7 +130,6 @@ export default function CertificationsPage({ userId }: Props) {
 
   function resetForm() {
     setForm({
-      userId: currentUserId,
       name: '',
       issuingOrganization: '',
       dateEarned: '',
@@ -132,7 +146,7 @@ export default function CertificationsPage({ userId }: Props) {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       {/* Debug info */}
-      {!currentUser ? (
+      {hasAttemptedLoad && !currentUser ? (
         <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
           <strong>No user info found.</strong> Check your login session.
           <div className="mt-2">
@@ -146,13 +160,7 @@ export default function CertificationsPage({ userId }: Props) {
             <strong>Error:</strong> {debugError}
           </div>
         </div>
-      ) : (
-        <div className="rounded-md bg-gray-50 p-3 text-sm text-gray-700">
-          <strong>Logged in as:</strong> {currentUser.email}
-          <br />
-          <strong>User ID:</strong> {currentUser.id}
-        </div>
-      )}
+      ) : null}
 
       {/* Page header */}
       <div>
