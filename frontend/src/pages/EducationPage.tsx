@@ -63,7 +63,7 @@ export default function EducationPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const [form, setForm] = useState<any>({
-    degree: '',
+    degree: 'High School Diploma',
     institution: '',
     fieldOfStudy: '',
     startDate: '',
@@ -72,12 +72,11 @@ export default function EducationPage() {
     gpa: '',
     showGpa: true,
     honors: '',
-    educationLevel: 'Bachelor',
   });
 
   function resetForm() {
     setForm({
-      degree: '',
+      degree: 'High School Diploma',
       institution: '',
       fieldOfStudy: '',
       startDate: '',
@@ -86,7 +85,6 @@ export default function EducationPage() {
       gpa: '',
       showGpa: true,
       honors: '',
-      educationLevel: 'Bachelor',
     });
   }
 
@@ -147,29 +145,35 @@ export default function EducationPage() {
 
         <div className="grid gap-3 md:grid-cols-2">
           <div className="grid gap-2">
-            <label className="text-sm text-gray-600">Education Level</label>
-            <select
-              value={form.educationLevel}
-              onChange={(e) => setForm({ ...form, educationLevel: e.target.value })}
-              className="w-full rounded-lg border border-[var(--border-color)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-            >
-              <option value="High School">High School</option>
-              <option value="Associate">Associate</option>
-              <option value="Bachelor">Bachelor</option>
-              <option value="Master">Master</option>
-              <option value="PhD">PhD</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          <div className="grid gap-2">
             <label className="text-sm text-gray-600">Degree</label>
-            <input
-              placeholder="Degree"
+            <select
               value={form.degree}
               onChange={(e) => setForm({ ...form, degree: e.target.value })}
               className="w-full rounded-lg border border-[var(--border-color)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-            />
+            >
+              <option value="High School Diploma">High School Diploma</option>
+              <option value="GED">GED</option>
+              <option value="Associate of Arts (AA)">Associate of Arts (AA)</option>
+              <option value="Associate of Science (AS)">Associate of Science (AS)</option>
+              <option value="Associate of Applied Science (AAS)">Associate of Applied Science (AAS)</option>
+              <option value="Bachelor of Arts (BA)">Bachelor of Arts (BA)</option>
+              <option value="Bachelor of Science (BS)">Bachelor of Science (BS)</option>
+              <option value="Bachelor of Fine Arts (BFA)">Bachelor of Fine Arts (BFA)</option>
+              <option value="Bachelor of Business Administration (BBA)">Bachelor of Business Administration (BBA)</option>
+              <option value="Bachelor of Engineering (BEng)">Bachelor of Engineering (BEng)</option>
+              <option value="Master of Arts (MA)">Master of Arts (MA)</option>
+              <option value="Master of Science (MS)">Master of Science (MS)</option>
+              <option value="Master of Business Administration (MBA)">Master of Business Administration (MBA)</option>
+              <option value="Master of Engineering (MEng)">Master of Engineering (MEng)</option>
+              <option value="Master of Education (MEd)">Master of Education (MEd)</option>
+              <option value="Doctor of Philosophy (PhD)">Doctor of Philosophy (PhD)</option>
+              <option value="Doctor of Education (EdD)">Doctor of Education (EdD)</option>
+              <option value="Juris Doctor (JD)">Juris Doctor (JD)</option>
+              <option value="Doctor of Medicine (MD)">Doctor of Medicine (MD)</option>
+              <option value="Professional Certificate">Professional Certificate</option>
+              <option value="Bootcamp Certificate">Bootcamp Certificate</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
 
           <div className="grid gap-2">
@@ -261,7 +265,7 @@ export default function EducationPage() {
               console.log('Current User ID:', currentUserId);
               console.log('Current User:', currentUser);
               
-              if (!form.degree || !form.institution || !form.startDate || !form.educationLevel) {
+              if (!form.degree || !form.institution || !form.startDate) {
                 setFormError('Please fill all required fields.');
                 return;
               }
@@ -373,7 +377,7 @@ export default function EducationPage() {
                         console.log('Editing education id:', e.id, 'type:', typeof e.id);
                         setEditingId(e.id);
                         setForm({
-                          degree: e.degree || '',
+                          degree: e.degree || 'High School Diploma',
                           institution: e.institution || '',
                           fieldOfStudy: e.fieldOfStudy || '',
                           startDate: e.startDate?.slice(0, 7) || '',
@@ -382,7 +386,6 @@ export default function EducationPage() {
                           gpa: e.gpa || '',
                           showGpa: e.showGpa ?? true,
                           honors: e.honors?.join(', ') || '',
-                          educationLevel: e.educationLevel || 'Bachelor',
                         });
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}

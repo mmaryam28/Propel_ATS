@@ -6,7 +6,7 @@ export class CreateCertificationDto {
   expirationDate?: string;
   doesNotExpire?: boolean;
   certificationNumber?: string;
+  credentialUrl?: string;
   documentUrl?: string;
   category?: string;
-  renewalReminderDays?: number;
 }
