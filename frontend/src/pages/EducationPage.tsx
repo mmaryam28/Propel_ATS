@@ -350,9 +350,6 @@ export default function EducationPage() {
                     {formatDate(e.startDate)} –{' '}
                     {e.ongoing || !e.endDate ? 'Present' : formatDate(e.endDate)}
                   </div>
-                  <div className="text-xs text-gray-700">
-                    <strong>Level:</strong> {e.educationLevel}
-                  </div>
                   {e.showGpa && e.gpa && (
                     <div className="text-xs text-gray-700">
                       <strong>GPA:</strong> {e.gpa}
