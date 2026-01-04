@@ -21,7 +21,11 @@ export class EmploymentService {
       start_date: this.toIsoOrNull(data.startDate),
       end_date: data.current ? null : this.toIsoOrNull(data.endDate),
       current: !!data.current,
-      description: data.description
+      description: data.description,
+      employment_type: data.employmentType || null,
+      responsibilities: data.responsibilities || [],
+      skills: data.skills || [],
+      display_order: data.displayOrder || 0
     };
 
     const { data: employment, error } = await client
@@ -40,6 +44,7 @@ export class EmploymentService {
       .from('employment')
       .select('*')
       .eq('user_id', String(userId))
+      .order('display_order', { ascending: false })
       .order('start_date', { ascending: false });
 
     if (error) throw error;
@@ -72,6 +77,10 @@ export class EmploymentService {
       if (payload.current) payload.end_date = null;
     }
     if (updateData.description !== undefined) payload.description = updateData.description;
+    if (updateData.employmentType !== undefined) payload.employment_type = updateData.employmentType;
+    if (updateData.responsibilities !== undefined) payload.responsibilities = updateData.responsibilities;
+    if (updateData.skills !== undefined) payload.skills = updateData.skills;
+    if (updateData.displayOrder !== undefined) payload.display_order = updateData.displayOrder;
 
     const { data, error } = await client
       .from('employment')

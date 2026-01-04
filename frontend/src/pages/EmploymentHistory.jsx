@@ -13,12 +13,19 @@ export default function EmploymentHistoryPage() {
     endDate: "",
     current: false,
     description: "",
+    employmentType: "",
+    responsibilities: [],
+    skills: [],
+    displayOrder: 0
   });
+  const [currentResponsibility, setCurrentResponsibility] = useState("");
+  const [currentSkill, setCurrentSkill] = useState("");
   const [employmentHistory, setEmploymentHistory] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
   const [employmentError, setEmploymentError] = useState("");
   const [employmentSuccess, setEmploymentSuccess] = useState("");
-  const [descCount, setDescCount] = useState(0);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState(null);
   const [userId, setUserId] = useState(null);
 
   // Fetch current user info on mount
@@ -38,7 +45,7 @@ export default function EmploymentHistoryPage() {
   }, []);
 
   const handleEmploymentSubmit = async () => {
-    const { title, company, startDate, endDate, current } = employment;
+    const { title, company, startDate, endDate, current, employmentType } = employment;
     if (!title || !company || !startDate) {
       setEmploymentError("Please fill in all required fields (Title, Company, Start Date).");
       setEmploymentSuccess("");
@@ -46,6 +53,11 @@ export default function EmploymentHistoryPage() {
     }
     if (!current && endDate && new Date(startDate) > new Date(endDate)) {
       setEmploymentError("Start date cannot be after end date.");
+      setEmploymentSuccess("");
+      return;
+    }
+    if (employment.responsibilities.length === 0) {
+      setEmploymentError("Please add at least one responsibility/achievement.");
       setEmploymentSuccess("");
       return;
     }
@@ -69,8 +81,13 @@ export default function EmploymentHistoryPage() {
         endDate: "",
         current: false,
         description: "",
+        employmentType: "",
+        responsibilities: [],
+        skills: [],
+        displayOrder: 0
       });
-      setDescCount(0);
+      setCurrentResponsibility("");
+      setCurrentSkill("");
       setEmploymentError("");
       setEmploymentSuccess("Employment entry saved successfully!");
     } catch (err) {
@@ -88,43 +105,126 @@ export default function EmploymentHistoryPage() {
       endDate: "",
       current: false,
       description: "",
+      employmentType: "",
+      responsibilities: [],
+      skills: [],
+      displayOrder: 0
     });
-    setDescCount(0);
+    setCurrentResponsibility("");
+    setCurrentSkill("");
     setEmploymentError("");
     setEmploymentSuccess("");
     setEditingIndex(null);
   };
 
   const handleEditEmployment = (index) => {
-    setEmployment(employmentHistory[index]);
+    const job = employmentHistory[index];
+    setEmployment({
+      ...job,
+      responsibilities: job.responsibilities || [],
+      skills: job.skills || [],
+      employmentType: job.employment_type || job.employmentType || ""
+    });
     setEditingIndex(index);
     setEmploymentError("");
     setEmploymentSuccess("");
+    // Scroll to top of form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteEmployment = async (index) => {
-    if (window.confirm("Are you sure you want to delete this entry?")) {
-      try {
-        const entry = employmentHistory[index];
-        if (entry?.id) {
-          await axios.delete(`${API}/employment/${entry.id}`);
-        }
-        // Refresh history
-  const res = await axios.get(`${API}/employment/${userId}`);
-  setEmploymentHistory(Array.isArray(res.data) ? res.data : []);
-      } catch {
-        // fallback: remove locally
-        setEmploymentHistory(employmentHistory.filter((_, i) => i !== index));
+  const handleDeleteClick = (index) => {
+    setDeleteIndex(index);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const entry = employmentHistory[deleteIndex];
+      if (entry?.id) {
+        await axios.delete(`${API}/employment/${entry.id}`);
       }
+      // Refresh history
+      const res = await axios.get(`${API}/employment/${userId}`);
+      setEmploymentHistory(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      // fallback: remove locally
+      setEmploymentHistory(employmentHistory.filter((_, i) => i !== deleteIndex));
+    }
+    setShowDeleteModal(false);
+    setDeleteIndex(null);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeleteIndex(null);
+  };
+
+  const addResponsibility = () => {
+    if (currentResponsibility.trim()) {
+      setEmployment({
+        ...employment,
+        responsibilities: [...employment.responsibilities, currentResponsibility.trim()]
+      });
+      setCurrentResponsibility("");
     }
   };
 
-  // (Removed duplicate handleDeleteEmployment)
-
-  const handleFinish = () => {
-    localStorage.setItem("employmentHistory", JSON.stringify(employmentHistory));
-    window.location.href = "/summary";
+  const removeResponsibility = (index) => {
+    setEmployment({
+      ...employment,
+      responsibilities: employment.responsibilities.filter((_, i) => i !== index)
+    });
   };
+
+  const addSkill = () => {
+    if (currentSkill.trim()) {
+      setEmployment({
+        ...employment,
+        skills: [...employment.skills, currentSkill.trim()]
+      });
+      setCurrentSkill("");
+    }
+  };
+
+  const removeSkill = (index) => {
+    setEmployment({
+      ...employment,
+      skills: employment.skills.filter((_, i) => i !== index)
+    });
+  };
+
+  const moveEntry = async (index, direction) => {
+    const newHistory = [...employmentHistory];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (targetIndex < 0 || targetIndex >= newHistory.length) return;
+    
+    [newHistory[index], newHistory[targetIndex]] = [newHistory[targetIndex], newHistory[index]];
+    
+    // Update display_order for both entries
+    try {
+      await Promise.all([
+        axios.put(`${API}/employment/${newHistory[index].id}`, { 
+          displayOrder: newHistory.length - index 
+        }),
+        axios.put(`${API}/employment/${newHistory[targetIndex].id}`, { 
+          displayOrder: newHistory.length - targetIndex 
+        })
+      ]);
+      const res = await axios.get(`${API}/employment/${userId}`);
+      setEmploymentHistory(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Failed to reorder entries', err);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+  };
+
+
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-6">
@@ -162,18 +262,61 @@ export default function EmploymentHistoryPage() {
             required
           />
 
+          <label>Employment Type *</label>
+          <select
+            value={employment.employmentType}
+            onChange={(e) => setEmployment({ ...employment, employmentType: e.target.value })}
+            required
+          >
+            <option value="">Select Type</option>
+            <option value="Full-time">Full-time</option>
+            <option value="Part-time">Part-time</option>
+            <option value="Contract">Contract</option>
+            <option value="Internship">Internship</option>
+            <option value="Freelance">Freelance</option>
+          </select>
+
           <label>Location</label>
           <input
             type="text"
             value={employment.location}
             onChange={(e) => setEmployment({ ...employment, location: e.target.value })}
+            placeholder="e.g., San Francisco, CA or Remote"
+            list="location-suggestions"
           />
+          <datalist id="location-suggestions">
+            <option value="Remote" />
+            <option value="New York, NY" />
+            <option value="Los Angeles, CA" />
+            <option value="Chicago, IL" />
+            <option value="Houston, TX" />
+            <option value="Phoenix, AZ" />
+            <option value="Philadelphia, PA" />
+            <option value="San Antonio, TX" />
+            <option value="San Diego, CA" />
+            <option value="Dallas, TX" />
+            <option value="San Jose, CA" />
+            <option value="Austin, TX" />
+            <option value="Jacksonville, FL" />
+            <option value="San Francisco, CA" />
+            <option value="Columbus, OH" />
+            <option value="Indianapolis, IN" />
+            <option value="Seattle, WA" />
+            <option value="Denver, CO" />
+            <option value="Boston, MA" />
+            <option value="Portland, OR" />
+            <option value="Atlanta, GA" />
+            <option value="Miami, FL" />
+            <option value="Detroit, MI" />
+            <option value="Minneapolis, MN" />
+            <option value="Tampa, FL" />
+          </datalist>
 
           <div className="date-row">
             <div>
-              <label>Start Date *</label>
+              <label>Start Date (Month/Year) *</label>
               <input
-                type="date"
+                type="month"
                 value={employment.startDate}
                 onChange={(e) => setEmployment({ ...employment, startDate: e.target.value })}
                 required
@@ -182,9 +325,9 @@ export default function EmploymentHistoryPage() {
 
             {!employment.current && (
               <div>
-                <label>End Date</label>
+                <label>End Date (Month/Year)</label>
                 <input
-                  type="date"
+                  type="month"
                   value={employment.endDate}
                   onChange={(e) => setEmployment({ ...employment, endDate: e.target.value })}
                 />
@@ -204,28 +347,107 @@ export default function EmploymentHistoryPage() {
             <label htmlFor="currentPosition">Current Position</label>
           </div>
 
-          <label>Job Description</label>
+          <label>Key Responsibilities & Achievements *</label>
+          <p className="text-sm text-gray-600 mb-2">Add 3-5 bullet points highlighting your accomplishments (like a resume)</p>
+          <div className="responsibilities-section">
+            <div className="input-with-button">
+              <input
+                type="text"
+                value={currentResponsibility}
+                onChange={(e) => setCurrentResponsibility(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addResponsibility();
+                  }
+                }}
+                placeholder="e.g., Led a team of 5 developers to deliver project 2 weeks ahead of schedule"
+                maxLength={200}
+              />
+              <button 
+                type="button" 
+                onClick={addResponsibility}
+                className="btn btn-primary btn-sm add-bullet-btn"
+              >
+                Add Bullet
+              </button>
+            </div>
+            <div className="bullets-list">
+              {employment.responsibilities.map((resp, idx) => (
+                <div key={idx} className="bullet-item">
+                  <span className="bullet-dot">•</span>
+                  <span className="bullet-text">{resp}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeResponsibility(idx)}
+                    className="remove-bullet-btn"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <label>Skills & Technologies Used</label>
+          <p className="text-sm text-gray-600 mb-2">Add relevant skills, tools, or technologies</p>
+          <div className="skills-section">
+            <div className="input-with-button">
+              <input
+                type="text"
+                value={currentSkill}
+                onChange={(e) => setCurrentSkill(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addSkill();
+                  }
+                }}
+                placeholder="e.g., React, Python, AWS, Agile"
+              />
+              <button 
+                type="button" 
+                onClick={addSkill}
+                className="btn btn-primary btn-sm add-skill-btn"
+              >
+                Add Skill
+              </button>
+            </div>
+            <div className="skills-list">
+              {employment.skills.map((skill, idx) => (
+                <span key={idx} className="skill-tag">
+                  {skill}
+                  <button
+                    type="button"
+                    onClick={() => removeSkill(idx)}
+                    className="skill-remove-btn"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <label>Additional Notes (Optional)</label>
           <textarea
-            maxLength={1000}
+            maxLength={500}
             value={employment.description}
-            onChange={(e) => {
-              setEmployment({ ...employment, description: e.target.value });
-              setDescCount(e.target.value.length);
-            }}
-            placeholder="Describe your role and responsibilities..."
+            onChange={(e) => setEmployment({ ...employment, description: e.target.value })}
+            placeholder="Any additional context about this role..."
+            rows={3}
           />
-          <p>{descCount}/1000 characters</p>
+          <p className="text-sm text-gray-500">{employment.description.length}/500 characters</p>
 
           {employmentError && <p className="error">{employmentError}</p>}
           {employmentSuccess && <p className="success">{employmentSuccess}</p>}
 
           <div className="button-group">
-            <button type="submit" className="btn btn-primary btn-md">{editingIndex !== null ? "Update Entry" : "Save Entry"}</button>
+            <button type="submit" className="btn btn-primary btn-md">
+              {editingIndex !== null ? "Update Entry" : "Save Entry"}
+            </button>
             <button type="button" className="cancel-btn px-4 py-2 rounded-md border" onClick={handleEmploymentCancel}>
               Cancel
-            </button>
-            <button type="button" className="btn btn-primary btn-md" onClick={handleFinish}>
-              Finish
             </button>
           </div>
         </form>
@@ -237,21 +459,69 @@ export default function EmploymentHistoryPage() {
           ) : (
             employmentHistory.map((job, index) => (
               <div
-                key={index}
+                key={job.id || index}
                 className={`employment-entry ${job.current ? "current-role" : "past-role"}`}
               >
                 <div className="employment-header">
-                  <h4>{job.title}</h4>
-                  <p className="company">{job.company}</p>
-                  <p className="dates">
-                    {job.startDate} – {job.current ? "Present" : job.endDate || "N/A"}
-                  </p>
-                  <p className="location">{job.location}</p>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h4>{job.title}</h4>
+                      <p className="company">{job.company} {job.employment_type && `• ${job.employment_type}`}</p>
+                      <p className="dates">
+                        {formatDate(job.start_date || job.startDate)} – {job.current ? "Present" : formatDate(job.end_date || job.endDate)}
+                      </p>
+                      {job.location && <p className="location">📍 {job.location}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => moveEntry(index, 'up')}
+                        disabled={index === 0}
+                        className="text-sm px-2 py-1 border rounded disabled:opacity-30"
+                        title="Move up"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveEntry(index, 'down')}
+                        disabled={index === employmentHistory.length - 1}
+                        className="text-sm px-2 py-1 border rounded disabled:opacity-30"
+                        title="Move down"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <p className="description">{job.description}</p>
+                {(job.responsibilities && job.responsibilities.length > 0) && (
+                  <div className="mt-3">
+                    <strong className="text-sm">Key Responsibilities:</strong>
+                    <ul className="list-disc ml-5 mt-1">
+                      {job.responsibilities.map((resp, idx) => (
+                        <li key={idx} className="text-gray-700">{resp}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-                <div className="button-group">
+                {(job.skills && job.skills.length > 0) && (
+                  <div className="mt-3">
+                    <strong className="text-sm">Skills & Technologies:</strong>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {job.skills.map((skill, idx) => (
+                        <span key={idx} className="skill-tag">{skill}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {job.description && (
+                  <p className="description mt-3">{job.description}</p>
+                )}
+
+                <div className="button-group mt-4">
                   <button
                     type="button"
                     className="edit-btn"
@@ -262,7 +532,7 @@ export default function EmploymentHistoryPage() {
                   <button
                     type="button"
                     className="delete-btn"
-                    onClick={() => handleDeleteEmployment(index)}
+                    onClick={() => handleDeleteClick(index)}
                   >
                     Delete
                   </button>
@@ -272,6 +542,24 @@ export default function EmploymentHistoryPage() {
           )}
         </div>
       </div>
+
+      {/* Custom Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={cancelDelete}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Delete Employment Entry</h3>
+            <p className="modal-message">Are you sure you want to delete this employment entry? This action cannot be undone.</p>
+            <div className="modal-buttons">
+              <button onClick={cancelDelete} className="modal-btn-cancel">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} className="modal-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

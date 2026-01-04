@@ -5,16 +5,13 @@ import { ReorderDto } from './dto/reorder.dto';
 import { SupabaseService } from '../supabase/supabase.service';
 import { v4 as uuid } from 'uuid';
 
-export type SkillCategory = 'Technical' | 'Soft Skills' | 'Languages' | 'Industry-Specific';
-export type SkillProficiency = 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+export type SkillCategory = 'Technical' | 'Soft Skills';
 
 export interface Skill {
   id: string;
   userId: string;
   name: string;
   category: SkillCategory;
-  proficiency: SkillProficiency;
-  // For sorting within category:
   order: number;
 }
 
@@ -48,13 +45,13 @@ export class SkillsService {
   }
 
   async create(dto: CreateSkillDto): Promise<Skill> {
-    const { userId, name, category, proficiency } = dto;
+    const { userId, name, category } = dto;
     if (!userId) throw new BadRequestException('userId is required');
     if (!name?.trim()) throw new BadRequestException('name is required');
 
     const supabase = this.supabaseService.getClient();
     
-    console.log('DEBUG: Creating skill:', { userId, name, category, proficiency });
+    console.log('DEBUG: Creating skill:', { userId, name, category });
     
     // Check for duplicate
     const { data: existing, error: checkError } = await supabase
@@ -85,7 +82,6 @@ export class SkillsService {
       userId,
       name: name.trim(),
       category,
-      proficiency,
       order,
     };
     

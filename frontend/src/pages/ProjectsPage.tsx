@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const API = (import.meta as any).env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
 
@@ -23,6 +24,8 @@ export default function ProjectsPage() {
   });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<any | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<any | null>(null);
+  const [error, setError] = useState<string>('');
 
   // Get userId from JWT and API
   useEffect(() => {
@@ -242,18 +245,25 @@ export default function ProjectsPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
         <div className="mt-4">
           <button
             onClick={async () => {
               if (!form.name || form.name.trim().length === 0) {
-                alert('Project name is required');
+                setError('Project name is required');
                 return;
               }
               if (!form.startDate) {
-                alert('Start date is required');
+                setError('Start date is required');
                 return;
               }
               
+              setError('');
               // Convert YYYY-MM to YYYY-MM-01 for backend
               const startDateISO = form.startDate ? `${form.startDate}-01` : '';
               const endDateISO = form.endDate ? `${form.endDate}-01` : '';
@@ -425,19 +435,7 @@ export default function ProjectsPage() {
                     Edit
                   </button>
                   <button
-                    onClick={() => {
-                      if (!confirm('Delete this project?')) return;
-                      axios
-                        .delete(`${API}/projects/${p.id}`)
-                        .then(() =>
-                          axios
-                            .get(`${API}/projects/user/${currentUserId}`)
-                            .then((r) => {
-                              const transformed = r.data.map(transformProject);
-                              setItems(transformed);
-                            })
-                        );
-                    }}
+                    onClick={() => setConfirmDelete(p)}
                     className="btn btn-secondary"
                   >
                     Delete
@@ -448,6 +446,29 @@ export default function ProjectsPage() {
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!confirmDelete}
+        title="Delete Project"
+        message={`Are you sure you want to delete "${confirmDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (confirmDelete) {
+            axios
+              .delete(`${API}/projects/${confirmDelete.id}`)
+              .then(() => {
+                axios.get(`${API}/projects/user/${currentUserId}`).then((r) => {
+                  const transformed = r.data.map(transformProject);
+                  setItems(transformed);
+                });
+                setConfirmDelete(null);
+              });
+          }
+        }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }
