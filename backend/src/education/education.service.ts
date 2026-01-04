@@ -36,7 +36,27 @@ export class EducationService {
       .single();
     
     if (error) throw error;
-    return education;
+    return this.transformEducation(education);
+  }
+
+  private transformEducation(edu: any) {
+    if (!edu) return edu;
+    return {
+      id: edu.id,
+      userId: edu.user_id,
+      degree: edu.degree,
+      institution: edu.institution,
+      fieldOfStudy: edu.field_of_study,
+      startDate: edu.start_date,
+      endDate: edu.end_date,
+      ongoing: edu.ongoing,
+      gpa: edu.gpa,
+      showGpa: edu.show_gpa,
+      honors: edu.honors,
+      notes: edu.notes,
+      createdAt: edu.created_at,
+      updatedAt: edu.updated_at,
+    };
   }
 
   async findAllByUser(userId: string) {
@@ -49,10 +69,10 @@ export class EducationService {
         .order('start_date', { ascending: false });
     
     if (error) throw error;
-    return data || [];
+    return (data || []).map(edu => this.transformEducation(edu));
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const client = this.supabase.getClient();
       const { data, error } = await client
         .from('education')
@@ -61,29 +81,40 @@ export class EducationService {
         .single();
     
     if (error) throw error;
-    return data;
+    return this.transformEducation(data);
   }
 
-  async update(id: number, dto: UpdateEducationDto) {
+  async update(id: string, dto: UpdateEducationDto) {
     const client = this.supabase.getClient();
-      const data: any = { ...dto };
-      if (dto.startDate) data.start_date = new Date(dto.startDate).toISOString();
-      if (dto.endDate !== undefined) {
-        data.end_date = dto.endDate ? new Date(dto.endDate).toISOString() : null;
-      }
+    const payload: any = {};
+    
+    if (dto.degree !== undefined) payload.degree = dto.degree;
+    if (dto.institution !== undefined) payload.institution = dto.institution;
+    if (dto.fieldOfStudy !== undefined) payload.field_of_study = dto.fieldOfStudy;
+    if (dto.startDate !== undefined) payload.start_date = this.toIsoOrNull(dto.startDate);
+    if (dto.endDate !== undefined) payload.end_date = this.toIsoOrNull(dto.endDate);
+    if (dto.ongoing !== undefined) payload.ongoing = dto.ongoing;
+    if (dto.gpa !== undefined) payload.gpa = dto.gpa;
+    if (dto.showGpa !== undefined) payload.show_gpa = dto.showGpa;
+    if (dto.honors !== undefined) payload.honors = dto.honors;
+    if (dto.notes !== undefined) payload.notes = dto.notes;
+    // Note: education_level column doesn't exist in database, so we skip it
+    
+    console.log('Updating education id:', id, 'with payload:', payload);
     
     const { data: education, error } = await client
-      .from('Education')
-      .update(data)
+      .from('education')
+      .update(payload)
       .eq('id', id)
       .select()
       .single();
     
+    console.log('Update result:', { education, error });
     if (error) throw error;
-    return education;
+    return this.transformEducation(education);
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     const client = this.supabase.getClient();
       const { data, error } = await client
         .from('education')
@@ -93,6 +124,6 @@ export class EducationService {
         .single();
     
     if (error) throw error;
-    return data;
+    return this.transformEducation(data);
   }
 }

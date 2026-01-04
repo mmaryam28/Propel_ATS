@@ -21,16 +21,17 @@ export class EducationController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.educationService.findOne(Number(id));
+    return this.educationService.findOne(id);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateEducationDto) {
-    return this.educationService.update(Number(id), dto);
+  update(@Param('id') id: string, @Body() dto: any) {
+    console.log('Controller received id:', id, 'dto:', dto);
+    return this.educationService.update(id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.educationService.remove(Number(id));
+    return this.educationService.remove(id);
   }
 }

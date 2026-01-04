@@ -60,6 +60,7 @@ export default function EducationPage() {
 
   const [formError, setFormError] = useState<string | null>(null);
   const [items, setItems] = useState<any[]>([]);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [form, setForm] = useState<any>({
     degree: '',
@@ -73,9 +74,6 @@ export default function EducationPage() {
     honors: '',
     educationLevel: 'Bachelor',
   });
-
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<any | null>(null);
 
   function resetForm() {
     setForm({
@@ -93,9 +91,16 @@ export default function EducationPage() {
   }
 
   useEffect(() => {
+    if (!currentUserId) return;
     axios
       .get(`${API}/education/user/${currentUserId}`)
-      .then((r) => setItems(r.data))
+      .then((r) => {
+        console.log('Education items:', r.data);
+        if (r.data.length > 0) {
+          console.log('First item id type:', typeof r.data[0].id, 'value:', r.data[0].id);
+        }
+        setItems(r.data);
+      })
       .catch(() => {});
   }, [currentUserId]);
 
@@ -134,7 +139,9 @@ export default function EducationPage() {
 
       {/* Add education form */}
       <div className="rounded-xl border border-[var(--border-color)] bg-[var(--panel-bg)] p-4 sm:p-6">
-        <h3 className="mb-4 text-lg font-semibold text-gray-900">Add education</h3>
+        <h3 className="mb-4 text-lg font-semibold text-gray-900">
+          {editingId ? 'Edit Education' : 'Add Education'}
+        </h3>
 
         {formError && <div className="text-red-600 mb-2 text-sm">{formError}</div>}
 
@@ -188,7 +195,7 @@ export default function EducationPage() {
           <div className="grid gap-2">
             <label className="text-sm text-gray-600">Start date</label>
             <input
-              type="date"
+              type="month"
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
               className="w-full rounded-lg border border-[var(--border-color)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
@@ -199,7 +206,7 @@ export default function EducationPage() {
             <div className="grid gap-2">
               <label className="text-sm text-gray-600">End date</label>
               <input
-                type="date"
+                type="month"
                 value={form.endDate}
                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                 className="w-full rounded-lg border border-[var(--border-color)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
@@ -273,67 +280,119 @@ export default function EducationPage() {
                 gpa: form.gpa === '' ? null : Number(form.gpa),
               };
               console.log('Sending payload:', payload);
-              axios.post(`${API}/education`, payload).then(() => {
-                axios.get(`${API}/education/user/${currentUserId}`).then((r) => setItems(r.data));
-                resetForm();
-              }).catch((err) => {
-                console.error('Error adding education:', err);
-                setFormError(err.response?.data?.message || 'Failed to add education entry');
-              });
+              
+              if (editingId) {
+                // Update existing education (exclude userId from update payload)
+                const { userId, ...updatePayload } = payload;
+                axios.put(`${API}/education/${editingId}`, updatePayload).then(() => {
+                  axios.get(`${API}/education/user/${currentUserId}`).then((r) => setItems(r.data));
+                  resetForm();
+                  setEditingId(null);
+                }).catch((err) => {
+                  console.error('Error updating education:', err);
+                  setFormError(err.response?.data?.message || 'Failed to update education entry');
+                });
+              } else {
+                // Add new education
+                axios.post(`${API}/education`, payload).then(() => {
+                  axios.get(`${API}/education/user/${currentUserId}`).then((r) => setItems(r.data));
+                  resetForm();
+                }).catch((err) => {
+                  console.error('Error adding education:', err);
+                  setFormError(err.response?.data?.message || 'Failed to add education entry');
+                });
+              }
             }}
             className="inline-flex items-center rounded-md bg-[var(--primary-color)] px-4 py-2 text-sm font-medium text-white hover:brightness-90"
           >
-            Add
+            {editingId ? 'Update' : 'Add'}
           </button>
+          {editingId && (
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                setEditingId(null);
+              }}
+              className="ml-2 inline-flex items-center rounded-md border border-[var(--border-color)] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Entries & Timeline */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Entries list */}
-        <div>
-          <h3 className="mb-3 text-lg font-semibold text-blue-700">Entries</h3>
-          <ul className="space-y-3">
-            {sorted.map((e) => (
-              <li
-                key={e.id}
-                className="rounded-xl border border-[var(--border-color)] bg-[var(--panel-bg)] p-4"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="font-semibold text-gray-900">
-                      {e.degree}{' '}
-                      <span className="font-normal text-gray-600">— {e.institution}</span>
-                    </div>
-                    <div className="text-sm text-gray-600">{e.fieldOfStudy}</div>
-                    <div className="text-sm">
-                      {e.startDate?.slice(0, 10)} –{' '}
-                      {e.endDate ? e.endDate.slice(0, 10) : 'Ongoing'}
-                      {e.ongoing && (
-                        <span className="ml-2 rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
-                          In progress
-                        </span>
-                      )}
-                    </div>
-                    {e.showGpa && e.gpa && (
-                      <div className="text-sm">
-                        <strong>GPA:</strong> {e.gpa}
-                      </div>
-                    )}
-                    {e.honors?.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {e.honors.map((h: string, i: number) => (
-                          <span
-                            key={i}
-                            className="inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-900"
-                          >
-                            {h}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+      {/* Timeline */}
+      <div>
+        <h3 className="mb-3 text-lg font-semibold text-blue-700">Timeline</h3>
+        <div className="relative pl-6">
+          <div className="absolute left-2 top-0 h-full w-[2px] bg-[var(--border-color)]" />
+          {sorted.map((e) => {
+            const formatDate = (dateStr: string) => {
+              if (!dateStr) return '';
+              const date = new Date(dateStr);
+              return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+            };
+
+            return (
+              <div key={e.id} className="relative mb-4">
+                <div
+                  className={`absolute left-0 top-1 h-2.5 w-2.5 rounded-full ${
+                    e.ongoing || !e.endDate ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}
+                />
+                <div className="ml-4">
+                  <div className="font-medium">
+                    {e.degree}{' '}
+                    <span className="text-gray-600">@ {e.institution}</span>
                   </div>
-                  <div className="shrink-0">
+                  <div className="text-xs text-gray-600">
+                    {formatDate(e.startDate)} –{' '}
+                    {e.ongoing || !e.endDate ? 'Present' : formatDate(e.endDate)}
+                  </div>
+                  <div className="text-xs text-gray-700">
+                    <strong>Level:</strong> {e.educationLevel}
+                  </div>
+                  {e.showGpa && e.gpa && (
+                    <div className="text-xs text-gray-700">
+                      <strong>GPA:</strong> {e.gpa}
+                    </div>
+                  )}
+                  {e.honors?.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {e.honors.map((h: string, i: number) => (
+                        <span
+                          key={i}
+                          className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900"
+                        >
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => {
+                        console.log('Editing education id:', e.id, 'type:', typeof e.id);
+                        setEditingId(e.id);
+                        setForm({
+                          degree: e.degree || '',
+                          institution: e.institution || '',
+                          fieldOfStudy: e.fieldOfStudy || '',
+                          startDate: e.startDate?.slice(0, 7) || '',
+                          endDate: e.endDate?.slice(0, 7) || '',
+                          ongoing: e.ongoing || false,
+                          gpa: e.gpa || '',
+                          showGpa: e.showGpa ?? true,
+                          honors: e.honors?.join(', ') || '',
+                          educationLevel: e.educationLevel || 'Bachelor',
+                        });
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="inline-flex items-center rounded-md border border-[var(--border-color)] bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Edit
+                    </button>
                     <button
                       onClick={() => {
                         if (!confirm('Delete this education entry?')) return;
@@ -345,45 +404,15 @@ export default function EducationPage() {
                               .then((r) => setItems(r.data))
                           );
                       }}
-                      className="inline-flex items-center rounded-md border border-[var(--border-color)] bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      className="inline-flex items-center rounded-md border border-[var(--border-color)] bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                     >
                       Delete
                     </button>
                   </div>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Timeline */}
-        <div>
-          <h3 className="mb-3 text-lg font-semibold text-blue-700">Timeline</h3>
-          <div className="relative pl-6">
-            <div className="absolute left-2 top-0 h-full w-[2px] bg-[var(--border-color)]" />
-            {sorted.map((e) => (
-              <div key={e.id} className="relative mb-4">
-                <div
-                  className={`absolute left-0 top-1 h-2.5 w-2.5 rounded-full ${
-                    e.endDate ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}
-                />
-                <div className="ml-4">
-                  <div className="font-medium">
-                    {e.degree}{' '}
-                    <span className="text-gray-600">@ {e.institution}</span>
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {e.startDate?.slice(0, 10)} –{' '}
-                    {e.endDate ? e.endDate.slice(0, 10) : 'Present'}
-                  </div>
-                  <div className="text-xs text-gray-700">
-                    <strong>Level:</strong> {e.educationLevel}
-                  </div>
-                </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
     </div>
