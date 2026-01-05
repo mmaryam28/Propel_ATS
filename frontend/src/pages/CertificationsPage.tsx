@@ -7,7 +7,7 @@ function getToken() {
   return window.localStorage.getItem('token');
 }
 
-const API = (import.meta as any).env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
+const API = (import.meta as any).env.VITE_API_URL;
 
 type Props = { userId?: string };
 

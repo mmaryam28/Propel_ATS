@@ -11,5 +11,17 @@ export default defineConfig({
         '/applications': target,
       };
     })(),
-  }
+  },
+  build: {
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: ['log'],
+        drop_debugger: true,
+      },
+    },
+  },
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
 })

@@ -60,7 +60,7 @@ export default function Login() {
     }
   };
 
-  const API_BASE = (import.meta as any).env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
+  const API_BASE = (import.meta as any).env.VITE_API_URL;
 
   return (
     <div className="auth-page">

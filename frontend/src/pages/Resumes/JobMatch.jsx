@@ -4,7 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Icon } from '../../components/ui/Icon';
 
 const JobMatch = () => {
-  const API = import.meta?.env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
+  const API = import.meta.env.VITE_API_URL;
   const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [matchData, setMatchData] = useState(null);

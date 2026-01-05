@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
-const API = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+const API = import.meta.env.VITE_API_URL;
 
 export default function OfferComparison() {
   const [searchParams] = useSearchParams();

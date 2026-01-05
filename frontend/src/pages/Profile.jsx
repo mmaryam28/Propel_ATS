@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+const API = import.meta.env.VITE_API_URL;
 
 export default function Profile() {
   const [profile, setProfile] = useState({ 

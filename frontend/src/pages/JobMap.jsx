@@ -13,7 +13,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-const API = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+const API = import.meta.env.VITE_API_URL;
 
 // Dev-only auto-login token support: set VITE_DEV_TOKEN into localStorage when running in dev
 const DEV_TOKEN = import.meta.env.VITE_DEV_TOKEN;

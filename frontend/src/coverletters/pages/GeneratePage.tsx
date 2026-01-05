@@ -23,7 +23,7 @@ export default function GeneratePage() {
   async function loadJobs() {
     try {
       const token = localStorage.getItem('token');
-      const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+      const base = import.meta.env.VITE_API_URL;
       const res = await fetch(`${base}/jobs`, {
         headers: { Authorization: `Bearer ${token}` },
       });

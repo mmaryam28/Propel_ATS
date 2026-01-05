@@ -271,7 +271,7 @@ function SuccessPatterns() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + '/application-quality/score', {
+      const response = await fetch(import.meta.env.VITE_API_URL + '/application-quality/score', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

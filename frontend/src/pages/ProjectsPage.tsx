@@ -3,7 +3,7 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-const API = (import.meta as any).env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
+const API = (import.meta as any).env.VITE_API_URL;
 
 export default function ProjectsPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
