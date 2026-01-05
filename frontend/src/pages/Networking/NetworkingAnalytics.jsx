@@ -64,7 +64,7 @@ const NetworkingAnalytics = () => {
     notes: ''
   });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // Fetch dashboard data
   const fetchDashboard = async () => {

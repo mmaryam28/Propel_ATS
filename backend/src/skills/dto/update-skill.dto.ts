@@ -1,16 +1,13 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
-import type { SkillCategory, SkillProficiency } from '../skills.service';
+import type { SkillCategory } from '../skills.service';
 
 export class UpdateSkillDto {
   @IsString()
-  userId!: string; // required to locate bucket, but left without IsNotEmpty to allow PATCH ergonomics
+  userId!: string;
 
   @IsString() @IsOptional()
   name?: string;
 
-  @IsEnum(['Technical','Soft Skills','Languages','Industry-Specific'] as const) @IsOptional()
+  @IsEnum(['Technical','Soft Skills'] as const) @IsOptional()
   category?: SkillCategory;
-
-  @IsEnum(['Beginner','Intermediate','Advanced','Expert'] as const) @IsOptional()
-  proficiency?: SkillProficiency;
 }

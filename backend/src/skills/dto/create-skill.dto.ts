@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import type { SkillCategory, SkillProficiency } from '../skills.service';
+import type { SkillCategory } from '../skills.service';
 
 export class CreateSkillDto {
   @IsString() @IsNotEmpty()
@@ -8,9 +8,6 @@ export class CreateSkillDto {
   @IsString() @IsNotEmpty()
   name!: string;
 
-  @IsEnum(['Technical','Soft Skills','Languages','Industry-Specific'] as const)
+  @IsEnum(['Technical','Soft Skills'] as const)
   category!: SkillCategory;
-
-  @IsEnum(['Beginner','Intermediate','Advanced','Expert'] as const)
-  proficiency!: SkillProficiency;
 }

@@ -60,7 +60,7 @@ export class ProfileCompletenessService {
       client.from('users').select('*').eq('id', userId).single(),
       client.from('employment').select('*').eq('user_id', userId),
       client.from('education').select('*').eq('user_id', userId),
-      client.from('user_skills').select('*, skills(*)').eq('user_id', userId),
+      client.from('user_profile_skills').select('*').eq('user_id', userId),
       client.from('projects').select('*').eq('user_id', userId),
       client.from('certifications').select('*').eq('user_id', userId)
     ]);
@@ -71,6 +71,14 @@ export class ProfileCompletenessService {
     const skillsData = skills.data || [];
     const projectsData = projects.data || [];
     const certificationsData = certifications.data || [];
+
+    console.log(`[Profile Completeness] User ${userId} has ${skillsData.length} skills from user_profile_skills table`);
+    if (skills.error) {
+      console.error(`[Profile Completeness] Error fetching skills:`, skills.error);
+    }
+    if (skillsData.length > 0) {
+      console.log(`[Profile Completeness] Sample skill:`, skillsData[0]);
+    }
 
     // Calculate section scores
     const sections = {
@@ -249,7 +257,10 @@ export class ProfileCompletenessService {
       { field: 'at_least_three_skills', present: skills.length >= 3, required: true }
     ];
 
+    console.log(`[Skills Score] Calculating for ${skills.length} skills`);
+
     if (skills.length === 0) {
+      console.log('[Skills Score] No skills found, returning 0%');
       return {
         name: 'Skills',
         score: 0,
@@ -260,16 +271,37 @@ export class ProfileCompletenessService {
       };
     }
 
-    // Base score for number of skills
-    score += Math.min(skills.length * 8, 40); // Up to 40 points for 5+ skills
+    // Base score for number of skills (40 points max)
+    const countScore = Math.min(skills.length * 8, 40);
+    score += countScore;
+    console.log(`[Skills Score] Base score from count (${skills.length} skills): ${countScore}`);
 
-    // Quality points
-    skills.forEach(skill => {
-      if (skill.proficiency_level && skill.proficiency_level > 0) score += 8;
-      if (skill.years_of_experience && skill.years_of_experience > 0) score += 6;
+    // Quality points for each skill (60 points max total)
+    let qualityScore = 0;
+    skills.forEach((skill, index) => {
+      let skillPoints = 0;
+      
+      // Points for having a name and category (required fields)
+      if (skill.skill_name && skill.skill_name.length > 0) skillPoints += 4;
+      if (skill.category && skill.category.length > 0) skillPoints += 2;
+      
+      // Bonus points for proficiency level
+      if (skill.proficiency && skill.proficiency.length > 0) skillPoints += 4;
+      
+      // Bonus points for years of experience
+      if (skill.years_experience && skill.years_experience > 0) skillPoints += 2;
+      
+      qualityScore += skillPoints;
+      console.log(`[Skills Score] Skill ${index + 1} "${skill.skill_name}": +${skillPoints} points (proficiency: ${skill.proficiency}, years: ${skill.years_experience})`);
     });
+    
+    // Cap quality score at 60 points
+    qualityScore = Math.min(qualityScore, 60);
+    score += qualityScore;
 
     score = Math.min(score, maxScore);
+
+    console.log(`[Skills Score] Final score: ${countScore} (count) + ${qualityScore} (quality) = ${score}/${maxScore} = ${Math.round((score / maxScore) * 100)}%`);
 
     return {
       name: 'Skills',

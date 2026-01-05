@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-const API = (import.meta as any).env?.VITE_API_URL || 'https://cs490-backend.onrender.com';
+const API = (import.meta as any).env.VITE_API_URL;
 
 function getToken() {
   return window.localStorage.getItem('token');

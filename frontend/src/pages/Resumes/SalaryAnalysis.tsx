@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { generateSalaryAnalytics } from "../../lib/api";
 
-const base = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+const base = import.meta.env.VITE_API_URL;
 
 const SalaryAnalysis: React.FC = () => {
   const [title, setTitle] = useState("");

@@ -57,7 +57,8 @@
 
 /* Inputs / Textareas */
 .employment-form input,
-.employment-form textarea {
+.employment-form textarea,
+.employment-form select {
   width: 100%;
   padding: 10px 12px;
   border-radius: 10px;
@@ -75,7 +76,8 @@
 
 /* Focus */
 .employment-form input:focus,
-.employment-form textarea:focus {
+.employment-form textarea:focus,
+.employment-form select:focus {
   outline: none;
   border-color: #93c5fd; /* blue-300 */
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
@@ -235,6 +237,7 @@
   margin: 0 0 4px;
   font-weight: 700;
   font-size: 1.05rem;
+  color: #111827 !important;
 }
 .company {
   font-weight: 600;
@@ -293,4 +296,261 @@
 }
 .summary-avatar:hover {
   border-color: #4f46e5;
+}
+
+/* Responsibilities & Skills Sections */
+.responsibilities-section,
+.skills-section {
+  margin-top: 8px;
+}
+
+.input-with-button {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.input-with-button input {
+  flex: 1;
+}
+
+.add-bullet-btn,
+.add-skill-btn {
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+/* Resume-style bullets list */
+.bullets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.bullet-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 3px solid #3b82f6;
+  transition: background 0.15s ease;
+  width: 100%;
+}
+
+.bullet-item:hover {
+  background: #f3f4f6;
+}
+
+.bullet-dot {
+  color: #3b82f6;
+  font-weight: 700;
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+.bullet-text {
+  font-size: 0.95rem;
+  color: #374151;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.remove-bullet-btn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0 6px;
+  border-radius: 4px;
+  transition: color 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.remove-bullet-btn:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+.responsibilities-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 12px;
+}
+
+.responsibilities-list li {
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.skill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #eff6ff;
+  color: #1e40af;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #bfdbfe;
+}
+
+.skill-remove-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #1e40af;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.skill-remove-btn:hover {
+  color: #dc2626;
+}
+
+/* Button sizing utilities */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  min-width: auto;
+}
+
+.btn-md {
+  padding: 10px 16px;
+  font-size: 0.9375rem;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.06s ease;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Custom Delete Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 12px 0;
+}
+
+.modal-message {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal-btn-cancel,
+.modal-btn-delete {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.modal-btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+
+.modal-btn-cancel:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.modal-btn-delete {
+  background: #dc2626;
+  color: white;
+}
+
+.modal-btn-delete:hover {
+  background: #b91c1c;
 }

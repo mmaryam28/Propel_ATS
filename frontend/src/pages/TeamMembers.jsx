@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API = import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com';
+const API = import.meta.env.VITE_API_URL;
 
 export default function TeamMembers() {
   const { teamId } = useParams();

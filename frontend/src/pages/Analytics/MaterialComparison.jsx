@@ -57,7 +57,7 @@ function MaterialComparison() {
   const fetchJobs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch((import.meta.env.VITE_API_URL || 'https://cs490-backend.onrender.com') + '/jobs', {
+      const response = await fetch(import.meta.env.VITE_API_URL + '/jobs', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
